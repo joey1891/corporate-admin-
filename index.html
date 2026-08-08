@@ -772,7 +772,15 @@
                         userSession.value = data.session;
                         await fetchUserProfile(data.user.id);
                     } catch (error) {
-                        showToast('로그인 실패: ' + (error.message || '이메일 또는 비밀번호를 확인해주세요.'), 'error');
+                        let errorMsg = '이메일 또는 비밀번호를 확인해주세요.';
+                        if (error.message.includes('Invalid login credentials')) {
+                            errorMsg = '등록되지 않은 이메일이거나 비밀번호가 틀렸습니다. (신규 사용자는 회원가입을 먼저 진행해주세요)';
+                        } else if (error.message.includes('Email not confirmed')) {
+                            errorMsg = '이메일 인증이 필요합니다. 관리자에게 문의하세요.';
+                        } else {
+                            errorMsg = error.message;
+                        }
+                        showToast('로그인 실패: ' + errorMsg, 'error');
                     } finally {
                         isAuthLoading.value = false;
                     }
