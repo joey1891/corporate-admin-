@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사내 업무 지원 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f3f4f6; /* bg-gray-100 */
+        }
+        
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1d4ed8', // blue-700, professional look
+                        secondary: '#3b82f6', // blue-500
+                        dark: '#1e293b', // slate-800
+                        light: '#f8fafc', // slate-50
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-gray-800 antialiased">
+    <div id="app" class="flex h-screen overflow-hidden bg-gray-50">
+
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white shadow-md flex-shrink-0 flex flex-col z-10 transition-all duration-300 ease-in-out" :class="{'translate-x-0': isSidebarOpen, '-translate-x-full absolute h-full md:relative md:translate-x-0': !isSidebarOpen}">
+            <div class="h-16 flex items-center justify-between px-6 border-b border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded bg-primary text-white flex items-center justify-center font-bold text-lg">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <span class="font-bold text-lg text-gray-900 tracking-tight">WorkPortal</span>
+                </div>
+                <button @click="toggleSidebar" class="md:hidden text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="overflow-y-auto overflow-x-hidden flex-grow py-4 px-3">
+                <ul class="space-y-1">
+                    <li v-for="category in categories" :key="category.id">
+                        <button 
+                            @click="selectCategory(category.id)"
+                            :class="[
+                                'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200',
+                                activeCategoryId === category.id 
+                                    ? 'bg-blue-50 text-primary' 
+                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            ]"
+                        >
+                            <i :class="['w-5 text-center', category.icon, activeCategoryId === category.id ? 'text-primary' : 'text-gray-400']"></i>
+                            {{ category.name }}
+                            <span v-if="category.items.length > 0" class="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+                                {{ category.items.length }}
+                            </span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="p-4 border-t border-gray-100">
+                <div class="flex items-center gap-3 px-3 py-2">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-sm font-medium text-gray-900">관리자</span>
+                        <span class="text-xs text-gray-500">admin@company.com</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-50">
+            
+            <!-- Header -->
+            <header class="h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 bg-white border-b border-gray-100 shadow-sm z-0">
+                <div class="flex items-center flex-1">
+                    <button @click="toggleSidebar" class="md:hidden p-2 -ml-2 mr-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <h1 class="text-xl font-bold text-gray-800 tracking-tight">{{ activeCategoryName }}</h1>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <!-- Admin Toggle -->
+                    <div class="flex items-center mr-2 border-r border-gray-200 pr-4 hidden sm:flex">
+                        <span class="mr-2 text-sm font-medium" :class="isAdmin ? 'text-primary' : 'text-gray-500'">관리자 모드</span>
+                        <button 
+                            @click="toggleAdminMode"
+                            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            :class="isAdmin ? 'bg-primary' : 'bg-gray-200'"
+                        >
+                            <span 
+                                aria-hidden="true" 
+                                class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                                :class="isAdmin ? 'translate-x-5' : 'translate-x-0'"
+                            ></span>
+                        </button>
+                    </div>
+
+                    <div class="relative hidden sm:block">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input 
+                            type="text" 
+                            v-model="searchQuery"
+                            placeholder="문서 검색..." 
+                            class="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary w-64 bg-gray-50 focus:bg-white transition-colors"
+                        >
+                    </div>
+                    <button class="p-2 text-gray-400 hover:text-gray-600 relative rounded-full hover:bg-gray-100 transition-colors">
+                        <i class="fa-regular fa-bell text-xl"></i>
+                        <span class="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+                
+                <!-- Quick Stats / Overview Banner -->
+                <div class="bg-gradient-to-r from-blue-600 to-primary rounded-xl shadow-md p-6 mb-8 text-white relative overflow-hidden">
+                    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
+                    <div class="relative z-10">
+                        <h2 class="text-2xl font-bold mb-2">{{ activeCategoryName }} 센터</h2>
+                        <p class="text-blue-100 text-sm max-w-2xl">필요한 서류와 양식을 즉시 다운로드하거나 관련 시스템으로 이동할 수 있습니다. 업무 효율을 높이세요.</p>
+                    </div>
+                </div>
+
+                <!-- Document List -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    
+                    <!-- Search bar for mobile -->
+                    <div class="p-4 border-b border-gray-200 sm:hidden">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium" :class="isAdmin ? 'text-primary' : 'text-gray-500'">관리자 모드</span>
+                            <button @click="toggleAdminMode" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none" :class="isAdmin ? 'bg-primary' : 'bg-gray-200'">
+                                <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" :class="isAdmin ? 'translate-x-5' : 'translate-x-0'"></span>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <input 
+                                type="text" 
+                                v-model="searchQuery"
+                                placeholder="문서 검색..." 
+                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-gray-50 focus:bg-white transition-colors"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">지원 항목</h3>
+                            <span class="text-sm text-gray-500">{{ filteredItems.length }}개 항목</span>
+                        </div>
+                        <button v-if="isAdmin" @click="openAddModal" class="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-blue-800 focus:outline-none transition-colors">
+                            <i class="fa-solid fa-plus mr-1.5"></i> 항목 추가
+                        </button>
+                    </div>
+                    
+                    <ul class="divide-y divide-gray-100">
+                        <li v-for="item in filteredItems" :key="item.id" class="hover:bg-gray-50 transition-colors duration-150">
+                            <div class="px-6 py-4 flex items-center justify-between sm:flex-row flex-col sm:gap-0 gap-4">
+                                <div class="flex items-center gap-4 w-full sm:w-auto">
+                                    <div :class="['flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-white', getTypeColor(item.type)]">
+                                        <i :class="getTypeIcon(item.type)"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-medium text-gray-900">
+                                            {{ item.name }}
+                                            <span v-if="item.url && isAdmin" class="ml-2 text-xs text-blue-500 font-normal"><i class="fa-solid fa-link"></i> 링크 연결됨</span>
+                                            <span v-if="item.fileName && isAdmin" class="ml-2 text-xs text-green-500 font-normal"><i class="fa-solid fa-paperclip"></i> 파일 첨부됨</span>
+                                        </h4>
+                                        <p class="text-xs text-gray-500 mt-0.5">{{ getTypeDescription(item.type) }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                                    <template v-if="isAdmin">
+                                        <button @click="openEditModal(item)" class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="수정">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <button @click="confirmDelete(item)" class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title="삭제">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </template>
+                                    <template v-else>
+                                        <button 
+                                            @click="handleAction(item)"
+                                            class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors w-full sm:w-auto"
+                                        >
+                                            <i :class="['mr-2', getActionIcon(item.type)]"></i>
+                                            {{ getActionText(item.type) }}
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <!-- Empty State -->
+                    <div v-if="filteredItems.length === 0" class="px-6 py-12 text-center">
+                        <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-4">
+                            <i class="fa-solid fa-folder-open text-2xl"></i>
+                        </div>
+                        <h3 class="text-base font-medium text-gray-900 mb-1">항목이 없습니다</h3>
+                        <p class="text-sm text-gray-500">선택한 카테고리나 검색어에 해당하는 문서가 없습니다.</p>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        
+        <!-- Overlay for mobile sidebar -->
+        <div v-if="isSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-0 md:hidden transition-opacity"></div>
+
+        <!-- Admin Item Modal (Add/Edit) -->
+        <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="closeModal" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                                <h3 class="text-lg leading-6 font-bold text-gray-900 border-b pb-2" id="modal-title">
+                                    {{ isEditing ? '항목 수정' : '새 항목 추가' }}
+                                </h3>
+                                <div class="mt-4 space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">항목명 <span class="text-red-500">*</span></label>
+                                        <input type="text" v-model="modalForm.name" class="mt-1 p-2 block w-full shadow-sm focus:ring-primary focus:border-primary border border-gray-300 rounded-md" placeholder="예: 사업자등록증">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">분류 유형 <span class="text-red-500">*</span></label>
+                                        <select v-model="modalForm.type" class="mt-1 p-2 block w-full shadow-sm focus:ring-primary focus:border-primary border border-gray-300 rounded-md">
+                                            <option value="download">문서/이미지 다운로드 (PDF, JPG 등)</option>
+                                            <option value="document">서식 파일 다운로드 (Word, HWP 등)</option>
+                                            <option value="system">사내 시스템 연결</option>
+                                            <option value="link">외부 웹사이트 링크</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- URL Input for Links -->
+                                    <div v-if="modalForm.type === 'system' || modalForm.type === 'link'">
+                                        <label class="block text-sm font-medium text-gray-700">연결할 URL</label>
+                                        <input type="url" v-model="modalForm.url" class="mt-1 p-2 block w-full shadow-sm focus:ring-primary focus:border-primary border border-gray-300 rounded-md" placeholder="https://...">
+                                        <p class="mt-1 text-xs text-gray-500">클릭 시 이동할 링크 주소를 입력하세요.</p>
+                                    </div>
+                                    
+                                    <!-- File Input for Downloads -->
+                                    <div v-if="modalForm.type === 'download' || modalForm.type === 'document'">
+                                        <label class="block text-sm font-medium text-gray-700">파일 업로드</label>
+                                        <input type="file" @change="handleFileUpload" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-primary hover:file:bg-blue-100 cursor-pointer">
+                                        <p v-if="modalForm.fileName" class="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded border border-gray-100">
+                                            <i class="fa-solid fa-file-check text-green-500 mr-1"></i> 현재 첨부됨: <strong>{{ modalForm.fileName }}</strong>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-100">
+                        <button type="button" @click="saveItem" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm">
+                            저장하기
+                        </button>
+                        <button type="button" @click="closeModal" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            취소
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div v-if="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="showDeleteModal = false" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <i class="fa-solid fa-triangle-exclamation text-red-600"></i>
+                            </div>
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">항목 삭제 확인</h3>
+                                <div class="mt-2">
+                                    <p class="text-sm text-gray-500">정말로 <strong>'{{ itemToDelete?.name }}'</strong> 항목을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-100">
+                        <button type="button" @click="executeDelete" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">삭제</button>
+                        <button type="button" @click="showDeleteModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">취소</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Toast -->
+        <transition name="fade">
+            <div v-if="toast.show" class="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50">
+                <i :class="['fa-solid', toast.icon, toast.color]"></i>
+                <span class="text-sm font-medium">{{ toast.message }}</span>
+            </div>
+        </transition>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                const isSidebarOpen = ref(false);
+                const activeCategoryId = ref('management');
+                const searchQuery = ref('');
+                
+                // Admin States
+                const isAdmin = ref(false);
+                const showModal = ref(false);
+                const isEditing = ref(false);
+                const showDeleteModal = ref(false);
+                const itemToDelete = ref(null);
+                const modalForm = ref({
+                    id: '',
+                    name: '',
+                    type: 'download',
+                    url: '',
+                    fileName: ''
+                });
+
+                const toast = ref({
+                    show: false,
+                    message: '',
+                    icon: 'fa-check-circle',
+                    color: 'text-green-400'
+                });
+
+                const toggleSidebar = () => {
+                    isSidebarOpen.value = !isSidebarOpen.value;
+                };
+
+                const selectCategory = (id) => {
+                    activeCategoryId.value = id;
+                    searchQuery.value = '';
+                    if (window.innerWidth < 768) {
+                        isSidebarOpen.value = false;
+                    }
+                };
+
+                const showToast = (message, type = 'success') => {
+                    toast.value.message = message;
+                    
+                    if (type === 'success') {
+                        toast.value.icon = 'fa-check-circle';
+                        toast.value.color = 'text-green-400';
+                    } else if (type === 'error') {
+                        toast.value.icon = 'fa-circle-xmark';
+                        toast.value.color = 'text-red-400';
+                    } else {
+                        toast.value.icon = 'fa-info-circle';
+                        toast.value.color = 'text-blue-400';
+                    }
+                    
+                    toast.value.show = true;
+                    
+                    setTimeout(() => {
+                        toast.value.show = false;
+                    }, 3000);
+                };
+
+                const handleAction = (item) => {
+                    if (item.type === 'download' || item.type === 'document') {
+                        // Simulate download
+                        showToast(`'${item.name}' 다운로드가 시작되었습니다.${item.fileName ? ' ('+item.fileName+')' : ''}`);
+                    } else if (item.type === 'link' || item.type === 'system') {
+                        // Simulate redirect
+                        showToast(`'${item.name}' 시스템으로 이동합니다.${item.url ? ' ('+item.url+')' : ''}`, 'info');
+                    }
+                };
+
+                // Admin Methods
+                const toggleAdminMode = () => {
+                    isAdmin.value = !isAdmin.value;
+                    showToast(isAdmin.value ? '관리자 모드가 켜졌습니다. 항목을 추가/수정/삭제할 수 있습니다.' : '관리자 모드가 종료되었습니다.', 'info');
+                };
+
+                const openAddModal = () => {
+                    isEditing.value = false;
+                    modalForm.value = { id: '', name: '', type: 'download', url: '', fileName: '' };
+                    showModal.value = true;
+                };
+
+                const openEditModal = (item) => {
+                    isEditing.value = true;
+                    modalForm.value = { ...item };
+                    showModal.value = true;
+                };
+
+                const closeModal = () => {
+                    showModal.value = false;
+                };
+
+                const handleFileUpload = (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        modalForm.value.fileName = file.name;
+                    }
+                };
+
+                const saveItem = () => {
+                    if (!modalForm.value.name.trim()) {
+                        showToast('항목명을 입력해주세요.', 'error');
+                        return;
+                    }
+
+                    const category = categories.value.find(c => c.id === activeCategoryId.value);
+                    if (!category) return;
+
+                    if (isEditing.value) {
+                        const index = category.items.findIndex(i => i.id === modalForm.value.id);
+                        if (index !== -1) {
+                            category.items[index] = { ...modalForm.value };
+                            showToast('항목이 성공적으로 수정되었습니다.');
+                        }
+                    } else {
+                        const newItem = {
+                            ...modalForm.value,
+                            id: 'item_' + Date.now() // Unique ID generated
+                        };
+                        category.items.push(newItem);
+                        showToast('새 항목이 추가되었습니다.');
+                    }
+                    closeModal();
+                };
+
+                const confirmDelete = (item) => {
+                    itemToDelete.value = item;
+                    showDeleteModal.value = true;
+                };
+
+                const executeDelete = () => {
+                    if (!itemToDelete.value) return;
+                    
+                    const category = categories.value.find(c => c.id === activeCategoryId.value);
+                    if (category) {
+                        category.items = category.items.filter(i => i.id !== itemToDelete.value.id);
+                        showToast('항목이 삭제되었습니다.');
+                    }
+                    showDeleteModal.value = false;
+                    itemToDelete.value = null;
+                };
+
+                // Types: 'download' (PDF, DOC, etc.), 'link' (external site), 'system' (internal system), 'document' (internal form)
+                const categories = ref([
+                    {
+                        id: 'management',
+                        name: '경영관리',
+                        icon: 'fa-solid fa-briefcase',
+                        items: [
+                            { id: 'm1', name: '정관', type: 'download' },
+                            { id: 'm2', name: '법인등기부등본', type: 'download' },
+                            { id: 'm3', name: '사업자등록증', type: 'download' },
+                            { id: 'm4', name: '통장사본', type: 'download' },
+                            { id: 'm5', name: '영업신고증', type: 'download' },
+                            { id: 'm6', name: '주주총회 서류 양식', type: 'document' },
+                            { id: 'm7', name: '인감도장 증명서', type: 'download' },
+                            { id: 'm8', name: '사용인감계', type: 'document' },
+                            { id: 'm9', name: '계약서 날인 서명 안내', type: 'link' },
+                            { id: 'm10', name: '대리인 위임장 양식', type: 'document' },
+                            { id: 'm11', name: '위임전결규정', type: 'download' }
+                        ]
+                    },
+                    {
+                        id: 'finance',
+                        name: '재무/세무/회계',
+                        icon: 'fa-solid fa-calculator',
+                        items: [
+                            { id: 'f1', name: '입출금확인 시스템', type: 'system' },
+                            { id: 'f2', name: '지출결의서 양식', type: 'document' },
+                            { id: 'f3', name: '세금계산서 발행 시스템', type: 'system' },
+                            { id: 'f4', name: '부가세 신고 안내', type: 'link' },
+                            { id: 'f5', name: '법인세 신고 자료 제출', type: 'system' }
+                        ]
+                    },
+                    {
+                        id: 'hr',
+                        name: '인사',
+                        icon: 'fa-solid fa-users',
+                        items: [
+                            { id: 'h1', name: '표준 근로계약서 양식', type: 'document' },
+                            { id: 'h2', name: '프리랜서 계약서 양식', type: 'document' },
+                            { id: 'h3', name: '급여 산정 기준안', type: 'download' },
+                            { id: 'h4', name: '근로소득세 원천징수 신고', type: 'system' },
+                            { id: 'h5', name: '4대보험 신고 및 정산', type: 'system' },
+                            { id: 'h6', name: '퇴직금 정산 시뮬레이터', type: 'system' },
+                            { id: 'h7', name: '재직증명서 발급', type: 'system' },
+                            { id: 'h8', name: '경력증명서 발급', type: 'system' },
+                            { id: 'h9', name: '채용 공고문 템플릿', type: 'document' },
+                            { id: 'h10', name: '인사 평가 관리 시스템', type: 'system' },
+                            { id: 'h11', name: '연차 관리 시스템', type: 'system' },
+                            { id: 'h12', name: '인사 이동 및 발령 확인', type: 'system' },
+                            { id: 'h13', name: '법정 의무 교육 센터', type: 'link' }
+                        ]
+                    },
+                    {
+                        id: 'legal',
+                        name: '법무',
+                        icon: 'fa-solid fa-scale-balanced',
+                        items: [
+                            { id: 'l1', name: '표준 계약서 작성 가이드', type: 'download' },
+                            { id: 'l2', name: '물품공급계약서 양식', type: 'document' },
+                            { id: 'l3', name: '비밀유지계약서(NDA) 양식', type: 'document' },
+                            { id: 'l4', name: '법률 자문 요청', type: 'system' }
+                        ]
+                    },
+                    {
+                        id: 'sales',
+                        name: '영업관리',
+                        icon: 'fa-solid fa-chart-line',
+                        items: [
+                            { id: 's1', name: '세금계산서 발행 요청', type: 'system' },
+                            { id: 's2', name: '입출금확인 (영업부)', type: 'system' },
+                            { id: 's3', name: '재고수불부 관리 시스템', type: 'system' },
+                            { id: 's4', name: '영업 주간 보고서 양식', type: 'document' }
+                        ]
+                    }
+                ]);
+
+                const activeCategoryName = computed(() => {
+                    const category = categories.value.find(c => c.id === activeCategoryId.value);
+                    return category ? category.name : '';
+                });
+
+                const filteredItems = computed(() => {
+                    const category = categories.value.find(c => c.id === activeCategoryId.value);
+                    if (!category) return [];
+
+                    if (!searchQuery.value) {
+                        return category.items;
+                    }
+
+                    const query = searchQuery.value.toLowerCase();
+                    return category.items.filter(item => 
+                        item.name.toLowerCase().includes(query)
+                    );
+                });
+
+                // Helper methods for UI
+                const getTypeColor = (type) => {
+                    switch(type) {
+                        case 'download': return 'bg-orange-500';
+                        case 'document': return 'bg-emerald-500';
+                        case 'system': return 'bg-blue-600';
+                        case 'link': return 'bg-purple-500';
+                        default: return 'bg-gray-500';
+                    }
+                };
+
+                const getTypeIcon = (type) => {
+                    switch(type) {
+                        case 'download': return 'fa-solid fa-file-pdf';
+                        case 'document': return 'fa-solid fa-file-word';
+                        case 'system': return 'fa-solid fa-desktop';
+                        case 'link': return 'fa-solid fa-link';
+                        default: return 'fa-solid fa-file';
+                    }
+                };
+                
+                const getTypeDescription = (type) => {
+                    switch(type) {
+                        case 'download': return 'PDF / 이미지 스캔본';
+                        case 'document': return 'Word / 한글 서식';
+                        case 'system': return '사내 시스템 연결';
+                        case 'link': return '외부 링크 / 가이드';
+                        default: return '문서';
+                    }
+                };
+
+                const getActionIcon = (type) => {
+                    switch(type) {
+                        case 'download':
+                        case 'document': return 'fa-solid fa-download';
+                        case 'system': return 'fa-solid fa-arrow-right-to-bracket';
+                        case 'link': return 'fa-solid fa-external-link-alt';
+                        default: return 'fa-solid fa-arrow-right';
+                    }
+                };
+
+                const getActionText = (type) => {
+                    switch(type) {
+                        case 'download':
+                        case 'document': return '다운로드';
+                        case 'system': return '시스템 열기';
+                        case 'link': return '바로가기';
+                        default: return '열기';
+                    }
+                };
+
+                return {
+                    categories,
+                    activeCategoryId,
+                    isSidebarOpen,
+                    searchQuery,
+                    activeCategoryName,
+                    filteredItems,
+                    toast,
+                    isAdmin,
+                    showModal,
+                    isEditing,
+                    showDeleteModal,
+                    itemToDelete,
+                    modalForm,
+                    toggleSidebar,
+                    selectCategory,
+                    handleAction,
+                    toggleAdminMode,
+                    openAddModal,
+                    openEditModal,
+                    closeModal,
+                    handleFileUpload,
+                    saveItem,
+                    confirmDelete,
+                    executeDelete,
+                    getTypeColor,
+                    getTypeIcon,
+                    getTypeDescription,
+                    getActionIcon,
+                    getActionText
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
