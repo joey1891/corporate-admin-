@@ -57,7 +57,7 @@
                         <div class="w-16 h-16 bg-primary text-white rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg">
                             <i class="fa-solid fa-building"></i>
                         </div>
-                        <h2 class="text-2xl font-bold text-gray-900 tracking-tight mb-1">힘 인터내셔널</h2>
+                        <h2 class="text-2xl font-bold text-gray-900 tracking-tight mb-1">주식회사 힘</h2>
                         <p class="text-sm text-gray-500">사내 업무 지원 포털</p>
                     </div>
                     
@@ -80,6 +80,18 @@
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600 mb-1">비밀번호</label>
                                 <input type="password" v-model="authForm.password" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                            </div>
+                            
+                            <!-- ID 기억하기 & 로그인 유지 체크박스 -->
+                            <div v-if="authState === 'login'" class="flex items-center gap-4 mt-3 mb-2 px-1 text-sm">
+                                <label class="flex items-center text-gray-600 cursor-pointer hover:text-primary transition-colors">
+                                    <input type="checkbox" v-model="rememberId" class="mr-2 rounded border-gray-300 text-primary focus:ring-primary h-4 w-4">
+                                    <span>ID 기억하기</span>
+                                </label>
+                                <label class="flex items-center text-gray-600 cursor-pointer hover:text-primary transition-colors">
+                                    <input type="checkbox" v-model="keepLoggedIn" class="mr-2 rounded border-gray-300 text-primary focus:ring-primary h-4 w-4">
+                                    <span>로그인 유지</span>
+                                </label>
                             </div>
                             
                             <button type="submit" :disabled="isAuthLoading" class="w-full py-3 px-4 bg-primary text-white rounded-lg font-bold shadow-md hover:bg-blue-800 focus:ring-4 focus:ring-blue-500/50 transition-all disabled:opacity-50 mt-2 flex justify-center items-center">
@@ -573,6 +585,10 @@
                 const isAuthLoading = ref(false);
                 const userSession = ref(null);
                 const userProfile = ref(null);
+                
+                // 로그인 옵션 (ID 기억, 로그인 유지)
+                const rememberId = ref(false);
+                const keepLoggedIn = ref(false);
 
                 // ================= 앱 상태 관리 =================
                 const isDbConnected = ref(false);
@@ -688,6 +704,12 @@
                 // ================= 인증 로직 =================
                 
                 const checkSession = async () => {
+                    // 로그인 유지 해제 상태로 브라우저를 껐다 킨 경우 세션을 강제 제거
+                    if (localStorage.getItem('keepLoggedIn') === 'false') {
+                        await supabase.auth.signOut();
+                        localStorage.removeItem('keepLoggedIn');
+                    }
+
                     const { data: { session } } = await supabase.auth.getSession();
                     if (session) {
                         userSession.value = session;
@@ -732,6 +754,21 @@
                         });
                         
                         if (error) throw error;
+                        
+                        // ID 기억하기 처리
+                        if (rememberId.value) {
+                            localStorage.setItem('savedEmail', authForm.value.email);
+                        } else {
+                            localStorage.removeItem('savedEmail');
+                        }
+                        
+                        // 로그인 유지 처리
+                        if (keepLoggedIn.value) {
+                            localStorage.setItem('keepLoggedIn', 'true');
+                        } else {
+                            localStorage.setItem('keepLoggedIn', 'false');
+                        }
+
                         userSession.value = data.session;
                         await fetchUserProfile(data.user.id);
                     } catch (error) {
@@ -766,8 +803,16 @@
                     userSession.value = null;
                     userProfile.value = null;
                     isAdminMode.value = false;
-                    authForm.value = { email: '', password: '', name: '' };
+                    
+                    // 로그아웃 시 로그인 유지 해제 및 폼 초기화
+                    localStorage.removeItem('keepLoggedIn'); 
+                    authForm.value.password = '';
+                    if (!rememberId.value) {
+                        authForm.value.email = ''; 
+                    }
+                    
                     authState.value = 'login';
+                    showToast('안전하게 로그아웃 되었습니다.');
                 };
 
                 // ================= 회원 관리 로직 (관리자 전용) =================
@@ -1035,11 +1080,19 @@
                 const getActionIcon = (t) => ({ download: 'fa-solid fa-download', document: 'fa-solid fa-pen', system: 'fa-solid fa-desktop', link: 'fa-solid fa-link', proxy_form: isAdminMode.value ? 'fa-solid fa-wand-magic-sparkles' : 'fa-solid fa-download' }[t] || 'fa-solid fa-play');
 
                 onMounted(() => {
+                    // 저장된 이메일 불러오기
+                    const savedEmail = localStorage.getItem('savedEmail');
+                    if (savedEmail) {
+                        authForm.value.email = savedEmail;
+                        rememberId.value = true;
+                    }
+                    
                     checkSession(); // 페이지 진입 시 세션 확인
                 });
 
                 return {
                     authState, authForm, isAuthLoading, userProfile, handleLogin, handleRegister, handleLogout, // Auth
+                    rememberId, keepLoggedIn,
                     showUserModal, userList, openUserManagement, updateUserStatus, // Admin Users
                     isSidebarOpen, searchQuery, activeCategoryId, activeCategoryName, filteredItems, viewMode, menuGroups,
                     toggleSidebar, selectCategory, selectSubCategory, isCategoryActive,
