@@ -353,6 +353,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">유형 <span class="text-red-500">*</span></label>
                             <select v-model="modalForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 outline-none font-medium">
+                                <option value="notice">공지사항 (게시글)</option>
                                 <option value="download">단순 파일 다운로드</option>
                                 <option value="document">내부 기안 양식</option>
                                 <option value="system">사내 시스템 연결</option>
@@ -361,12 +362,12 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">설명 (선택)</label>
-                            <input type="text" v-model="modalForm.desc" placeholder="항목에 대한 간단한 설명" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 outline-none">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">설명 / 공지내용 (선택)</label>
+                            <textarea v-model="modalForm.desc" rows="4" placeholder="항목에 대한 간단한 설명이나 공지사항 내용을 입력하세요" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 outline-none whitespace-pre-wrap"></textarea>
                         </div>
                         
                         <!-- 다중 파일 드래그앤드롭 업로드 UI -->
-                        <div v-if="['download', 'document'].includes(modalForm.type)" class="pt-2">
+                        <div v-if="['download', 'document', 'notice'].includes(modalForm.type)" class="pt-2">
                             <label class="block text-sm font-medium text-gray-700 mb-2">파일 첨부 (여러 개 가능)</label>
                             
                             <div @dragover.prevent="dragActive = true" @dragleave.prevent="dragActive = false" @drop.prevent="handleDrop" :class="['border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition-colors cursor-pointer', dragActive ? 'dropzone-active' : 'border-gray-300 hover:bg-gray-50']" @click="$refs.fileInput.click()">
@@ -459,7 +460,7 @@
                         <!-- 설명 영역 -->
                         <div v-if="previewItem?.desc" class="w-full max-w-2xl bg-white p-4 rounded-lg border border-gray-200 mb-6 shadow-sm">
                             <h4 class="text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">Description</h4>
-                            <p class="text-gray-700 text-sm">{{ previewItem.desc }}</p>
+                            <p class="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{{ previewItem.desc }}</p>
                         </div>
 
                         <!-- 첨부된 파일 리스트 -->
@@ -678,7 +679,7 @@
                     isUploading.value = true;
                     try {
                         let finalFiles = [];
-                        if (['download', 'document'].includes(modalForm.value.type)) {
+                        if (['download', 'document', 'notice'].includes(modalForm.value.type)) {
                             for (let fData of modalForm.value.files) {
                                 if (fData.isNew) {
                                     const extMatch = fData.fileObj.name.match(/\.[^.]+$/);
@@ -777,7 +778,7 @@
                 const hasFiles = (item) => { return item.file_path && item.file_path.startsWith('['); };
 
                 const handleAction = (item) => {
-                    if (['download', 'document'].includes(item.type)) {
+                    if (['download', 'document', 'notice'].includes(item.type)) {
                         previewItem.value = item;
                         previewFiles.value = [];
                         if (hasFiles(item)) {
@@ -962,12 +963,12 @@
                     return false;
                 };
 
-                const getIcon = (t) => ({ download: 'fa-solid fa-file-arrow-down', document: 'fa-solid fa-file-signature', system: 'fa-solid fa-laptop-code', link: 'fa-solid fa-arrow-up-right-from-square', proxy_form: 'fa-solid fa-file-invoice' }[t] || 'fa-solid fa-file');
-                const getIconClass = (t) => ({ download: 'bg-blue-50 text-blue-600', document: 'bg-emerald-50 text-emerald-600', system: 'bg-purple-50 text-purple-600', link: 'bg-amber-50 text-amber-600', proxy_form: 'bg-rose-50 text-rose-600' }[t] || 'bg-gray-50 text-gray-600');
-                const getTypeBorderClass = (t) => ({ download: 'border-blue-100', document: 'border-emerald-100', system: 'border-purple-100', link: 'border-amber-100', proxy_form: 'border-rose-100' }[t] || 'border-gray-200');
-                const getTypeName = (t) => ({ download: '양식 파일', document: '내부 기안', system: '사내 시스템', link: '외부 링크', proxy_form: '스마트 폼' }[t] || '기타');
-                const getActionText = (t, item) => { if(hasFiles(item)) return '열람/다운로드'; return ({ download: '다운로드', document: '열람/다운로드', system: '시스템 열기', link: '바로가기', proxy_form: '작성/발급' }[t] || '실행'); };
-                const getActionIcon = (t) => ({ download: 'fa-solid fa-download', document: 'fa-solid fa-folder-open', system: 'fa-solid fa-desktop', link: 'fa-solid fa-link', proxy_form: 'fa-solid fa-wand-magic-sparkles' }[t] || 'fa-solid fa-play');
+                const getIcon = (t) => ({ notice: 'fa-solid fa-bullhorn', download: 'fa-solid fa-file-arrow-down', document: 'fa-solid fa-file-signature', system: 'fa-solid fa-laptop-code', link: 'fa-solid fa-arrow-up-right-from-square', proxy_form: 'fa-solid fa-file-invoice' }[t] || 'fa-solid fa-file');
+                const getIconClass = (t) => ({ notice: 'bg-red-50 text-red-600', download: 'bg-blue-50 text-blue-600', document: 'bg-emerald-50 text-emerald-600', system: 'bg-purple-50 text-purple-600', link: 'bg-amber-50 text-amber-600', proxy_form: 'bg-rose-50 text-rose-600' }[t] || 'bg-gray-50 text-gray-600');
+                const getTypeBorderClass = (t) => ({ notice: 'border-red-100', download: 'border-blue-100', document: 'border-emerald-100', system: 'border-purple-100', link: 'border-amber-100', proxy_form: 'border-rose-100' }[t] || 'border-gray-200');
+                const getTypeName = (t) => ({ notice: '공지글', download: '양식 파일', document: '내부 기안', system: '사내 시스템', link: '외부 링크', proxy_form: '스마트 폼' }[t] || '기타');
+                const getActionText = (t, item) => { if(hasFiles(item)) return '열람/다운로드'; return ({ notice: '내용 보기', download: '다운로드', document: '열람/다운로드', system: '시스템 열기', link: '바로가기', proxy_form: '작성/발급' }[t] || '실행'); };
+                const getActionIcon = (t) => ({ notice: 'fa-solid fa-book-open', download: 'fa-solid fa-download', document: 'fa-solid fa-folder-open', system: 'fa-solid fa-desktop', link: 'fa-solid fa-link', proxy_form: 'fa-solid fa-wand-magic-sparkles' }[t] || 'fa-solid fa-play');
 
                 onMounted(() => {
                     // 페이지 접속 또는 새로고침 시 기존 로그인 세션을 확인하여 자동으로 접속 유지
