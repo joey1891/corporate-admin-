@@ -121,8 +121,9 @@
                 </div>
 
                 <div class="overflow-y-auto flex-grow py-4">
-                    <!-- HYM 공식 홈페이지 퀵 링크 -->
-                    <div class="px-4 mb-4">
+                    <!-- 퀵 링크 영역 (공식 홈페이지 및 쇼핑몰) -->
+                    <div class="px-4 mb-4 flex flex-col gap-2">
+                        <!-- HYM 공식 홈페이지 -->
                         <a href="https://www.hyminternational.com/" target="_blank" class="w-full flex items-center justify-between bg-gray-800 hover:bg-gray-900 text-white p-3 rounded-xl shadow-md transition-all transform hover:-translate-y-0.5">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center"><i class="fa-solid fa-globe"></i></div>
@@ -133,6 +134,18 @@
                             </div>
                             <i class="fa-solid fa-arrow-up-right-from-square text-gray-400 text-sm"></i>
                         </a>
+
+                        <!-- 쇼핑몰 바로가기 (글로벌몰 / 국내몰) -->
+                        <div class="flex gap-2">
+                            <a href="https://www.exov.store/" target="_blank" class="flex-1 flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 py-2 px-1 rounded-xl shadow-sm transition-colors group">
+                                <i class="fa-solid fa-earth-americas text-indigo-500 group-hover:scale-110 transition-transform"></i>
+                                <span class="text-xs font-bold">글로벌몰</span>
+                            </a>
+                            <a href="https://smartstore.naver.com/exov" target="_blank" class="flex-1 flex items-center justify-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 py-2 px-1 rounded-xl shadow-sm transition-colors group">
+                                <i class="fa-solid fa-store text-emerald-500 group-hover:scale-110 transition-transform"></i>
+                                <span class="text-xs font-bold">국내몰</span>
+                            </a>
+                        </div>
                     </div>
 
                     <!-- 사이드바 메뉴 트리 -->
