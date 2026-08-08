@@ -238,11 +238,20 @@
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
                                 </template>
+                                
                                 <!-- 사용자 액션 버튼 (다운로드/실행) -->
-                                <button @click="handleAction(item)" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-primary transition-colors shadow-sm flex items-center gap-2">
-                                    <i :class="getActionIcon(item.type)"></i>
-                                    <span class="hidden sm:inline">{{ getActionText(item.type) }}</span>
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <!-- 위임장(m10) 전용 신분증 사본 버튼 -->
+                                    <button v-if="item.id === 'm10'" @click="downloadCEOID" class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors shadow-sm flex items-center gap-1.5" title="대표자 주민등록증 사본 다운로드">
+                                        <i class="fa-solid fa-id-card text-blue-500"></i>
+                                        <span class="hidden md:inline">대표자 신분증 사본</span>
+                                    </button>
+                                    
+                                    <button @click="handleAction(item)" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-primary transition-colors shadow-sm flex items-center gap-2">
+                                        <i :class="getActionIcon(item.type)"></i>
+                                        <span class="hidden sm:inline">{{ getActionText(item.type) }}</span>
+                                    </button>
+                                </div>
                             </div>
                         </li>
                     </ul>
@@ -269,10 +278,18 @@
                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
                                 {{ getTypeName(item.type) }}
                             </span>
-                            <button @click="handleAction(item)" class="text-sm font-medium text-primary hover:text-blue-800 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
-                                <i :class="getActionIcon(item.type)"></i>
-                                {{ getActionText(item.type) }}
-                            </button>
+                            
+                            <div class="flex items-center gap-1.5">
+                                <!-- 위임장(m10) 전용 신분증 사본 버튼 (그리드용) -->
+                                <button v-if="item.id === 'm10'" @click="downloadCEOID" class="text-sm font-medium text-gray-600 hover:text-blue-700 flex items-center gap-1 bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="대표자 주민등록증 사본 다운로드">
+                                    <i class="fa-solid fa-id-card"></i>
+                                </button>
+
+                                <button @click="handleAction(item)" class="text-sm font-medium text-primary hover:text-blue-800 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
+                                    <i :class="getActionIcon(item.type)"></i>
+                                    {{ getActionText(item.type) }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -394,6 +411,7 @@
                             <button @click="applyTemplate('finance')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-blue-50 hover:text-primary hover:border-primary">금융업무</button>
                             <button @click="applyTemplate('registry')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-blue-50 hover:text-primary hover:border-primary">법인등기</button>
                             <button @click="applyTemplate('contract')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-blue-50 hover:text-primary hover:border-primary">계약체결</button>
+                            <button @click="applyTemplate('pg')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-blue-600 font-medium hover:bg-blue-50 hover:text-primary hover:border-primary">PG신청</button>
                             <button @click="applyTemplate('reset')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-400 hover:bg-gray-100">초기화</button>
                         </div>
                         <div class="space-y-3">
@@ -464,7 +482,39 @@
                     
                     <div class="flex-1 flex flex-col gap-6 px-8">
                         
-                        <!-- 대리인 테이블 -->
+                        <!-- 1. 위임자 (본인) 테이블 -->
+                        <table class="w-full border-collapse border border-black text-black text-sm">
+                            <tbody>
+                                <tr>
+                                    <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold">위 임 자<br>(본 인)</th>
+                                    <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">법인명 (상호)</th>
+                                    <td colspan="3" class="border border-black p-2 font-bold">{{ proxyData.delegator.name }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">본점 소재지</th>
+                                    <td colspan="3" class="border border-black p-2">{{ proxyData.delegator.address }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">법인등록번호</th>
+                                    <td class="border border-black p-2 w-[22.5%]">{{ proxyData.delegator.corp_id }}</td>
+                                    <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">사업자번호</th>
+                                    <td class="border border-black p-2 w-[22.5%]">{{ proxyData.delegator.biz_id }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">대표이사 성명</th>
+                                    <td class="border border-black p-2 relative">
+                                        {{ proxyData.delegator.rep_name }}
+                                        <span class="float-right mr-4 text-base">(인)</span>
+                                        <!-- 도장 이미지 (이름 및 인 글자 옆에 자연스럽게 배치) -->
+                                        <img v-if="stampImage" :src="stampImage" class="absolute right-2 top-1/2 w-14 h-14 object-contain transform -translate-y-1/2 opacity-90 mix-blend-multiply" alt="직인">
+                                    </td>
+                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium text-[11px]">대표이사 주민번호</th>
+                                    <td class="border border-black p-2">{{ proxyData.delegator.rep_id }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- 2. 대리인(수임자) 테이블 -->
                         <table class="w-full border-collapse border border-black text-black text-sm">
                             <tbody>
                                 <tr>
@@ -489,7 +539,7 @@
                             </tbody>
                         </table>
 
-                        <!-- 위임사항 테이블 -->
+                        <!-- 3. 위임사항 테이블 -->
                         <table class="w-full border-collapse border border-black text-black text-sm">
                             <tbody>
                                 <tr>
@@ -515,46 +565,13 @@
                             </tbody>
                         </table>
 
+                        <!-- 확약 문구 및 날짜 (하단 배치) -->
                         <div class="text-base text-black leading-relaxed mt-4 text-justify px-2">
                             본인(위임자)은 위 사람(수임자)을 대리인으로 정하고 상기 위임사항에 관한 일체의 권한을 포괄적으로 위임하며, 대리인이 행한 일체의 행위에 대하여 본인이 민·형사상의 모든 책임을 질 것을 확약합니다.
                         </div>
 
-                        <div class="text-center mt-8 text-xl font-bold text-black">
+                        <div class="text-center mt-12 mb-12 text-xl font-bold text-black">
                             {{ formattedDate }}
-                        </div>
-
-                        <!-- 위임자 테이블 및 도장 -->
-                        <div class="mt-auto mb-12 flex flex-col items-end px-2">
-                            <table class="w-[85%] border-collapse border border-black text-black text-sm ml-auto relative">
-                                <tbody>
-                                    <tr>
-                                        <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[18%] text-center font-bold">위 임 자<br>(본 인)</th>
-                                        <th class="border border-black bg-gray-50 p-2 w-[22%] text-center font-medium">법인명 (상호)</th>
-                                        <td colspan="3" class="border border-black p-2 font-bold">{{ proxyData.delegator.name }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">본점 소재지</th>
-                                        <td colspan="3" class="border border-black p-2">{{ proxyData.delegator.address }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">법인등록번호</th>
-                                        <td class="border border-black p-2">{{ proxyData.delegator.corp_id }}</td>
-                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">사업자번호</th>
-                                        <td class="border border-black p-2">{{ proxyData.delegator.biz_id }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">대표이사 성명</th>
-                                        <td class="border border-black p-2">
-                                            {{ proxyData.delegator.rep_name }}
-                                            <span class="float-right mr-4 text-base">(인)</span>
-                                        </td>
-                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium text-[11px]">대표이사 주민번호</th>
-                                        <td class="border border-black p-2">{{ proxyData.delegator.rep_id }}</td>
-                                    </tr>
-                                </tbody>
-                                <!-- 도장 이미지 위치 지정 -->
-                                <img v-if="stampImage" :src="stampImage" class="absolute left-[54%] top-[70%] w-14 h-14 object-contain transform -translate-y-1/2" alt="직인">
-                            </table>
                         </div>
                     </div>
                 </div>
@@ -605,14 +622,15 @@
                 const nextMonth = new Date(today);
                 nextMonth.setMonth(today.getMonth() + 1);
                 
+                // 법인 기본 정보 업데이트 (주식회사 힘)
                 const proxyData = ref({
                     delegator: { 
-                        name: '(주)에이치와이엠', 
-                        corp_id: '110111-1234567',
-                        biz_id: '123-45-67890', 
-                        rep_name: '김 대 표',
-                        rep_id: '800101-1234567',
-                        address: '서울특별시 강남구 테헤란로 123' 
+                        name: '주식회사 힘', 
+                        corp_id: '134511-0078137',
+                        biz_id: '130-88-03645', 
+                        rep_name: '이혜윤',
+                        rep_id: '830421-2168311',
+                        address: '경기도 용인시 수지구 용구대로2790번길, 302-제이77호(죽전동, 프라임조명)' 
                     },
                     delegatee: { name: '', id: '', dept_pos: '', phone: '', address: '' },
                     mandate: { purpose: '', details: '' },
@@ -853,6 +871,17 @@
                                             { id: 'so7', name: '해외 D2C 채널 정산서', type: 'system' }
                                         ]
                                     }
+                                ]
+                            },
+                            {
+                                id: 'cs',
+                                name: 'CS',
+                                icon: 'fa-solid fa-headset',
+                                items: [
+                                    { id: 'cs1', name: '고객 응대 표준 매뉴얼', type: 'download' },
+                                    { id: 'cs2', name: 'A/S 및 교환/환불 접수 시스템', type: 'system' },
+                                    { id: 'cs3', name: 'VOC(고객의 소리) 리포트 양식', type: 'document' },
+                                    { id: 'cs4', name: '자주 묻는 질문(FAQ) 관리 대장', type: 'document' }
                                 ]
                             }
                         ]
@@ -1148,6 +1177,10 @@
                         contract: {
                             purpose: '물품 공급 및 제휴 계약 체결의 건',
                             details: '1. OOOO 주식회사와의 물품 공급(또는 업무 제휴) 계약 체결\n2. 계약 조건 협의, 변경 및 최종 날인\n3. 계약금 및 잔금의 수령, 영수증 발행\n4. 기타 위 계약 체결 및 이행에 부수하는 일체의 행위'
+                        },
+                        pg: {
+                            purpose: 'PG(전자결제지급대행) 서비스 도입 및 가입 신청의 건',
+                            details: '1. PG(전자결제지급대행) 서비스 가입 신청서 작성 및 제출\n2. 관련 부속 서류 제출 및 약관 동의\n3. 서비스 이용 수수료 및 정산 계좌 등록\n4. 기타 위 PG 서비스 가입 및 개통에 부수하는 일체의 행위'
                         }
                     };
                     
@@ -1188,6 +1221,10 @@
                     window.print();
                 };
 
+                const downloadCEOID = () => {
+                    showToastMsg('대표자 주민등록증 사본 다운로드를 시작합니다.', 'success');
+                };
+
                 // Type Mapping Utilities
                 const getIcon = (type) => {
                     const icons = { download: 'fa-solid fa-file-arrow-down', document: 'fa-solid fa-file-signature', system: 'fa-solid fa-laptop-code', link: 'fa-solid fa-arrow-up-right-from-square', proxy_form: 'fa-solid fa-file-invoice' };
@@ -1220,7 +1257,7 @@
                     isAdminMode, showAdminAuth, adminPassword, requestAdminModeToggle, verifyAdminPassword,
                     showItemModal, showDeleteModal, isEditing, modalForm, itemToDelete,
                     openAddModal, openEditModal, closeModal, saveItem, confirmDelete, executeDelete, handleAction,
-                    getIcon, getIconClass, getTypeName, getActionText, getActionIcon,
+                    getIcon, getIconClass, getTypeName, getActionText, getActionIcon, downloadCEOID,
                     toast,
                     showProxyForm, proxyData, formattedDate, stampImage, applyTemplate, handleStampUpload, generatePDF, printForm
                 };
