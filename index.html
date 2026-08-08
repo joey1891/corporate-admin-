@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사내 업무 지원 포털</title>
-    <!-- Tailwind CSS (Play CDN for v3) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 캡처 및 공유를 위한 html2canvas 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -33,7 +34,6 @@
         
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
-        .dropzone-active { border-color: #3b82f6 !important; background-color: #eff6ff !important; }
         
         /* 공지사항 HTML 렌더링 스타일 */
         .html-content h1 { font-size: 1.75rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; }
@@ -41,6 +41,9 @@
         .html-content p { margin-bottom: 0.75rem; line-height: 1.6; }
         .html-content strong, .html-content b { font-weight: 800; color: #111827; }
         .html-content a { color: #2563eb; text-decoration: underline; }
+
+        /* 드래그앤드롭 및 포커스(붙여넣기) 아웃라인 방지 */
+        .dropzone:focus { outline: 2px solid #3b82f6; outline-offset: 2px; }
     </style>
 </head>
 <body class="text-gray-800 h-screen overflow-hidden">
@@ -80,9 +83,13 @@
                                 <input type="password" v-model="authForm.password" required class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:border-primary outline-none">
                             </div>
                             
-                            <div v-if="authState === 'login'" class="flex items-center gap-4 text-xs font-medium text-gray-600 pt-1">
-                                <label class="flex items-center cursor-pointer hover:text-primary"><input type="checkbox" v-model="rememberEmail" class="w-3.5 h-3.5 mr-1.5 rounded border-gray-300 text-primary">이메일 저장</label>
-                                <label class="flex items-center cursor-pointer hover:text-primary"><input type="checkbox" v-model="keepLoggedIn" class="w-3.5 h-3.5 mr-1.5 rounded border-gray-300 text-primary">로그인 상태 유지</label>
+                            <div class="flex items-center gap-4 py-2 text-sm text-gray-600" v-if="authState === 'login'">
+                                <label class="flex items-center gap-1.5 cursor-pointer">
+                                    <input type="checkbox" v-model="rememberEmail" class="w-4 h-4 text-primary rounded border-gray-300"> 이메일 저장
+                                </label>
+                                <label class="flex items-center gap-1.5 cursor-pointer">
+                                    <input type="checkbox" v-model="keepLoggedIn" class="w-4 h-4 text-primary rounded border-gray-300"> 로그인 상태 유지
+                                </label>
                             </div>
 
                             <button type="submit" :disabled="isAuthLoading" class="w-full py-3 px-4 bg-primary text-white rounded-lg font-bold shadow-md hover:bg-blue-800 transition-all flex justify-center items-center mt-2">
@@ -106,23 +113,21 @@
 
             <aside :class="['fixed md:static inset-y-0 left-0 z-30 w-72 bg-surface border-r border-gray-200 transform transition-transform duration-300 flex flex-col', isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
                 <!-- 회사 로고 및 소속 회사 표시 -->
-                <div class="h-16 flex items-center px-6 border-b border-gray-100 flex-shrink-0 bg-gray-50">
-                    <i class="fa-solid fa-building text-primary text-xl mr-3"></i>
-                    <div class="flex flex-col min-w-0">
-                        <span class="text-xs text-gray-500 font-bold tracking-wider uppercase">Workspace</span>
-                        <span class="text-sm font-black text-gray-900 truncate" :title="currentCompanyName">{{ currentCompanyName || '통합 포털' }}</span>
+                <div class="flex flex-col px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gray-50">
+                    <div class="flex items-center mb-3">
+                        <i class="fa-solid fa-building text-primary text-xl mr-3"></i>
+                        <div class="flex flex-col min-w-0">
+                            <span class="text-xs text-gray-500 font-bold tracking-wider uppercase">Workspace</span>
+                            <span class="text-sm font-black text-gray-900 truncate" :title="currentCompanyName">{{ currentCompanyName || '통합 포털' }}</span>
+                        </div>
                     </div>
+                    <!-- HYM 공식 홈페이지 링크 버튼 -->
+                    <a href="https://www.hyminternational.com/" target="_blank" class="w-full py-2 bg-gray-800 text-white text-xs font-bold rounded-lg text-center shadow-sm hover:bg-gray-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-globe"></i> HYM 공식 홈페이지
+                    </a>
                 </div>
 
                 <div class="overflow-y-auto flex-grow py-4">
-                    <!-- 공식 홈페이지 퀵 링크 -->
-                    <div class="px-4 mb-5">
-                        <a href="https://www.hyminternational.com/" target="_blank" class="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-slate-700 to-slate-900 text-white rounded-xl shadow hover:shadow-md transition-all font-bold text-sm hover:-translate-y-0.5">
-                            <span class="flex items-center gap-2.5"><i class="fa-solid fa-house text-blue-300"></i> HYM 공식 홈페이지</span>
-                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-70"></i>
-                        </a>
-                    </div>
-
                     <!-- 사이드바 메뉴 트리 -->
                     <div v-for="(group, groupIdx) in visibleMenuGroups" :key="group.sectorId" class="mb-6">
                         <!-- 부문명 강조 (파란색 테두리 및 굵은 글씨) -->
@@ -187,6 +192,10 @@
                             <select v-model="currentCompanyId" @change="loadData" class="bg-transparent border-none text-sm font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-8 cursor-pointer outline-none">
                                 <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
                             </select>
+                            <!-- 자회사 삭제 버튼 (편집 모드일 때, 본사가 아닐 때만 표시) -->
+                            <button v-if="isAdminMode && companies.length > 0 && currentCompanyId !== companies[0].id" @click="confirmDeleteCompany" class="ml-2 w-6 h-6 flex items-center justify-center text-red-500 bg-red-50 hover:bg-red-100 rounded-md shadow-sm" title="현재 자회사 삭제">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
                         </div>
                     </div>
                     
@@ -197,17 +206,12 @@
 
                         <!-- 관리자 전용 제어 버튼들 -->
                         <template v-if="userProfile?.role === 'admin'">
-                            <template v-if="isAdminMode">
-                                <button @click="openAddCompanyModal" class="hidden md:flex items-center px-3 py-1.5 bg-indigo-100 text-indigo-700 border border-indigo-300 rounded text-xs font-bold hover:bg-indigo-200">
-                                    <i class="fa-solid fa-sitemap mr-1.5"></i> 자회사 추가
-                                </button>
-                                <button v-if="currentCompanyId !== (companies.length > 0 ? companies[0].id : '')" @click="openDeleteCompanyModal" class="hidden md:flex items-center px-3 py-1.5 bg-red-100 text-red-700 border border-red-300 rounded text-xs font-bold hover:bg-red-200">
-                                    <i class="fa-solid fa-trash-can mr-1.5"></i> 현재 자회사 삭제
-                                </button>
-                                <button @click="openUserManagement" class="hidden md:flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 border border-purple-300 rounded text-xs font-bold hover:bg-purple-200">
-                                    <i class="fa-solid fa-users-gear mr-1.5"></i> 회원 관리
-                                </button>
-                            </template>
+                            <button v-if="isAdminMode" @click="openAddCompanyModal" class="hidden md:flex items-center px-3 py-1.5 bg-indigo-100 text-indigo-700 border border-indigo-300 rounded text-xs font-bold hover:bg-indigo-200">
+                                <i class="fa-solid fa-sitemap mr-1.5"></i> 자회사 복제(추가)
+                            </button>
+                            <button v-if="isAdminMode" @click="openUserManagement" class="hidden md:flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 border border-purple-300 rounded text-xs font-bold hover:bg-purple-200">
+                                <i class="fa-solid fa-users-gear mr-1.5"></i> 회원 관리
+                            </button>
 
                             <div class="flex items-center gap-2 border-l pl-3 border-gray-200 ml-1">
                                 <span class="text-xs font-bold text-gray-600">편집 모드</span>
@@ -247,12 +251,13 @@
                                     <div :class="['w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0', getIconClass(item.type)]">
                                         <i :class="getIcon(item.type)"></i>
                                     </div>
-                                    <div class="min-w-0">
+                                    <div class="min-w-0 flex-1">
                                         <h3 class="text-base font-semibold text-gray-900 truncate">
                                             {{ item.name }} <i v-if="hasFiles(item)" class="fa-solid fa-paperclip text-xs text-blue-500 ml-1"></i>
                                         </h3>
                                         <div class="flex items-center gap-2 mt-0.5">
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">{{ getTypeName(item.type) }}</span>
+                                            <span class="text-xs text-gray-500 truncate" v-if="item.description">{{ item.description.replace(/<[^>]*>?/gm, '').substring(0, 50) }}{{ item.description.length > 50 ? '...' : '' }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -267,7 +272,6 @@
                                         <button @click.stop="confirmDelete(item)" class="w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 rounded mr-2"><i class="fa-solid fa-trash"></i></button>
                                     </template>
                                     
-                                    <!-- 크기를 동일하게 맞춘 버튼 영역 -->
                                     <div class="flex gap-2">
                                         <button v-if="item.type === 'proxy_form'" class="w-[110px] py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5"><i class="fa-solid fa-id-card text-blue-500"></i> 신분증 사본</button>
                                         <button @click="handleAction(item)" class="w-[110px] py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-primary flex items-center justify-center gap-1.5 shadow-sm transition-colors">
@@ -299,7 +303,7 @@
                             
                             <div class="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
                                 <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">{{ getTypeName(item.type) }}</span>
-                                <button @click="handleAction(item)" class="w-[90px] py-1.5 text-xs font-bold text-primary bg-blue-50 rounded hover:bg-blue-100 flex items-center justify-center gap-1">
+                                <button @click="handleAction(item)" class="w-[110px] py-1.5 text-xs font-bold text-primary bg-blue-50 rounded hover:bg-blue-100 flex items-center justify-center gap-1">
                                     <i :class="getActionIcon(item.type)"></i> {{ getActionText(item.type, item) }}
                                 </button>
                             </div>
@@ -317,7 +321,7 @@
             <!-- 모달 영역 시작 -->
             <!-- ---------------------------------------------------- -->
 
-            <!-- 항목 추가/수정 모달 (파일 다중 첨부 및 순서 변경 지원) -->
+            <!-- 항목 추가/수정 모달 -->
             <div v-if="showItemModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
                     <div class="flex justify-between items-center mb-5 border-b pb-3">
@@ -339,11 +343,12 @@
                                 <option value="system">사내 시스템 연결</option>
                                 <option value="link">외부 링크 연결</option>
                                 <option value="proxy_form">스마트 폼 (위임장 등)</option>
+                                <option value="my_business_card">내 명함 (개인화 뷰어)</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">설명 / 내용</label>
-                            <textarea v-model="modalForm.description" :rows="modalForm.type === 'notice' ? '12' : '5'" placeholder="내용을 입력하세요. (HTML 태그 지원: <h1>, <b>, <a> 등)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none resize-y"></textarea>
+                            <textarea v-model="modalForm.description" rows="5" placeholder="내용을 입력하세요. (HTML 태그 지원: <h1>, <b>, <a> 등)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none"></textarea>
                         </div>
                         
                         <!-- 파일 업로드 영역 -->
@@ -387,7 +392,7 @@
             <div v-if="showCompanyModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 relative">
                     <h3 class="text-lg font-bold text-gray-900 mb-2">새 자회사(워크스페이스) 생성</h3>
-                    <p class="text-xs text-gray-500 mb-4">새 회사를 만들면 본사의 전체 메뉴 구조가 자동으로 복사(Clone)되며, 첨부파일과 연결 주소는 초기화됩니다.</p>
+                    <p class="text-xs text-gray-500 mb-4">새 회사를 만들면 본사의 전체 메뉴 구조가 자동으로 복사(Clone)되어 기본 세팅됩니다. (첨부파일 및 링크는 비워짐)</p>
                     <input type="text" v-model="newCompanyName" placeholder="자회사 이름 (예: 주식회사 다윗)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none mb-6">
                     <div class="flex justify-end gap-2">
                         <button @click="showCompanyModal = false" class="px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium">취소</button>
@@ -399,24 +404,24 @@
             </div>
 
             <!-- 자회사 삭제 확인 모달 -->
-            <div v-if="showDeleteCompanyModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
+            <div v-if="showDeleteCompanyModal" class="fixed inset-0 bg-black bg-opacity-50 z-[110] flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
-                    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mx-auto mb-4"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mx-auto mb-4"><i class="fa-solid fa-building-circle-xmark"></i></div>
                     <h3 class="text-lg font-bold text-gray-900 mb-2">자회사 삭제 확인</h3>
-                    <p class="text-sm text-gray-700 font-bold mb-2">정말로 {{ currentCompanyName }}을(를) 삭제하시겠습니까?</p>
-                    <p class="text-xs text-gray-500 mb-6">※ 소속된 모든 메뉴와 파일, 항목이 영구 삭제되며 복구할 수 없습니다!</p>
+                    <p class="text-sm text-gray-700 mb-2">정말로 <strong>{{ currentCompanyName }}</strong>을(를) 삭제하시겠습니까?</p>
+                    <p class="text-[11px] text-red-500 mb-6 font-bold bg-red-50 p-2 rounded">※ 소속된 모든 메뉴와 파일이 즉시 영구 삭제되며 복구할 수 없습니다! (소속 회원들은 미배정 상태로 변경됩니다.)</p>
                     <div class="flex justify-center gap-2">
                         <button @click="showDeleteCompanyModal = false" class="px-4 py-2 text-sm bg-gray-100 rounded-lg w-full">취소</button>
-                        <button @click="executeDeleteCompany" :disabled="isDeletingCompany" class="px-4 py-2 text-sm text-white bg-red-600 rounded-lg w-full font-bold">
-                            <i v-if="isDeletingCompany" class="fa-solid fa-spinner fa-spin mr-1"></i> {{ isDeletingCompany ? '삭제 중...' : '삭제하기' }}
+                        <button @click="executeDeleteCompany" :disabled="isDeletingCompany" class="px-4 py-2 text-sm text-white bg-red-600 rounded-lg w-full font-bold flex justify-center items-center">
+                            <i v-if="isDeletingCompany" class="fa-solid fa-spinner fa-spin mr-2"></i> {{ isDeletingCompany ? '삭제 중...' : '삭제하기' }}
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- 회원 관리 모달 (권한 제어 포함) -->
+            <!-- 회원 관리 모달 (부문/메뉴 권한 제어 + 명함 관리 탭 분리) -->
             <div v-if="showUserModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
                     <div class="flex justify-between items-center p-5 border-b bg-gray-50">
                         <h3 class="text-lg font-bold text-gray-900"><i class="fa-solid fa-users-gear text-primary mr-2"></i> 회원 및 권한 관리</h3>
                         <button @click="showUserModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
@@ -438,58 +443,116 @@
                             </ul>
                         </div>
                         
-                        <!-- 우측 회원 권한 수정 패널 -->
-                        <div class="w-2/3 p-6 overflow-y-auto bg-gray-50" v-if="editingUser">
-                            <div class="flex justify-between items-center mb-6">
-                                <h4 class="text-lg font-bold text-gray-900">{{ editingUser.full_name }} 님의 권한 설정</h4>
+                        <!-- 우측 편집 패널 -->
+                        <div class="w-2/3 flex flex-col bg-gray-50 relative" v-if="editingUser">
+                            <div class="p-6 pb-0 flex justify-between items-center mb-4">
+                                <h4 class="text-lg font-bold text-gray-900">{{ editingUser.full_name }} 님의 설정</h4>
                                 <div class="flex gap-2">
                                     <button @click="updateUserStatus('approved')" v-if="editingUser.status === 'pending'" class="px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded">가입 승인</button>
                                     <button @click="updateUserStatus('rejected')" v-if="editingUser.status === 'pending'" class="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded">가입 거절</button>
                                 </div>
                             </div>
                             
-                            <div class="space-y-5 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-xs font-bold text-gray-600 mb-1">계정 권한 (Role)</label>
-                                        <select v-model="editingUser.role" class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50">
-                                            <option value="user">일반 사용자</option>
-                                            <option value="admin">최고 관리자</option>
-                                        </select>
+                            <!-- 탭 메뉴 -->
+                            <div class="px-6 border-b border-gray-200 flex gap-4">
+                                <button @click="adminUserTab = 'auth'" :class="['pb-2 text-sm font-bold border-b-2', adminUserTab === 'auth' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">권한 설정</button>
+                                <button @click="adminUserTab = 'card'" :class="['pb-2 text-sm font-bold border-b-2', adminUserTab === 'card' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">명함 관리</button>
+                            </div>
+
+                            <div class="p-6 overflow-y-auto flex-1">
+                                <!-- 탭 1: 권한 설정 -->
+                                <div v-if="adminUserTab === 'auth'" class="space-y-5 bg-white p-5 rounded-lg border border-gray-200 shadow-sm relative">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-600 mb-1">계정 권한 (Role)</label>
+                                            <select v-model="editingUser.role" class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50">
+                                                <option value="user">일반 사용자</option>
+                                                <option value="admin">최고 관리자</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-600 mb-1">소속 회사 (Workspace)</label>
+                                            <select v-model="editingUser.company_id" @change="refreshMenuGroupsForUser" class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50">
+                                                <option value="">-- 회사 선택 (미배정) --</option>
+                                                <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-gray-600 mb-1">소속 회사 (Workspace)</label>
-                                        <select v-model="editingUser.company_id" @change="reloadPermissionsTree" class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50">
-                                            <option value="">-- 회사 선택 --</option>
-                                            <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                <div v-if="editingUser.company_id" class="pt-4 border-t border-gray-100 mt-4 relative">
-                                    <div v-if="editingUser.role === 'admin'" class="absolute inset-0 bg-white/70 z-10 flex items-center justify-center">
-                                        <span class="bg-gray-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm">최고 관리자는 모든 권한을 가집니다</span>
-                                    </div>
-                                    <label class="block text-sm font-bold text-gray-800 mb-3"><i class="fa-solid fa-lock text-gray-400 mr-1"></i> 부문 및 하위 메뉴 접근 권한 (미체크 시 숨김)</label>
-                                    <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                                        <div v-for="group in menuGroupsForEditingUser" :key="group.id" class="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                                            <label class="flex items-center p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-200">
-                                                <input type="checkbox" v-model="editingUser.allowed_menus" :value="group.id" class="w-4 h-4 text-primary rounded border-gray-300 mr-3">
-                                                <span class="text-sm font-black text-gray-800">{{ group.name }} <span class="text-[10px] text-gray-500 font-normal ml-1">(최상위 부문)</span></span>
-                                            </label>
-                                            <div class="p-3 bg-white grid grid-cols-2 gap-3" v-if="group.children && group.children.length > 0">
-                                                <label v-for="child in group.children" :key="child.id" class="flex items-center cursor-pointer hover:bg-blue-50 p-1.5 rounded">
-                                                    <input type="checkbox" v-model="editingUser.allowed_menus" :value="child.id" class="w-3.5 h-3.5 text-secondary rounded border-gray-300 mr-2">
-                                                    <span class="text-xs font-bold text-gray-700">{{ child.name }}</span>
+                                    
+                                    <div class="pt-4 border-t border-gray-100 mt-4 relative">
+                                        <!-- 관리자 블라인드 처리 -->
+                                        <div v-if="editingUser.role === 'admin'" class="absolute inset-0 bg-white/80 z-10 flex flex-col items-center justify-center backdrop-blur-sm border border-gray-200 rounded-lg">
+                                            <i class="fa-solid fa-crown text-3xl text-amber-400 mb-2"></i>
+                                            <p class="font-bold text-gray-800">최고 관리자 계정입니다.</p>
+                                            <p class="text-xs text-gray-500 mt-1">최고 관리자는 모든 회사의 모든 메뉴 접근 권한을 가집니다.</p>
+                                        </div>
+
+                                        <label class="block text-sm font-bold text-gray-800 mb-3"><i class="fa-solid fa-lock text-gray-400 mr-1"></i> 세부 메뉴별 접근 권한 설정</label>
+                                        
+                                        <div v-if="!editingUser.company_id" class="text-sm text-red-500 font-bold p-3 bg-red-50 rounded">소속 회사를 먼저 선택해 주세요.</div>
+                                        
+                                        <div v-else class="space-y-3">
+                                            <div v-for="group in menuGroupsForEditingUser" :key="group.sectorId" class="border border-gray-200 rounded-lg overflow-hidden">
+                                                <label class="flex items-center p-3 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100">
+                                                    <input type="checkbox" v-model="editingUser.allowed_menus" :value="group.sectorId" class="w-4 h-4 text-primary rounded border-gray-300 mr-3">
+                                                    <span class="text-sm font-black text-gray-800">{{ group.sectorName }}</span>
                                                 </label>
+                                                <div class="p-3 bg-white grid grid-cols-2 gap-2">
+                                                    <label v-for="cat in group.categories" :key="cat.id" class="flex items-center cursor-pointer hover:bg-blue-50 p-1.5 rounded">
+                                                        <input type="checkbox" v-model="editingUser.allowed_menus" :value="cat.id" class="w-3.5 h-3.5 text-secondary rounded border-gray-300 mr-2">
+                                                        <span class="text-xs font-medium text-gray-700">{{ cat.name }}</span>
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <p class="text-[10px] text-gray-400 mt-2">* 체크를 해제하면 사용자의 사이드바에서 해당 부문이나 메뉴가 완전히 사라집니다.</p>
+                                    
+                                    <div class="flex justify-end pt-4">
+                                        <button @click="saveUserPermissions" class="px-6 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow">변경사항 저장</button>
+                                    </div>
                                 </div>
-                                
-                                <div class="flex justify-end pt-4">
-                                    <button @click="saveUserPermissions" class="px-6 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow">변경사항 저장</button>
+
+                                <!-- 탭 2: 명함 관리 (관리자가 등록) -->
+                                <div v-if="adminUserTab === 'card'" class="space-y-6 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                                    <div class="bg-blue-50 text-blue-800 p-3 rounded text-xs leading-relaxed border border-blue-200">
+                                        <i class="fa-solid fa-circle-info mr-1"></i> <strong>관리자 명함 세팅 가이드</strong><br>
+                                        아래에 해당 회원의 명함 이미지를 등록해 두면, 일반 회원이 '내 명함' 메뉴를 클릭했을 때 본인의 명함만 보게 됩니다.<br>
+                                        ※ 회색 영역을 클릭하거나 이미지를 <kbd class="px-1 py-0.5 bg-white border border-gray-300 rounded font-mono">드래그 앤 드롭</kbd>, 또는 클릭 후 <kbd class="px-1 py-0.5 bg-white border border-gray-300 rounded font-mono">Ctrl+V</kbd>로 즉시 붙여넣을 수 있습니다.
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-6">
+                                        <!-- 앞면 드롭존 -->
+                                        <div class="flex flex-col gap-2">
+                                            <h5 class="text-sm font-bold text-gray-700 text-center">앞면</h5>
+                                            <div @dragover.prevent="dragStates.adminFront = true" @dragleave.prevent="dragStates.adminFront = false" @drop.prevent="e => handleCardDrop(e, 'front', true)" @paste="e => handleCardPaste(e, 'front', true)" @click="$refs.adminFrontInput.click()" tabindex="0" :class="['dropzone w-full aspect-[9/5] border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-colors relative', dragStates.adminFront ? 'border-primary bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100']">
+                                                <img v-if="adminCardData.front" :src="adminCardData.front" crossorigin="anonymous" class="w-full h-full object-cover">
+                                                <div v-else class="text-center p-4">
+                                                    <i class="fa-solid fa-id-card-clip text-3xl text-gray-400 mb-2"></i>
+                                                    <p class="text-xs text-gray-500">클릭, 드래그 또는 Ctrl+V</p>
+                                                </div>
+                                                <input type="file" ref="adminFrontInput" @change="e => handleCardFileSelect(e, 'front', true)" accept="image/*" class="hidden">
+                                            </div>
+                                            <button v-if="adminCardData.front" @click.stop="adminCardData.front = null; adminCardFiles.front = null;" class="text-xs text-red-500 hover:underline text-center">이미지 삭제</button>
+                                        </div>
+                                        <!-- 뒷면 드롭존 -->
+                                        <div class="flex flex-col gap-2">
+                                            <h5 class="text-sm font-bold text-gray-700 text-center">뒷면</h5>
+                                            <div @dragover.prevent="dragStates.adminBack = true" @dragleave.prevent="dragStates.adminBack = false" @drop.prevent="e => handleCardDrop(e, 'back', true)" @paste="e => handleCardPaste(e, 'back', true)" @click="$refs.adminBackInput.click()" tabindex="0" :class="['dropzone w-full aspect-[9/5] border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-colors relative', dragStates.adminBack ? 'border-primary bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100']">
+                                                <img v-if="adminCardData.back" :src="adminCardData.back" crossorigin="anonymous" class="w-full h-full object-cover">
+                                                <div v-else class="text-center p-4">
+                                                    <i class="fa-solid fa-id-card-clip text-3xl text-gray-400 mb-2"></i>
+                                                    <p class="text-xs text-gray-500">클릭, 드래그 또는 Ctrl+V</p>
+                                                </div>
+                                                <input type="file" ref="adminBackInput" @change="e => handleCardFileSelect(e, 'back', true)" accept="image/*" class="hidden">
+                                            </div>
+                                            <button v-if="adminCardData.back" @click.stop="adminCardData.back = null; adminCardFiles.back = null;" class="text-xs text-red-500 hover:underline text-center">이미지 삭제</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex justify-end pt-4 border-t border-gray-100">
+                                        <button @click="saveAdminBusinessCard" :disabled="isAdminCardUploading" class="px-6 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow flex items-center">
+                                            <i v-if="isAdminCardUploading" class="fa-solid fa-spinner fa-spin mr-2"></i> {{ isAdminCardUploading ? '저장 중...' : '명함 이미지 저장' }}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -500,7 +563,7 @@
                 </div>
             </div>
 
-            <!-- 파일 미리보기 및 공지사항 내용 모달 -->
+            <!-- 파일 열람/다운로드 미리보기 모달 -->
             <div v-if="showPreviewModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex flex-col items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-full max-h-[85vh] flex flex-col overflow-hidden relative">
                     <div class="flex justify-between items-center p-5 border-b bg-gray-50">
@@ -524,12 +587,12 @@
                             <h4 class="text-sm font-bold text-gray-800 mb-3"><i class="fa-solid fa-paperclip text-blue-500"></i> 첨부 파일 ({{ previewFiles.length }}개)</h4>
                             <ul class="space-y-2">
                                 <li v-for="(file, idx) in previewFiles" :key="idx" class="bg-white border border-gray-200 rounded-lg p-3 flex justify-between items-center shadow-sm">
-                                    <div class="flex items-center gap-3 min-w-0">
-                                        <div class="w-8 h-8 bg-blue-50 text-blue-500 rounded flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-file"></i></div>
-                                        <span class="text-sm font-bold text-gray-800 truncate">{{ file.name }}</span>
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 bg-blue-50 text-blue-500 rounded flex items-center justify-center"><i class="fa-solid fa-file"></i></div>
+                                        <span class="text-sm font-bold text-gray-800">{{ file.name }}</span>
                                     </div>
-                                    <div class="flex gap-2 flex-shrink-0">
-                                        <button @click="copyShareLink(file.url, file.name)" class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200 border border-gray-300"><i class="fa-solid fa-link mr-1"></i>링크 복사</button>
+                                    <div class="flex gap-2">
+                                        <button @click="copyDownloadLink(file.url, file.name)" class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200 border border-gray-300"><i class="fa-solid fa-link mr-1"></i>링크 복사</button>
                                         <button @click="downloadActualFile(file.url, file.name)" class="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded hover:bg-gray-900"><i class="fa-solid fa-download mr-1"></i>다운로드</button>
                                     </div>
                                 </li>
@@ -539,19 +602,69 @@
                 </div>
             </div>
 
-            <!-- 카테고리 추가/수정 모달 -->
-            <div v-if="showCatModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <!-- 내 명함 뷰어 (개인화 화면) -->
+            <div v-if="showBusinessCardModal" class="fixed inset-0 bg-black bg-opacity-60 z-[110] flex flex-col items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden relative">
+                    <div class="flex justify-between items-center p-5 border-b bg-gray-50">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded flex items-center justify-center text-lg bg-indigo-50 text-indigo-600"><i class="fa-solid fa-address-card"></i></div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">{{ userProfile?.full_name }} 님의 명함</h3>
+                                <p class="text-xs text-gray-500">본인에게만 표시되는 개인화된 명함입니다. (관리자가 등록/변경 가능)</p>
+                            </div>
+                        </div>
+                        <button @click="showBusinessCardModal = false" class="text-gray-400 hover:text-gray-600 bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <div class="p-6 bg-gray-100 flex flex-col gap-6 overflow-y-auto max-h-[70vh]">
+                        <!-- 앞면 뷰어 -->
+                        <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                            <div class="flex justify-between items-center mb-3 border-b pb-2">
+                                <h4 class="font-bold text-gray-800">명함 앞면</h4>
+                                <button v-if="businessCardData.front" @click="captureAndShare('front')" class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100 border border-indigo-200"><i class="fa-solid fa-copy mr-1"></i> 복사 및 공유</button>
+                            </div>
+                            <!-- 캡처 타겟 지정 ID -->
+                            <div v-if="businessCardData.front" :id="'card-render-target-front'" class="mb-4 bg-white p-2 rounded inline-block mx-auto max-w-full">
+                                <img :src="businessCardData.front" crossorigin="anonymous" class="w-full max-w-sm rounded border border-gray-200 mx-auto block">
+                            </div>
+                            <div v-else class="text-center py-10 bg-gray-50 rounded border border-dashed border-gray-300">
+                                <i class="fa-solid fa-image text-gray-300 text-3xl mb-2"></i>
+                                <p class="text-sm text-gray-500">등록된 앞면 명함이 없습니다.</p>
+                            </div>
+                        </div>
+
+                        <!-- 뒷면 뷰어 -->
+                        <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                            <div class="flex justify-between items-center mb-3 border-b pb-2">
+                                <h4 class="font-bold text-gray-800">명함 뒷면</h4>
+                                <button v-if="businessCardData.back" @click="captureAndShare('back')" class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100 border border-indigo-200"><i class="fa-solid fa-copy mr-1"></i> 복사 및 공유</button>
+                            </div>
+                            <!-- 캡처 타겟 지정 ID -->
+                            <div v-if="businessCardData.back" :id="'card-render-target-back'" class="mb-4 bg-white p-2 rounded inline-block mx-auto max-w-full">
+                                <img :src="businessCardData.back" crossorigin="anonymous" class="w-full max-w-sm rounded border border-gray-200 mx-auto block">
+                            </div>
+                            <div v-else class="text-center py-10 bg-gray-50 rounded border border-dashed border-gray-300">
+                                <i class="fa-solid fa-image text-gray-300 text-3xl mb-2"></i>
+                                <p class="text-sm text-gray-500">등록된 뒷면 명함이 없습니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 카테고리 추가/수정 모달 등 기존 모달 축소 포함 -->
+            <div v-if="showCatModal" class="fixed inset-0 bg-black bg-opacity-50 z-[120] flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
                     <h3 class="text-lg font-bold text-gray-900 mb-4">{{ catModalData.title }}</h3>
-                    <input type="text" v-model="catModalData.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4" placeholder="메뉴 이름">
+                    <input type="text" v-model="catModalData.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4 focus:border-primary outline-none" placeholder="메뉴 이름">
                     <div class="flex justify-end gap-2">
-                        <button @click="showCatModal = false" class="px-4 py-2 bg-gray-100 rounded-lg text-sm">취소</button>
+                        <button @click="showCatModal = false" class="px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium">취소</button>
                         <button @click="saveCategory" class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold">저장</button>
                     </div>
                 </div>
             </div>
             
-            <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
+            <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-[120] flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
                     <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mx-auto mb-4"><i class="fa-solid fa-triangle-exclamation"></i></div>
                     <h3 class="text-lg font-bold text-gray-900 mb-2">삭제 확인</h3>
@@ -562,10 +675,9 @@
                     </div>
                 </div>
             </div>
-
         </template>
 
-        <!-- 알림 토스트 (에러 원문 표시 포함) -->
+        <!-- 알림 토스트 -->
         <div v-if="toast.show" class="fixed bottom-4 right-4 z-[200] flex items-center p-4 rounded-lg shadow-lg text-white max-w-md transition-opacity" :class="toast.type === 'error' ? 'bg-red-500' : 'bg-gray-800'">
             <i :class="['mr-3', toast.type === 'error' ? 'fa-solid fa-circle-exclamation' : 'fa-solid fa-circle-check']"></i>
             <div class="flex flex-col">
@@ -584,7 +696,6 @@
                 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwemFpdXFjb2x0c2h0c3JsbHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjA4MTcsImV4cCI6MjEwMTczNjgxN30.zWiMJ0RDpSZlWaSBKcO1X3HvF-NBLw2YTqH6sjfRbME';
                 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-                // 핵심 상태 변수
                 const authState = ref('loading');
                 const authForm = ref({ email: '', password: '', name: '' });
                 const userProfile = ref(null);
@@ -601,52 +712,26 @@
                 const menuGroups = ref([]);
                 const activeCategoryId = ref('');
                 
-                // 알림 함수
                 const toast = ref({ show: false, message: '', subMessage: '', type: 'success' });
                 const showToast = (msg, type = 'success', sub = '') => {
                     toast.value = { show: true, message: msg, subMessage: sub, type };
                     setTimeout(() => { toast.value.show = false; }, 4000);
                 };
 
-                // 자동 다운로드 감지 로직 (공유 링크로 접근했을 때)
-                const checkAutoDownload = () => {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const downloadUrl = urlParams.get('download');
-                    const downloadName = urlParams.get('name') || 'download_file';
-                    
-                    if (downloadUrl) {
-                        showToast('요청하신 파일을 다운로드 중입니다...');
-                        saveAs(downloadUrl, downloadName);
-                        
-                        // URL에서 파라미터 깔끔하게 지우기
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                    }
-                };
-
-                // --- 1. 인증 및 세션 로직 ---
+                // 1. 인증 및 로그인 로직
                 const checkSession = async () => {
-                    checkAutoDownload(); // 앱 시작 시 링크 파라미터 체크
+                    const savedEmail = localStorage.getItem('savedEmail');
+                    if (savedEmail) { authForm.value.email = savedEmail; rememberEmail.value = true; }
+
+                    const isKeepLoggedIn = localStorage.getItem('keepLoggedIn') !== 'false';
+                    const hasTempSession = sessionStorage.getItem('tempSession') === 'true';
 
                     const { data: { session } } = await supabase.auth.getSession();
-                    
-                    // 저장된 이메일 불러오기
-                    const savedEmail = localStorage.getItem('savedEmail');
-                    if (savedEmail) {
-                        authForm.value.email = savedEmail;
-                        rememberEmail.value = true;
-                    }
-
-                    // 로그인 유지 옵션 확인
-                    const isKeepLoggedIn = localStorage.getItem('keepLoggedIn') !== 'false';
-                    const hasTempSession = sessionStorage.getItem('tempSession');
-
                     if (session) {
                         if (!isKeepLoggedIn && !hasTempSession) {
-                            // 자동로그인이 꺼져있고, 브라우저를 새로 열었을 경우 강제 로그아웃
                             await supabase.auth.signOut();
                             authState.value = 'login';
                         } else {
-                            // 세션 유지 및 활성화 상태 기록
                             sessionStorage.setItem('tempSession', 'true');
                             await fetchUserProfile(session.user.id);
                         }
@@ -660,20 +745,11 @@
                         const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
                         if (error) throw error;
                         userProfile.value = data;
-                        
-                        if (data.status === 'pending') {
-                            authState.value = 'pending';
-                        } else if (data.status === 'approved') {
-                            authState.value = 'authenticated';
-                            // Admin 무조건 세팅 방침 복구 (개발 단계 편의상)
-                            userProfile.value.role = 'admin'; 
-                            await loadCompanies();
-                        }
+                        if (data.status === 'pending') authState.value = 'pending';
+                        else if (data.status === 'approved') { authState.value = 'authenticated'; await loadCompanies(); }
                     } catch (e) {
-                        // 프로필이 없는 최초 생성자 등 예외 시 기본 Admin 세팅
                         userProfile.value = { id: userId, full_name: '관리자', role: 'admin', status: 'approved' };
-                        authState.value = 'authenticated';
-                        await loadCompanies();
+                        authState.value = 'authenticated'; await loadCompanies();
                     }
                 };
 
@@ -683,23 +759,15 @@
                         const { data, error } = await supabase.auth.signInWithPassword({ email: authForm.value.email, password: authForm.value.password });
                         if (error) throw error;
                         
-                        // 로그인 성공 시 이메일 저장 여부 처리
-                        if (rememberEmail.value) {
-                            localStorage.setItem('savedEmail', authForm.value.email);
-                        } else {
-                            localStorage.removeItem('savedEmail');
-                        }
-
-                        // 로그인 유지 옵션 처리
+                        if (rememberEmail.value) localStorage.setItem('savedEmail', authForm.value.email);
+                        else localStorage.removeItem('savedEmail');
+                        
                         localStorage.setItem('keepLoggedIn', keepLoggedIn.value);
                         sessionStorage.setItem('tempSession', 'true');
                         
                         await fetchUserProfile(data.user.id);
-                    } catch(e) { 
-                        showToast('로그인 실패: 이메일과 비밀번호를 확인하세요.', 'error', e.message); 
-                    } finally {
-                        isAuthLoading.value = false;
-                    }
+                    } catch(e) { showToast('로그인 실패: 이메일과 비밀번호를 확인하세요.', 'error', e.message); }
+                    finally { isAuthLoading.value = false; }
                 };
 
                 const handleRegister = async () => {
@@ -708,192 +776,134 @@
                         const { data, error } = await supabase.auth.signUp({ email: authForm.value.email, password: authForm.value.password });
                         if (error) throw error;
                         if (data.user) {
-                            await supabase.from('profiles').upsert({
-                                id: data.user.id, email: authForm.value.email, full_name: authForm.value.name, role: 'user', status: 'pending'
-                            });
+                            await supabase.from('profiles').upsert({ id: data.user.id, email: authForm.value.email, full_name: authForm.value.name, role: 'user', status: 'pending' });
                             authState.value = 'pending';
                         }
-                    } catch(e) { 
-                        showToast('회원가입 실패', 'error', e.message); 
-                    } finally {
-                        isAuthLoading.value = false;
-                    }
+                    } catch(e) { showToast('회원가입 실패', 'error', e.message); }
+                    finally { isAuthLoading.value = false; }
                 };
 
-                // --- 2. 다중 자회사(Workspace) 로직 ---
+                const handleLogout = async () => {
+                    await supabase.auth.signOut();
+                    sessionStorage.removeItem('tempSession');
+                    location.reload();
+                };
+
+                // 2. 회사 관리 로직
                 const loadCompanies = async () => {
                     const { data } = await supabase.from('companies').select('*').order('created_at');
                     companies.value = data || [];
-                    
                     if (companies.value.length > 0) {
-                        if (userProfile.value.role !== 'admin' && userProfile.value.company_id) {
-                            currentCompanyId.value = userProfile.value.company_id;
-                        } else if (!currentCompanyId.value) {
-                            currentCompanyId.value = companies.value[0].id;
-                        }
+                        if (userProfile.value.role !== 'admin' && userProfile.value.company_id) currentCompanyId.value = userProfile.value.company_id;
+                        else if (!currentCompanyId.value) currentCompanyId.value = companies.value[0].id;
                         await loadData();
                     }
                 };
+                const currentCompanyName = computed(() => { const comp = companies.value.find(c => c.id === currentCompanyId.value); return comp ? comp.name : ''; });
 
-                const currentCompanyName = computed(() => {
-                    const comp = companies.value.find(c => c.id === currentCompanyId.value);
-                    return comp ? comp.name : '';
-                });
-
-                // 자회사 복사(Clone) 로직 (파일 및 링크는 초기화)
-                const showCompanyModal = ref(false);
-                const newCompanyName = ref('');
-                const isCloning = ref(false);
-                
+                const showCompanyModal = ref(false); const newCompanyName = ref(''); const isCloning = ref(false);
                 const openAddCompanyModal = () => { newCompanyName.value = ''; showCompanyModal.value = true; };
                 const executeAddCompany = async () => {
-                    if(!newCompanyName.value) return;
-                    isCloning.value = true;
+                    if(!newCompanyName.value) return; isCloning.value = true;
                     try {
                         const { data: newComp, error: compErr } = await supabase.from('companies').insert({name: newCompanyName.value}).select().single();
                         if (compErr) throw compErr;
-                        
                         const templateId = companies.value[0].id; 
                         const { data: oldCats } = await supabase.from('categories').select('*').eq('company_id', templateId);
-                        const { data: oldItems } = await supabase.from('items').select('*'); 
+                        const { data: oldItems } = await supabase.from('items').select('*');
                         
                         let idMap = {};
-                        
                         const sectors = oldCats.filter(c => !c.parent_id);
                         for (let sec of sectors) {
                             const { data: nSec } = await supabase.from('categories').insert({name: sec.name, icon: sec.icon, sort_order: sec.sort_order, company_id: newComp.id}).select().single();
                             idMap[sec.id] = nSec.id;
-                            
                             const subs = oldCats.filter(c => c.parent_id === sec.id);
                             for (let sub of subs) {
                                 const { data: nSub } = await supabase.from('categories').insert({name: sub.name, icon: sub.icon, sort_order: sub.sort_order, company_id: newComp.id, parent_id: nSec.id}).select().single();
                                 idMap[sub.id] = nSub.id;
                             }
                         }
-                        
-                        // 복사 시 file_path를 null로 강제 초기화하여 내용만 유지
                         const itemsToClone = oldItems.filter(i => idMap[i.category_id]).map(i => ({
                             category_id: idMap[i.category_id], name: i.name, type: i.type, description: i.description, 
                             file_path: null, sort_order: i.sort_order
                         }));
-                        if (itemsToClone.length > 0) {
-                            await supabase.from('items').insert(itemsToClone);
-                        }
-                        
-                        showToast(`자회사 '${newCompanyName.value}' 구성 완료!`);
-                        showCompanyModal.value = false;
-                        await loadCompanies();
-                    } catch(e) {
-                        showToast('자회사 생성 실패', 'error', e.message);
-                    } finally { isCloning.value = false; }
+                        if (itemsToClone.length > 0) await supabase.from('items').insert(itemsToClone);
+                        showToast(`자회사 '${newCompanyName.value}' 구성 완료!`); showCompanyModal.value = false; await loadCompanies();
+                    } catch(e) { showToast('자회사 생성 실패', 'error', e.message); } finally { isCloning.value = false; }
                 };
 
-                // 자회사 삭제 로직
-                const showDeleteCompanyModal = ref(false);
-                const isDeletingCompany = ref(false);
-
-                const openDeleteCompanyModal = () => { showDeleteCompanyModal.value = true; };
+                const showDeleteCompanyModal = ref(false); const isDeletingCompany = ref(false);
                 const executeDeleteCompany = async () => {
                     isDeletingCompany.value = true;
                     try {
-                        // 1. 해당 자회사에 속했던 유저들의 소속을 '미배정(null)'으로 변경하여 FK 에러 방지
                         await supabase.from('profiles').update({ company_id: null }).eq('company_id', currentCompanyId.value);
-                        
-                        // 2. 회사 삭제 (ON DELETE CASCADE에 의해 연관 카테고리/항목 자동 삭제됨)
                         const { error } = await supabase.from('companies').delete().eq('id', currentCompanyId.value);
                         if (error) throw error;
-
-                        showToast(`'${currentCompanyName.value}' 자회사가 영구적으로 삭제되었습니다.`);
-                        
-                        // 3. 삭제 완료 후 모달을 닫고 본사(첫 번째 회사)로 자동 이동
-                        showDeleteCompanyModal.value = false;
-                        currentCompanyId.value = companies.value[0].id;
-                        await loadCompanies();
-                    } catch(e) {
-                        showToast('자회사 삭제 실패', 'error', e.message);
-                    } finally {
-                        isDeletingCompany.value = false;
-                    }
+                        showToast(`자회사가 삭제되었습니다.`); showDeleteCompanyModal.value = false;
+                        currentCompanyId.value = companies.value[0].id; await loadCompanies();
+                    } catch(e) { showToast('삭제 실패', 'error', e.message); } finally { isDeletingCompany.value = false; }
                 };
 
-
-                // --- 3. 데이터 로딩 및 권한 기반 필터링 ---
+                // 3. 데이터 로딩 및 권한 기반 필터링
                 const loadData = async () => {
                     try {
                         const { data: cats } = await supabase.from('categories').select('*').eq('company_id', currentCompanyId.value).order('sort_order', {ascending: true});
                         const { data: itms } = await supabase.from('items').select('*').order('sort_order', {ascending: true});
-                        
                         const built = [];
                         const sectors = (cats||[]).filter(c => !c.parent_id).sort((a,b) => a.sort_order - b.sort_order);
                         for (const sector of sectors) {
                             const group = { sectorName: sector.name, sectorId: sector.id, categories: [] };
                             const subCats = cats.filter(c => c.parent_id === sector.id).sort((a,b) => a.sort_order - b.sort_order);
-                            for (const cat of subCats) {
-                                group.categories.push({ id: cat.id, name: cat.name, icon: cat.icon, items: itms.filter(i => i.category_id === cat.id) });
-                            }
+                            for (const cat of subCats) group.categories.push({ id: cat.id, name: cat.name, icon: cat.icon, items: itms.filter(i => i.category_id === cat.id) });
                             built.push(group);
                         }
                         menuGroups.value = built;
-                        
-                        if (built.length > 0 && built[0].categories.length > 0) {
-                            activeCategoryId.value = built[0].categories[0].id;
-                        }
-                    } catch(e) { console.error('Data Load Error', e); }
+                        if (built.length > 0 && built[0].categories.length > 0) activeCategoryId.value = built[0].categories[0].id;
+                    } catch(e) { console.error(e); }
                 };
 
                 const visibleMenuGroups = computed(() => {
                     if (userProfile.value?.role === 'admin') return menuGroups.value;
                     const allowed = userProfile.value?.allowed_menus || [];
                     if (allowed.length === 0) return menuGroups.value; 
-                    
-                    // 1. 부문(Sector) 필터링
-                    const filteredGroups = menuGroups.value.filter(group => allowed.includes(group.sectorId));
-                    
-                    // 2. 하위 메뉴(Category) 필터링 (선택적)
-                    return filteredGroups.map(group => {
-                        const sectorCatIds = group.categories.map(c => c.id);
-                        const hasCategoryLevelPerms = allowed.some(id => sectorCatIds.includes(id));
-                        
-                        if (hasCategoryLevelPerms) {
-                            return {
-                                ...group,
-                                categories: group.categories.filter(cat => allowed.includes(cat.id))
-                            };
-                        } else {
-                            // 하위 메뉴를 하나도 체크하지 않고 부문만 체크한 경우 전체 하위 메뉴 허용 (하위 호환성 유지)
+                    return menuGroups.value.map(group => {
+                        const isSectorChecked = allowed.includes(group.sectorId);
+                        const checkedSubCats = group.categories.filter(cat => allowed.includes(cat.id));
+                        if (isSectorChecked || checkedSubCats.length > 0) {
+                            if (checkedSubCats.length > 0) return { ...group, categories: checkedSubCats };
                             return group;
                         }
-                    }).filter(group => group.categories.length > 0);
+                        return null;
+                    }).filter(group => group !== null && group.categories.length > 0);
                 });
 
-
-                // --- 4. 회원 권한 관리 패널 (Admin 전용) ---
+                // 4. 회원 권한 및 [명함 등록] (Admin 전용)
                 const showUserModal = ref(false);
                 const usersList = ref([]);
                 const editingUser = ref(null);
                 const menuGroupsForEditingUser = ref([]);
+                const adminUserTab = ref('auth'); // auth, card
+                
+                // 관리자용 명함 세팅 변수
+                const adminCardData = ref({ front: null, back: null });
+                const adminCardFiles = ref({ front: null, back: null });
+                const isAdminCardUploading = ref(false);
+                const dragStates = ref({ adminFront: false, adminBack: false });
 
                 const openUserManagement = async () => {
                     const { data } = await supabase.from('profiles').select('*').order('created_at', {ascending: false});
-                    usersList.value = data || [];
-                    showUserModal.value = true;
+                    usersList.value = data || []; showUserModal.value = true;
                 };
 
-                const reloadPermissionsTree = async () => {
-                    if (!editingUser.value || !editingUser.value.company_id) {
-                        menuGroupsForEditingUser.value = [];
-                        return;
-                    }
+                const refreshMenuGroupsForUser = async () => {
+                    if (!editingUser.value || !editingUser.value.company_id) { menuGroupsForEditingUser.value = []; return; }
                     const { data: cats } = await supabase.from('categories').select('*').eq('company_id', editingUser.value.company_id).order('sort_order');
-                    
                     const built = [];
-                    const sectors = (cats||[]).filter(c => !c.parent_id).sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+                    const sectors = (cats||[]).filter(c => !c.parent_id).sort((a,b) => a.sort_order - b.sort_order);
                     for (const sector of sectors) {
-                        const group = { id: sector.id, name: sector.name, children: [] };
-                        const subCats = cats.filter(c => c.parent_id === sector.id).sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
-                        for (const cat of subCats) {
-                            group.children.push({ id: cat.id, name: cat.name });
-                        }
+                        const group = { sectorName: sector.name, sectorId: sector.id, categories: [] };
+                        const subCats = cats.filter(c => c.parent_id === sector.id).sort((a,b) => a.sort_order - b.sort_order);
+                        for (const cat of subCats) group.categories.push({ id: cat.id, name: cat.name });
                         built.push(group);
                     }
                     menuGroupsForEditingUser.value = built;
@@ -902,83 +912,90 @@
                 const selectUserForEdit = async (user) => {
                     editingUser.value = JSON.parse(JSON.stringify(user));
                     if (!editingUser.value.allowed_menus) editingUser.value.allowed_menus = [];
-                    await reloadPermissionsTree();
+                    await refreshMenuGroupsForUser();
+                    
+                    // 명함 데이터 로드
+                    const cardData = editingUser.value.business_card_data || { front: null, back: null };
+                    adminCardData.value = { ...cardData };
+                    adminCardFiles.value = { front: null, back: null };
                 };
 
                 const updateUserStatus = async (status) => {
                     try {
                         await supabase.from('profiles').update({ status }).eq('id', editingUser.value.id);
-                        showToast(`상태가 ${status === 'approved' ? '승인' : '거절'} 되었습니다.`);
-                        openUserManagement(); 
-                        editingUser.value.status = status;
-                    } catch(e) { showToast('상태 변경 실패', 'error', e.message); }
+                        showToast(`상태 변경 완료`); openUserManagement(); editingUser.value.status = status;
+                    } catch(e) { showToast('변경 실패', 'error', e.message); }
                 };
 
                 const saveUserPermissions = async () => {
                     try {
-                        const payload = {
-                            role: editingUser.value.role,
-                            company_id: editingUser.value.company_id,
-                            allowed_menus: editingUser.value.allowed_menus 
-                        };
+                        const payload = { role: editingUser.value.role, company_id: editingUser.value.company_id, allowed_menus: editingUser.value.allowed_menus };
                         await supabase.from('profiles').update(payload).eq('id', editingUser.value.id);
-                        showToast(`${editingUser.value.full_name} 님의 권한이 저장되었습니다.`);
-                        openUserManagement(); 
+                        showToast(`${editingUser.value.full_name} 님의 권한 저장 완료`); openUserManagement();
                     } catch(e) { showToast('저장 실패', 'error', e.message); }
                 };
 
                 const getCompanyName = (id) => { const c = companies.value.find(x => x.id === id); return c ? c.name : ''; };
 
+                // 드래그앤드롭 / 붙여넣기 / 파일선택 공통 핸들러
+                const processCardImage = (file, side, isAdmin) => {
+                    if (file && file.type.startsWith('image/')) {
+                        if (isAdmin) {
+                            adminCardFiles.value[side] = file;
+                            adminCardData.value[side] = URL.createObjectURL(file);
+                        }
+                    }
+                };
 
-                // --- 5. 기존 파일 업로드, 아이템 CRUD 등 ---
+                const handleCardFileSelect = (e, side, isAdmin = false) => { processCardImage(e.target.files[0], side, isAdmin); };
+                const handleCardDrop = (e, side, isAdmin = false) => { dragStates.value[`admin${side.charAt(0).toUpperCase() + side.slice(1)}`] = false; processCardImage(e.dataTransfer.files[0], side, isAdmin); };
+                const handleCardPaste = (e, side, isAdmin = false) => {
+                    const items = e.clipboardData.items;
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf('image') !== -1) { processCardImage(items[i].getAsFile(), side, isAdmin); break; }
+                    }
+                };
+
+                const saveAdminBusinessCard = async () => {
+                    isAdminCardUploading.value = true;
+                    try {
+                        const finalData = { ...adminCardData.value };
+                        for (const side of ['front', 'back']) {
+                            if (adminCardFiles.value[side]) {
+                                const file = adminCardFiles.value[side];
+                                const extMatch = file.name.match(/\.[^.]+$/);
+                                const safeName = `card_${editingUser.value.id}_${side}_${Date.now()}${extMatch ? extMatch[0] : '.png'}`;
+                                const { error } = await supabase.storage.from('documents').upload(safeName, file);
+                                if (error) throw error;
+                                const { data: urlData } = supabase.storage.from('documents').getPublicUrl(safeName);
+                                finalData[side] = urlData.publicUrl;
+                            }
+                        }
+                        await supabase.from('profiles').update({ business_card_data: finalData }).eq('id', editingUser.value.id);
+                        showToast(`${editingUser.value.full_name} 님의 명함 이미지 저장 완료`);
+                    } catch (err) { showToast('저장 실패', 'error', err.message); } finally { isAdminCardUploading.value = false; }
+                };
+
+                // 5. 일반 파일 및 카테고리 관리 기능들
                 const selectedItems = ref([]);
                 const filteredItems = computed(() => {
                     let activeCat = null;
-                    for (const group of menuGroups.value) {
-                        for (const cat of group.categories) {
-                            if (cat.id === activeCategoryId.value) { activeCat = cat; break; }
-                        }
-                    }
+                    for (const group of menuGroups.value) { for (const cat of group.categories) { if (cat.id === activeCategoryId.value) { activeCat = cat; break; } } }
                     return activeCat ? activeCat.items : [];
                 });
-                
                 const activeCategoryName = computed(() => {
-                    for (const group of menuGroups.value) {
-                        for (const cat of group.categories) {
-                            if (cat.id === activeCategoryId.value) return `${group.sectorName} > ${cat.name}`;
-                        }
-                    } return '';
+                    for (const group of menuGroups.value) { for (const cat of group.categories) { if (cat.id === activeCategoryId.value) return `${group.sectorName} > ${cat.name}`; } } return '';
                 });
 
-                // 파일 업로드 관련
-                const showItemModal = ref(false);
-                const isEditing = ref(false);
-                const isUploading = ref(false);
-                const dragActive = ref(false);
+                const showItemModal = ref(false); const isEditing = ref(false); const isUploading = ref(false); const dragActive = ref(false);
                 const modalForm = ref({ id: '', name: '', type: 'download', description: '', files: [], file_path: '' });
                 
-                const handleFileSelect = (e) => {
-                    const files = e.target.files;
-                    if(!files) return;
-                    for(let i=0; i<files.length; i++) {
-                        modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true });
-                    }
-                    dragActive.value = false;
-                };
-                const handleDrop = (e) => {
-                    dragActive.value = false;
-                    const files = e.dataTransfer.files;
-                    if(!files) return;
-                    for(let i=0; i<files.length; i++) {
-                        modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true });
-                    }
-                };
-                const removeFile = (idx) => { modalForm.value.files.splice(idx, 1); };
+                const handleFileSelect = (e) => { const files = e.target.files; if(!files) return; for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true }); dragActive.value = false; };
+                const handleDrop = (e) => { dragActive.value = false; const files = e.dataTransfer.files; if(!files) return; for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true }); };
+                const removeFile = (idx) => modalForm.value.files.splice(idx, 1);
                 const moveFile = (idx, direction) => {
                     if (idx + direction < 0 || idx + direction >= modalForm.value.files.length) return;
-                    const temp = modalForm.value.files[idx];
-                    modalForm.value.files[idx] = modalForm.value.files[idx + direction];
-                    modalForm.value.files[idx + direction] = temp;
+                    const temp = modalForm.value.files[idx]; modalForm.value.files[idx] = modalForm.value.files[idx + direction]; modalForm.value.files[idx + direction] = temp;
                 };
 
                 const saveItem = async () => {
@@ -989,216 +1006,175 @@
                             for (let fData of modalForm.value.files) {
                                 if (fData.isNew) {
                                     const extMatch = fData.fileObj.name.match(/\.[^.]+$/);
-                                    const ext = extMatch ? extMatch[0] : '';
-                                    const safeStorageName = `file_${Date.now()}_${Math.random().toString(36).substring(2, 9)}${ext}`;
-                                    
-                                    const { error } = await supabase.storage.from('documents').upload(safeStorageName, fData.fileObj);
-                                    if (!error) {
-                                        const { data: urlData } = supabase.storage.from('documents').getPublicUrl(safeStorageName);
-                                        finalFiles.push({ name: fData.name, url: urlData.publicUrl, size: fData.fileObj.size });
-                                    } else {
-                                        showToast(`파일 업로드 실패: ${fData.name}`, 'error');
-                                    }
-                                } else {
-                                    finalFiles.push(fData);
-                                }
+                                    const safeName = `file_${Date.now()}_${Math.random().toString(36).substring(2, 9)}${extMatch ? extMatch[0] : ''}`;
+                                    const { error } = await supabase.storage.from('documents').upload(safeName, fData.fileObj);
+                                    if (error) throw error;
+                                    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(safeName);
+                                    finalFiles.push({ name: fData.name, url: urlData.publicUrl });
+                                } else finalFiles.push(fData);
                             }
                         }
-
-                        const payload = { 
-                            name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.description,
-                            file_path: finalFiles.length > 0 ? JSON.stringify(finalFiles) : modalForm.value.file_path
-                        };
-
+                        const payload = { name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.description, file_path: finalFiles.length > 0 ? JSON.stringify(finalFiles) : modalForm.value.file_path };
                         if (isEditing.value) await supabase.from('items').update(payload).eq('id', modalForm.value.id);
-                        else {
-                            payload.category_id = activeCategoryId.value;
-                            await supabase.from('items').insert(payload);
-                        }
-                        await loadData();
-                        showItemModal.value = false;
-                        showToast('저장되었습니다.');
-                    } catch(e) { showToast('저장 실패', 'error', e.message); }
-                    finally { isUploading.value = false; }
+                        else { payload.category_id = activeCategoryId.value; await supabase.from('items').insert(payload); }
+                        await loadData(); showItemModal.value = false; showToast('저장되었습니다.');
+                    } catch(e) { showToast('저장 실패', 'error', e.message); } finally { isUploading.value = false; }
                 };
 
                 const moveItem = async (item, direction) => {
                     try {
-                        const items = filteredItems.value;
-                        const idx = items.findIndex(i => i.id === item.id);
+                        const items = filteredItems.value; const idx = items.findIndex(i => i.id === item.id);
                         if (idx < 0 || (direction === -1 && idx === 0) || (direction === 1 && idx === items.length - 1)) return;
-                        
                         const swapTarget = items[idx + direction];
-                        await Promise.all([
-                            supabase.from('items').update({sort_order: swapTarget.sort_order||0}).eq('id', item.id),
-                            supabase.from('items').update({sort_order: item.sort_order||0}).eq('id', swapTarget.id)
-                        ]);
+                        await Promise.all([ supabase.from('items').update({sort_order: swapTarget.sort_order||0}).eq('id', item.id), supabase.from('items').update({sort_order: item.sort_order||0}).eq('id', swapTarget.id) ]);
                         await loadData();
-                    } catch(e) { showToast('순서 변경 실패', 'error', e.message); }
-                };
-
-                // 부문 및 카테고리 순서 변경/삭제/수정
-                const showCatModal = ref(false);
-                const catModalData = ref({});
-                const openCatModal = (id, mode, name='', icon='', parent_id='') => {
-                    catModalData.value = { id, mode, name, icon, parent_id, title: mode === 'edit' ? '메뉴 수정' : (mode === 'add_sector' ? '새 부문 만들기' : '새 하위 메뉴 추가') };
-                    showCatModal.value = true;
-                };
-                
-                const saveCategory = async () => {
-                    try {
-                        const payload = { name: catModalData.value.name, company_id: currentCompanyId.value };
-                        if (catModalData.value.mode === 'edit') {
-                            await supabase.from('categories').update(payload).eq('id', catModalData.value.id);
-                        } else {
-                            if (catModalData.value.mode === 'add_sector') {
-                                payload.parent_id = null;
-                            } else {
-                                payload.parent_id = catModalData.value.parent_id;
-                                payload.icon = 'fa-solid fa-folder';
-                            }
-                            await supabase.from('categories').insert(payload);
-                        }
-                        await loadData();
-                        showCatModal.value = false;
-                    } catch(e) { showToast('저장 실패', 'error', e.message); }
+                    } catch(e) { showToast('순서 변경 실패', 'error'); }
                 };
 
                 const moveCategory = async (id, direction) => {
                     try {
                         const { data: cats } = await supabase.from('categories').select('*').eq('company_id', currentCompanyId.value).order('sort_order');
-                        const target = cats.find(c => c.id === id);
-                        if(!target) return;
+                        const target = cats.find(c => c.id === id); if(!target) return;
                         const siblings = cats.filter(c => c.parent_id === target.parent_id).sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
                         const idx = siblings.findIndex(c => c.id === id);
                         if (idx < 0 || (direction === -1 && idx === 0) || (direction === 1 && idx === siblings.length - 1)) return;
-                        
                         const swapTarget = siblings[idx + direction];
-                        await Promise.all([
-                            supabase.from('categories').update({sort_order: swapTarget.sort_order}).eq('id', target.id),
-                            supabase.from('categories').update({sort_order: target.sort_order}).eq('id', swapTarget.id)
-                        ]);
+                        await Promise.all([ supabase.from('categories').update({sort_order: swapTarget.sort_order}).eq('id', target.id), supabase.from('categories').update({sort_order: target.sort_order}).eq('id', swapTarget.id) ]);
                         await loadData();
-                    } catch(e) { showToast('순서 변경 실패', 'error', e.message); }
+                    } catch(e) { showToast('순서 변경 실패', 'error'); }
                 };
 
-                const showDeleteModal = ref(false);
-                const deleteTarget = ref(null);
-                
-                const confirmDeleteCategory = (id, name) => { deleteTarget.value = { type: 'category', id, name }; showDeleteModal.value = true; };
-                const confirmDelete = (item) => { deleteTarget.value = { type: 'item', id: item.id, name: item.name }; showDeleteModal.value = true; };
-                
-                const executeDelete = async () => {
-                    try {
-                        if (deleteTarget.value.type === 'category') {
-                            await supabase.from('categories').delete().eq('id', deleteTarget.value.id);
-                        } else {
-                            await supabase.from('items').delete().eq('id', deleteTarget.value.id);
-                        }
-                        await loadData();
-                        showDeleteModal.value = false;
-                        showToast('삭제되었습니다.');
-                    } catch(e) { showToast('삭제 실패', 'error', e.message); }
-                };
+                // 6. 명함 캡처 후 자동 공유 및 뷰어 로직
+                const showBusinessCardModal = ref(false);
+                const businessCardData = ref({ front: null, back: null });
 
-                // 파일 및 링크 액션
-                const showPreviewModal = ref(false);
-                const previewItem = ref(null);
-                const previewFiles = ref([]);
-                const hasFiles = (item) => item.file_path && item.file_path.startsWith('[');
-                
                 const handleAction = (item) => {
-                    if (['download', 'document', 'notice'].includes(item.type)) {
-                        previewItem.value = item;
-                        previewFiles.value = hasFiles(item) ? JSON.parse(item.file_path) : [];
-                        showPreviewModal.value = true;
-                    } else if (item.file_path && item.file_path !== 'null') {
+                    if (item.type === 'my_business_card') {
+                        // 로그인된 유저의 프로필(DB)에서 명함 정보를 가져와 띄움
+                        businessCardData.value = userProfile.value?.business_card_data || { front: null, back: null };
+                        showBusinessCardModal.value = true;
+                    } else if (['download', 'document', 'notice'].includes(item.type)) {
+                        previewItem.value = item; previewFiles.value = hasFiles(item) ? JSON.parse(item.file_path) : []; showPreviewModal.value = true;
+                    } else if (item.file_path) {
                         window.open(item.file_path, '_blank');
-                    } else {
-                        showToast('연결된 주소가 없습니다. [수정]을 눌러 URL을 입력해 주세요.', 'error');
+                    } else showToast('링크 주소가 비어있습니다.', 'error');
+                };
+
+                // html2canvas 활용 화면 캡처 및 클립보드(Ctrl+V) 복사 + 공유
+                const captureAndShare = async (side) => {
+                    const elId = `card-render-target-${side}`;
+                    const targetEl = document.getElementById(elId);
+                    if (!targetEl) return;
+
+                    showToast('명함을 복사하는 중입니다...', 'success');
+                    try {
+                        // DOM을 캡처하여 Canvas로 변환 (화질 2배 적용)
+                        const canvas = await html2canvas(targetEl, { useCORS: true, backgroundColor: null, scale: 2 });
+                        canvas.toBlob(async (blob) => {
+                            let clipboardSuccess = false;
+                            
+                            // 1. 클립보드에 이미지 복사 시도 (카카오톡, 슬랙 등 Ctrl+V 용도)
+                            try {
+                                const item = new ClipboardItem({ 'image/png': blob });
+                                await navigator.clipboard.write([item]);
+                                clipboardSuccess = true;
+                                showToast('명함 이미지가 복사되었습니다! 채팅창에 Ctrl+V(붙여넣기) 하세요.', 'success');
+                            } catch (clipErr) {
+                                console.warn('클립보드 복사 실패 (브라우저/iFrame 보안 제한):', clipErr);
+                            }
+
+                            // 2. 모바일 스마트 기기 자체 '공유하기' 기능 연동
+                            const file = new File([blob], `my_business_card_${side}.png`, { type: 'image/png' });
+                            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                                try {
+                                    await navigator.share({ title: '내 명함', text: '명함을 공유합니다.', files: [file] });
+                                    return; // 스마트 기기 공유 성공 시 종료
+                                } catch(e) { console.log('공유 취소됨'); }
+                            } 
+                            
+                            // 3. 클립보드 복사도 실패하고 모바일 공유도 안되는 환경일 경우 자동 다운로드 폴백
+                            if (!clipboardSuccess) {
+                                saveAs(blob, `my_business_card_${side}.png`);
+                                showToast('클립보드 권한이 없어 이미지 파일로 다운로드되었습니다.', 'success');
+                            }
+                        }, 'image/png');
+                    } catch (e) {
+                        showToast('명함 복사/공유 실패', 'error', e.message);
                     }
                 };
+
+                // 파일 다운로드 및 링크 복사
+                const showPreviewModal = ref(false); const previewItem = ref(null); const previewFiles = ref([]);
+                const hasFiles = (item) => item.file_path && item.file_path.startsWith('[');
                 
+                const copyDownloadLink = (url, name) => {
+                    const downloadUrl = `${url}?download=${encodeURIComponent(name)}`;
+                    const tempInput = document.createElement("input"); tempInput.value = downloadUrl; document.body.appendChild(tempInput);
+                    tempInput.select(); document.execCommand("copy"); document.body.removeChild(tempInput);
+                    showToast(`다운로드 링크가 복사되었습니다!`);
+                };
                 const downloadActualFile = async (url, fileName) => { saveAs(url, fileName); };
                 const downloadSelectedZip = async () => {
-                    if (selectedItems.value.length === 0) return;
-                    showToast('압축을 시작합니다...');
+                    if (selectedItems.value.length === 0) return; showToast('압축을 시작합니다...');
                     const zip = new JSZip();
                     for (const itemId of selectedItems.value) {
                         const item = filteredItems.value.find(i => i.id === itemId);
                         if (item && hasFiles(item)) {
-                            const files = JSON.parse(item.file_path);
-                            const folder = zip.folder(item.name);
-                            for (const file of files) {
-                                const response = await fetch(file.url);
-                                folder.file(file.name, await response.blob());
-                            }
+                            const files = JSON.parse(item.file_path); const folder = zip.folder(item.name);
+                            for (const file of files) { const response = await fetch(file.url); folder.file(file.name, await response.blob()); }
                         }
                     }
                     zip.generateAsync({type:"blob"}).then(content => saveAs(content, `다운로드_${Date.now()}.zip`));
                     selectedItems.value = [];
                 };
 
-                const copyShareLink = async (url, name) => {
-                    // 현재 웹사이트의 도메인 주소를 가져옵니다.
-                    const baseUrl = window.location.origin + window.location.pathname;
-                    const shareUrl = `${baseUrl}?download=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`;
-                    
+                const showCatModal = ref(false); const catModalData = ref({});
+                const openCatModal = (id, mode, name='', icon='', parentId=null) => { catModalData.value = { id, mode, name, icon, parent_id: parentId, title: mode==='add_sector'?'새 부문 생성':mode==='add'?'하위 메뉴 추가':'이름 수정' }; showCatModal.value = true; };
+                const saveCategory = async () => {
                     try {
-                        // 1순위: 현대적인 클립보드 API 시도
-                        if (navigator.clipboard && window.isSecureContext) {
-                            await navigator.clipboard.writeText(shareUrl);
-                            showToast('다운로드 링크가 복사되었습니다!');
-                        } else {
-                            // 2순위: 구형 브라우저 및 iFrame 대응 강력한 Fallback
-                            const textArea = document.createElement("textarea");
-                            textArea.value = shareUrl;
-                            textArea.style.position = "fixed";
-                            textArea.style.left = "-999999px";
-                            document.body.appendChild(textArea);
-                            textArea.focus();
-                            textArea.select();
-                            try {
-                                document.execCommand('copy');
-                                showToast('다운로드 링크가 복사되었습니다!');
-                            } catch (err) {
-                                showToast('복사 실패: 수동으로 복사해주세요.', 'error', shareUrl);
-                            }
-                            document.body.removeChild(textArea);
+                        const { mode, id, name, icon, parent_id } = catModalData.value;
+                        if(mode === 'edit') await supabase.from('categories').update({name, icon}).eq('id', id);
+                        else {
+                            const { data: cats } = await supabase.from('categories').select('sort_order').eq('company_id', currentCompanyId.value).order('sort_order', {ascending: false}).limit(1);
+                            const newOrder = cats.length > 0 ? (cats[0].sort_order || 0) + 1 : 1;
+                            await supabase.from('categories').insert({name, icon, parent_id, company_id: currentCompanyId.value, sort_order: newOrder});
                         }
-                    } catch (e) {
-                        showToast('클립보드 권한이 없습니다.', 'error', shareUrl);
-                    }
+                        showCatModal.value = false; await loadData();
+                    } catch(e) {}
+                };
+                const showDeleteModal = ref(false); const deleteTarget = ref(null);
+                const confirmDeleteCategory = (id, name) => { deleteTarget.value = { type: 'category', id, name }; showDeleteModal.value = true; };
+                const confirmDelete = (item) => { deleteTarget.value = { type: 'item', id: item.id, name: item.name }; showDeleteModal.value = true; };
+                const executeDelete = async () => {
+                    try {
+                        if (deleteTarget.value.type === 'category') await supabase.from('categories').delete().eq('id', deleteTarget.value.id);
+                        else await supabase.from('items').delete().eq('id', deleteTarget.value.id);
+                        showDeleteModal.value = false; await loadData(); showToast('삭제되었습니다.');
+                    } catch(e) {}
                 };
 
                 onMounted(() => { checkSession(); });
 
                 return {
-                    authState, authForm, userProfile, isAuthLoading, handleLogin, handleRegister, 
-                    rememberEmail, keepLoggedIn,
-                    handleLogout: async () => { 
-                        await supabase.auth.signOut(); 
-                        sessionStorage.removeItem('tempSession');
-                        location.reload(); 
-                    },
+                    authState, authForm, userProfile, isAuthLoading, rememberEmail, keepLoggedIn, handleLogin, handleRegister, handleLogout,
                     companies, currentCompanyId, currentCompanyName, loadCompanies, loadData,
-                    showCompanyModal, newCompanyName, isCloning, openAddCompanyModal, executeAddCompany,
-                    showDeleteCompanyModal, isDeletingCompany, openDeleteCompanyModal, executeDeleteCompany,
-                    showUserModal, usersList, editingUser, menuGroupsForEditingUser, openUserManagement, selectUserForEdit, updateUserStatus, saveUserPermissions, getCompanyName, reloadPermissionsTree,
+                    showCompanyModal, newCompanyName, isCloning, openAddCompanyModal, executeAddCompany, showDeleteCompanyModal, isDeletingCompany, confirmDeleteCompany: () => showDeleteCompanyModal.value = true, executeDeleteCompany,
+                    showUserModal, usersList, editingUser, menuGroupsForEditingUser, openUserManagement, selectUserForEdit, updateUserStatus, saveUserPermissions, getCompanyName, refreshMenuGroupsForUser,
+                    adminUserTab, adminCardData, adminCardFiles, isAdminCardUploading, dragStates, handleCardFileSelect, handleCardDrop, handleCardPaste, saveAdminBusinessCard,
                     isAdminMode, toggleAdminMode: () => isAdminMode.value = !isAdminMode.value, isSidebarOpen, toggleSidebar: () => isSidebarOpen.value = !isSidebarOpen.value,
                     viewMode, menuGroups, visibleMenuGroups, activeCategoryId, activeCategoryName, filteredItems, selectCategory: (c) => { activeCategoryId.value = c.id; selectedItems.value = []; },
                     showCatModal, catModalData, openCatModal, saveCategory, moveCategory, showDeleteModal, confirmDeleteCategory, confirmDelete, executeDelete,
-                    showItemModal, isEditing, isUploading, dragActive, modalForm, 
-                    openAddModal: () => { isEditing.value=false; modalForm.value={type:'download', description:'', file_path:'', files:[]}; showItemModal.value=true; },
+                    showItemModal, isEditing, isUploading, dragActive, modalForm, openAddModal: () => { isEditing.value=false; modalForm.value={type:'download', files:[]}; showItemModal.value=true; },
                     openEditModal: (i) => { isEditing.value=true; modalForm.value={...i, files: hasFiles(i) ? JSON.parse(i.file_path) : []}; showItemModal.value=true; },
                     closeModal: () => showItemModal.value=false, saveItem, moveItem, handleFileSelect, handleDrop, removeFile, moveFile,
-                    showPreviewModal, previewItem, previewFiles, handleAction, downloadActualFile, copyShareLink, hasFiles, selectedItems, downloadSelectedZip,
-                    toast, getIcon: (t) => ({notice:'fa-solid fa-bullhorn', download:'fa-solid fa-file-arrow-down', document:'fa-solid fa-file-signature', system:'fa-solid fa-laptop-code', link:'fa-solid fa-link'}[t]||'fa-solid fa-file'),
-                    getIconClass: (t) => ({notice:'bg-red-50 text-red-600', download:'bg-blue-50 text-blue-600'}[t]||'bg-gray-50 text-gray-600'),
-                    getTypeBorderClass: (t) => ({notice:'border-red-100', download:'border-blue-100'}[t]||'border-gray-200'),
-                    getTypeName: (t) => ({notice:'공지사항', download:'일반파일', document:'사내기안', system:'시스템', link:'외부링크'}[t]||'기타'),
-                    getActionText: (t,i) => hasFiles(i) ? '열람/다운로드' : ({notice:'내용확인', download:'다운로드', link:'바로가기'}[t]||'실행'),
-                    getActionIcon: (t) => ({notice:'fa-solid fa-book-open', link:'fa-solid fa-arrow-up-right-from-square'}[t]||'fa-solid fa-download')
+                    showPreviewModal, previewItem, previewFiles, handleAction, copyDownloadLink, downloadActualFile, hasFiles, selectedItems, downloadSelectedZip,
+                    showBusinessCardModal, businessCardData, captureAndShare,
+                    toast, getIcon: (t) => ({notice:'fa-solid fa-bullhorn', download:'fa-solid fa-file-arrow-down', document:'fa-solid fa-file-signature', system:'fa-solid fa-laptop-code', link:'fa-solid fa-link', proxy_form:'fa-solid fa-id-card', my_business_card:'fa-solid fa-address-card'}[t]||'fa-solid fa-file'),
+                    getIconClass: (t) => ({notice:'bg-red-50 text-red-600', download:'bg-blue-50 text-blue-600', my_business_card:'bg-indigo-50 text-indigo-600'}[t]||'bg-gray-50 text-gray-600'),
+                    getTypeBorderClass: (t) => ({notice:'border-red-100', download:'border-blue-100', my_business_card:'border-indigo-100'}[t]||'border-gray-200'),
+                    getTypeName: (t) => ({notice:'공지사항', download:'일반파일', document:'사내기안', system:'시스템', link:'외부링크', proxy_form:'스마트폼', my_business_card:'개인명함'}[t]||'기타'),
+                    getActionText: (t,i) => t === 'my_business_card' ? '내 명함 열기' : (hasFiles(i) ? '열람/다운로드' : ({notice:'내용확인', download:'다운로드', link:'바로가기'}[t]||'실행')),
+                    getActionIcon: (t) => ({notice:'fa-solid fa-book-open', link:'fa-solid fa-arrow-up-right-from-square', my_business_card:'fa-solid fa-image-portrait'}[t]||'fa-solid fa-download')
                 };
             }
         }).mount('#app');
