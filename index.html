@@ -262,8 +262,14 @@
                     <!-- 리스트 뷰 -->
                     <div v-else-if="viewMode === 'list'" class="bg-surface rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                         <ul class="divide-y divide-gray-200">
-                            <li v-for="item in filteredItems" :key="item.id" class="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between gap-4">
+                            <li v-for="(item, index) in filteredItems" :key="item.id" 
+                                :draggable="isAdminMode"
+                                @dragstart="onDragStart(index)"
+                                @dragover.prevent
+                                @drop="onDrop(index)"
+                                :class="['p-4 hover:bg-gray-50 transition-colors flex items-center justify-between gap-4', isAdminMode ? 'cursor-grab active:cursor-grabbing' : '']">
                                 <div class="flex items-center gap-4 flex-1 min-w-0">
+                                    <i v-if="isAdminMode" class="fa-solid fa-grip-vertical text-gray-300 hover:text-gray-500 cursor-grab"></i>
                                     <input type="checkbox" :value="item.id" v-model="selectedItems" class="w-4 h-4 text-primary rounded border-gray-300">
                                     <div :class="['w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0', getIconClass(item.type)]">
                                         <i :class="getIcon(item.type)"></i>
@@ -1055,6 +1061,30 @@
                     finally { isUploading.value = false; }
                 };
 
+                // 드래그 앤 드롭 순서 변경 핸들러
+                const draggedItemIndex = ref(null);
+                const onDragStart = (index) => {
+                    draggedItemIndex.value = index;
+                };
+                const onDrop = async (targetIndex) => {
+                    if (draggedItemIndex.value === null || draggedItemIndex.value === targetIndex) return;
+                    try {
+                        const items = [...filteredItems.value];
+                        const [moved] = items.splice(draggedItemIndex.value, 1);
+                        items.splice(targetIndex, 0, moved);
+                        draggedItemIndex.value = null;
+
+                        const updates = items.map((itm, index) => 
+                            supabase.from('items').update({ sort_order: index + 1 }).eq('id', itm.id)
+                        );
+                        await Promise.all(updates);
+                        await loadData();
+                        showToast('순서가 변경되었습니다.');
+                    } catch(e) {
+                        showToast('순서 변경 실패', 'error', e.message);
+                    }
+                };
+
                 const moveItem = async (item, direction) => {
                     try {
                         const items = [...filteredItems.value];
@@ -1287,7 +1317,7 @@
                     isAdminMode, toggleAdminMode: () => isAdminMode.value = !isAdminMode.value, isSidebarOpen, toggleSidebar: () => isSidebarOpen.value = !isSidebarOpen.value,
                     viewMode, menuGroups, visibleMenuGroups, activeCategoryId, activeCategoryName, filteredItems, selectCategory: (c) => { activeCategoryId.value = c.id; selectedItems.value = []; },
                     showCatModal, catModalData, openCatModal, saveCategory, moveCategory, showDeleteModal, deleteTarget, confirmDeleteCategory, confirmDelete, executeDelete,
-                    showItemModal, isEditing, isUploading, dragActive, modalForm, openAddModal, openEditModal, closeModal: () => showItemModal.value=false, saveItem, moveItem, handleFileSelect, handleDrop, removeFile, moveFile, addLinkField, removeLinkField,
+                    showItemModal, isEditing, isUploading, dragActive, modalForm, openAddModal, openEditModal, closeModal: () => showItemModal.value=false, saveItem, moveItem, onDragStart, onDrop, handleFileSelect, handleDrop, removeFile, moveFile, addLinkField, removeLinkField,
                     showPreviewModal, previewItem, previewFiles, handleAction, copyDownloadLink, downloadActualFile, openLink, hasFiles, selectedItems, downloadSelectedZip,
                     showBusinessCardModal, businessCardData, selectedCardUserId, cardManagerUsers, isMgrCardUploading, handleCardFileSelect, handleCardDrop, handleCardPaste, saveAdminBusinessCard, shareBusinessCard,
                     showUserModal, usersList, editingUser, menuGroupsForEditingUser, openUserManagement, selectUserForEdit, updateUserStatus, loadMenuGroupsForEditingUser, saveUserPermissions, getCompanyName,
