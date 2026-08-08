@@ -540,7 +540,7 @@
 
                 // Proxy Form States
                 const showProxyForm = ref(false);
-                const stampImage = ref(null);
+                const stampImage = ref("https://zpzaiuqcoltshtsrllxx.supabase.co/storage/v1/object/sign/company_assets/Registered%20Corporate%20Seal.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81ZjA5NThjMi1lOWM5LTQ0NjYtOTZiMC04YWIyMzc1M2ViMzQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJjb21wYW55X2Fzc2V0cy9SZWdpc3RlcmVkIENvcnBvcmF0ZSBTZWFsLmpwZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODYxNjcyNzUsImV4cCI6MTc4NzAzMTI3NX0.pEQVTrUhTaOrrJD8APePljI0ZTYjRAstSZN2UHEtbSI");
                 const proxyData = ref({
                     delegator: { 
                         name: '주식회사 힘', 
@@ -919,7 +919,17 @@
                     html2pdf().set({ margin: 0, filename: '위임장.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => showToastMsg('PDF 저장 완료'));
                 };
                 const printForm = () => { window.print(); };
-                const downloadCEOID = () => { showToastMsg('대표자 신분증 사본 다운로드 시작', 'success'); };
+                const downloadCEOID = () => { 
+                    showToastMsg('대표자 신분증 사본을 불러옵니다.', 'success'); 
+                    const url = "https://zpzaiuqcoltshtsrllxx.supabase.co/storage/v1/object/sign/company_assets/Representative's%20ID%20Card.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81ZjA5NThjMi1lOWM5LTQ0NjYtOTZiMC04YWIyMzc1M2ViMzQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJjb21wYW55X2Fzc2V0cy9SZXByZXNlbnRhdGl2ZSdzIElEIENhcmQuanBnIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NjE2NzIzNCwiZXhwIjoyMTAxNTI3MjM0fQ.ZYsgDOTW71Fo3C0tnoJAZcyzH6BQ4rzHl-i4Pmnwivw";
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = '대표자_신분증_사본.jpg';
+                    a.target = '_blank';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                };
 
                 const getIcon = (t) => ({ download: 'fa-solid fa-file-arrow-down', document: 'fa-solid fa-file-signature', system: 'fa-solid fa-laptop-code', link: 'fa-solid fa-arrow-up-right-from-square', proxy_form: 'fa-solid fa-file-invoice' }[t] || 'fa-solid fa-file');
                 const getIconClass = (t) => ({ download: 'bg-blue-50 text-blue-600', document: 'bg-emerald-50 text-emerald-600', system: 'bg-purple-50 text-purple-600', link: 'bg-amber-50 text-amber-600', proxy_form: 'bg-rose-50 text-rose-600' }[t] || 'bg-gray-50 text-gray-600');
