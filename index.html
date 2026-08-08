@@ -12,6 +12,8 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <!-- html2pdf -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
         tailwind.config = {
@@ -34,13 +36,11 @@
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         body { font-family: 'Pretendard', sans-serif; background-color: #f3f4f6; }
         
-        /* 스크롤바 커스텀 */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* A4 사이즈 미리보기용 (위임장) */
         .a4-preview {
             width: 210mm;
             height: 297mm;
@@ -52,34 +52,26 @@
             transform-origin: top center;
         }
 
-        /* 인쇄 최적화 */
         @media print {
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; }
             #print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 210mm;
-                height: 297mm;
-                padding: 20mm;
-                box-shadow: none;
-                margin: 0;
+                position: absolute; left: 0; top: 0; width: 210mm; height: 297mm;
+                padding: 20mm; box-shadow: none; margin: 0;
             }
         }
     </style>
 </head>
 <body class="text-gray-800 h-screen overflow-hidden">
-    <div id="app" class="flex h-full w-full">
+    <div id="app" class="flex h-full w-full relative">
         
         <!-- 모바일 사이드바 배경 -->
         <div v-if="isSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"></div>
 
         <!-- 사이드바 -->
         <aside :class="['fixed md:static inset-y-0 left-0 z-30 w-64 bg-surface border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col', isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
-            
-            <!-- 로고 영역 -->
-            <div class="h-16 flex items-center px-6 border-b border-gray-100">
+            <!-- 로고 -->
+            <div class="h-16 flex items-center px-6 border-b border-gray-100 flex-shrink-0">
                 <i class="fa-solid fa-building text-primary text-xl mr-3"></i>
                 <span class="text-lg font-bold text-gray-900 tracking-tight">업무 지원 포털</span>
             </div>
@@ -87,12 +79,10 @@
             <!-- 카테고리 목록 -->
             <div class="overflow-y-auto overflow-x-hidden flex-grow py-4 px-3">
                 <div v-for="(group, groupIdx) in menuGroups" :key="groupIdx" class="mb-6 last:mb-0">
-                    <!-- 상위 부문 타이틀 -->
                     <h3 class="px-3 text-xs font-bold text-gray-400 mb-2 tracking-wider">{{ group.sectorName }}</h3>
                     
                     <ul class="space-y-1">
                         <li v-for="category in group.categories" :key="category.id">
-                            <!-- 메인 카테고리 버튼 -->
                             <button 
                                 @click="selectCategory(category)"
                                 :class="[
@@ -101,7 +91,7 @@
                                     (category.subCategories && isCategoryActive(category)) ? 'text-primary' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                 ]"
                             >
-                                <i :class="['w-5 text-center', category.icon, isCategoryActive(category) ? 'text-primary' : 'text-gray-400']"></i>
+                                <i :class="['w-5 text-center', category.icon || 'fa-solid fa-folder', isCategoryActive(category) ? 'text-primary' : 'text-gray-400']"></i>
                                 {{ category.name }}
                                 
                                 <i v-if="category.subCategories" :class="['ml-auto fa-solid transition-transform duration-200 text-xs', category.isOpen ? 'fa-chevron-down' : 'fa-chevron-right']"></i>
@@ -117,14 +107,12 @@
                                         @click="selectSubCategory(sub.id)"
                                         :class="[
                                             'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200',
-                                            activeCategoryId === sub.id 
-                                                ? 'bg-blue-50 text-primary' 
-                                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                            activeCategoryId === sub.id ? 'bg-blue-50 text-primary' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                                         ]"
                                     >
                                         <i class="fa-solid fa-minus text-[10px] w-3 text-center" :class="activeCategoryId === sub.id ? 'text-primary' : 'text-gray-300'"></i>
                                         {{ sub.name }}
-                                        <span v-if="sub.items.length > 0" class="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+                                        <span v-if="sub.items && sub.items.length > 0" class="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
                                             {{ sub.items.length }}
                                         </span>
                                     </button>
@@ -135,8 +123,13 @@
                 </div>
             </div>
             
-            <!-- 관리자 프로필 영역 -->
-            <div class="p-4 border-t border-gray-100 bg-gray-50">
+            <!-- 하단 DB 상태 표시 및 프로필 -->
+            <div class="p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+                <div class="mb-3 px-1 flex items-center justify-between">
+                    <span class="text-xs font-medium text-gray-500">DB 연동 상태</span>
+                    <span v-if="isDbConnected" class="flex items-center text-xs text-emerald-600 font-bold"><span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>Connected</span>
+                    <span v-else class="flex items-center text-xs text-amber-500 font-bold"><span class="w-2 h-2 rounded-full bg-amber-400 mr-1.5"></span>Local Mode</span>
+                </div>
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">
                         CE
@@ -149,16 +142,15 @@
             </div>
         </aside>
 
-        <!-- 메인 콘텐츠 영역 -->
+        <!-- 메인 콘텐츠 -->
         <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
-            
-            <!-- 헤더 바 -->
+            <!-- 헤더 -->
             <header class="h-16 bg-surface border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 z-10 flex-shrink-0">
                 <div class="flex items-center flex-1">
                     <button @click="toggleSidebar" class="md:hidden mr-4 text-gray-500 hover:text-gray-700">
                         <i class="fa-solid fa-bars text-xl"></i>
                     </button>
-                    <!-- 검색창 -->
+                    <!-- 검색 -->
                     <div class="relative w-full max-w-md hidden sm:block">
                         <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                         <input type="text" v-model="searchQuery" placeholder="필요한 서류나 시스템을 검색해보세요" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-gray-50 focus:bg-white">
@@ -166,13 +158,18 @@
                 </div>
                 
                 <div class="flex items-center gap-4">
+                    <!-- DB 초기 데이터 삽입 버튼 (관리자용) -->
+                    <button v-if="isAdminMode && !isDbConnected" @click="seedDatabase" class="hidden lg:flex items-center px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300 rounded text-xs font-bold transition-colors">
+                        <i class="fa-solid fa-database mr-1.5"></i> DB에 기본 데이터 세팅
+                    </button>
+
                     <!-- 뷰어 모드 토글 -->
                     <div class="flex bg-gray-100 rounded-lg p-1">
                         <button @click="viewMode = 'list'" :class="['px-3 py-1.5 rounded text-sm font-medium transition-colors', viewMode === 'list' ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700']">
-                            <i class="fa-solid fa-list mr-1"></i> 리스트
+                            <i class="fa-solid fa-list mr-1"></i>
                         </button>
                         <button @click="viewMode = 'grid'" :class="['px-3 py-1.5 rounded text-sm font-medium transition-colors', viewMode === 'grid' ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700']">
-                            <i class="fa-solid fa-border-all mr-1"></i> 그리드
+                            <i class="fa-solid fa-border-all mr-1"></i>
                         </button>
                     </div>
 
@@ -189,9 +186,8 @@
                 </div>
             </header>
 
-            <!-- 내부 콘텐츠 영역 (스크롤) -->
+            <!-- 내부 콘텐츠 영역 -->
             <div class="flex-1 overflow-y-auto p-4 sm:p-8">
-                
                 <!-- 카테고리 헤더 -->
                 <div class="mb-6 flex justify-between items-end">
                     <div>
@@ -205,11 +201,11 @@
                     <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-400 text-2xl">
                         <i class="fa-solid fa-folder-open"></i>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-1">검색 결과가 없습니다</h3>
-                    <p class="text-sm text-gray-500">다른 검색어를 입력하시거나 카테고리를 확인해주세요.</p>
+                    <h3 class="text-lg font-medium text-gray-900 mb-1">항목이 없습니다</h3>
+                    <p class="text-sm text-gray-500">현재 카테고리에 등록된 문서나 시스템이 없습니다.</p>
                 </div>
 
-                <!-- 리스트 뷰 (기본값) -->
+                <!-- 리스트 뷰 -->
                 <div v-else-if="viewMode === 'list'" class="bg-surface rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                     <ul class="divide-y divide-gray-200">
                         <li v-for="item in filteredItems" :key="item.id" class="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between gap-4 group">
@@ -229,27 +225,18 @@
                             </div>
                             
                             <div class="flex items-center gap-2 flex-shrink-0">
-                                <!-- 관리자 전용 수정/삭제 버튼 -->
+                                <!-- 관리자 전용 수정/삭제 -->
                                 <template v-if="isAdminMode">
-                                    <button @click.stop="openEditModal(item)" class="p-2 text-gray-400 hover:text-primary transition-colors opacity-0 group-hover:opacity-100" title="수정">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button @click.stop="confirmDelete(item)" class="p-2 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100" title="삭제">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
+                                    <button @click.stop="openEditModal(item)" class="p-2 text-gray-400 hover:text-primary transition-colors opacity-0 group-hover:opacity-100"><i class="fa-solid fa-pen"></i></button>
+                                    <button @click.stop="confirmDelete(item)" class="p-2 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
                                 </template>
                                 
-                                <!-- 사용자 액션 버튼 (다운로드/실행) -->
                                 <div class="flex items-center gap-2">
-                                    <!-- 위임장(m10) 전용 신분증 사본 버튼 -->
-                                    <button v-if="item.id === 'm10'" @click="downloadCEOID" class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors shadow-sm flex items-center gap-1.5" title="대표자 주민등록증 사본 다운로드">
-                                        <i class="fa-solid fa-id-card text-blue-500"></i>
-                                        <span class="hidden md:inline">대표자 신분증 사본</span>
+                                    <button v-if="item.id === 'm10' || item.name.includes('위임장')" @click="downloadCEOID" class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 flex items-center gap-1.5" title="대표자 신분증 사본">
+                                        <i class="fa-solid fa-id-card text-blue-500"></i><span class="hidden md:inline">신분증 사본</span>
                                     </button>
-                                    
-                                    <button @click="handleAction(item)" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-primary transition-colors shadow-sm flex items-center gap-2">
-                                        <i :class="getActionIcon(item.type)"></i>
-                                        <span class="hidden sm:inline">{{ getActionText(item.type) }}</span>
+                                    <button @click="handleAction(item)" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-primary flex items-center gap-2">
+                                        <i :class="getActionIcon(item.type)"></i><span class="hidden sm:inline">{{ getActionText(item.type) }}</span>
                                     </button>
                                 </div>
                             </div>
@@ -260,13 +247,10 @@
                 <!-- 그리드 뷰 -->
                 <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <div v-for="item in filteredItems" :key="item.id" class="bg-surface border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow relative group">
-                        
-                        <!-- 관리자 옵션 (오른쪽 상단 점 3개 메뉴 스타일 대체) -->
                         <div v-if="isAdminMode" class="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button @click.stop="openEditModal(item)" class="p-1.5 text-gray-400 hover:bg-gray-100 rounded text-xs" title="수정"><i class="fa-solid fa-pen"></i></button>
-                            <button @click.stop="confirmDelete(item)" class="p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded text-xs" title="삭제"><i class="fa-solid fa-trash"></i></button>
+                            <button @click.stop="openEditModal(item)" class="p-1.5 text-gray-400 hover:bg-gray-100 rounded text-xs"><i class="fa-solid fa-pen"></i></button>
+                            <button @click.stop="confirmDelete(item)" class="p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded text-xs"><i class="fa-solid fa-trash"></i></button>
                         </div>
-
                         <div :class="['w-12 h-12 rounded-lg flex items-center justify-center text-xl mb-4', getIconClass(item.type)]">
                             <i :class="getIcon(item.type)"></i>
                         </div>
@@ -278,16 +262,10 @@
                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
                                 {{ getTypeName(item.type) }}
                             </span>
-                            
                             <div class="flex items-center gap-1.5">
-                                <!-- 위임장(m10) 전용 신분증 사본 버튼 (그리드용) -->
-                                <button v-if="item.id === 'm10'" @click="downloadCEOID" class="text-sm font-medium text-gray-600 hover:text-blue-700 flex items-center gap-1 bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="대표자 주민등록증 사본 다운로드">
-                                    <i class="fa-solid fa-id-card"></i>
-                                </button>
-
-                                <button @click="handleAction(item)" class="text-sm font-medium text-primary hover:text-blue-800 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
-                                    <i :class="getActionIcon(item.type)"></i>
-                                    {{ getActionText(item.type) }}
+                                <button v-if="item.id === 'm10' || item.name.includes('위임장')" @click="downloadCEOID" class="text-sm font-medium text-gray-600 hover:text-blue-700 bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-100"><i class="fa-solid fa-id-card"></i></button>
+                                <button @click="handleAction(item)" class="text-sm font-medium text-primary hover:text-blue-800 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">
+                                    <i :class="getActionIcon(item.type)"></i> {{ getActionText(item.type) }}
                                 </button>
                             </div>
                         </div>
@@ -295,234 +273,165 @@
                 </div>
             </div>
 
-            <!-- 관리자용 추가 버튼 (플로팅) -->
-            <button v-if="isAdminMode" @click="openAddModal" class="absolute bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-blue-800 transition-colors flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-blue-300">
+            <!-- 항목 추가 버튼 (관리자 전용) -->
+            <button v-if="isAdminMode" @click="openAddModal" class="absolute bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-blue-800 flex items-center justify-center text-xl focus:outline-none">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </main>
 
         <!-- 관리자 인증 모달 -->
         <div v-if="showAdminAuth" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 transform transition-all">
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
                 <div class="flex justify-between items-center mb-5">
-                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <i class="fa-solid fa-lock text-primary"></i> 관리자 인증
-                    </h3>
-                    <button @click="showAdminAuth = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2"><i class="fa-solid fa-lock text-primary"></i> 관리자 인증</h3>
+                    <button @click="showAdminAuth = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="mb-5">
                     <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호를 입력하세요</label>
-                    <input type="password" v-model="adminPassword" @keyup.enter="verifyAdminPassword" placeholder="비밀번호" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                    <input type="password" v-model="adminPassword" @keyup.enter="verifyAdminPassword" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
                 </div>
                 <div class="flex justify-end gap-2">
-                    <button @click="showAdminAuth = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">취소</button>
+                    <button @click="showAdminAuth = false" class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg">취소</button>
                     <button @click="verifyAdminPassword" class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-800 rounded-lg">확인</button>
                 </div>
             </div>
         </div>
 
-        <!-- 항목 추가/수정 모달 (관리자용) -->
+        <!-- 항목 추가/수정 모달 -->
         <div v-if="showItemModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 transform transition-all">
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
                 <div class="flex justify-between items-center mb-5">
                     <h3 class="text-lg font-bold text-gray-900">{{ isEditing ? '항목 수정' : '새 항목 추가' }}</h3>
-                    <button @click="closeModal" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    <button @click="closeModal" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">항목명 <span class="text-red-500">*</span></label>
-                        <input type="text" v-model="modalForm.name" placeholder="예: 2024년 사업계획서 양식" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                        <input type="text" v-model="modalForm.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none">
                     </div>
-                    
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">유형 <span class="text-red-500">*</span></label>
-                        <select v-model="modalForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
-                            <option value="download">단순 파일 다운로드 (Word/PDF)</option>
-                            <option value="document">내부 기안 양식 (작성용)</option>
+                        <select v-model="modalForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                            <option value="download">단순 파일 다운로드</option>
+                            <option value="document">내부 기안 양식</option>
                             <option value="system">사내 시스템 연결</option>
                             <option value="link">외부 링크 연결</option>
-                            <option value="proxy_form">스마트 위임장 양식 (PDF 생성기)</option>
+                            <option value="proxy_form">스마트 위임장 양식 (PDF 생성)</option>
                         </select>
                     </div>
-
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">설명 (선택)</label>
-                        <input type="text" v-model="modalForm.desc" placeholder="항목에 대한 간단한 설명을 입력하세요" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                        <input type="text" v-model="modalForm.desc" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none">
                     </div>
                 </div>
-
                 <div class="mt-6 flex justify-end gap-2">
-                    <button @click="closeModal" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">취소</button>
-                    <button @click="saveItem" class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-800 rounded-lg transition-colors">저장하기</button>
+                    <button @click="closeModal" class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg">취소</button>
+                    <button @click="saveItem" class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-800 rounded-lg">저장하기</button>
                 </div>
             </div>
         </div>
 
         <!-- 삭제 확인 모달 -->
-        <div v-if="itemToDelete" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 transform transition-all text-center">
+        <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
                 <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mx-auto mb-4">
                     <i class="fa-solid fa-triangle-exclamation"></i>
                 </div>
                 <h3 class="text-lg font-bold text-gray-900 mb-2">항목 삭제</h3>
-                <p class="text-sm text-gray-500 mb-6">정말로 <strong>'{{ itemToDelete.name }}'</strong> 항목을 삭제하시겠습니까?<br>이 작업은 되돌릴 수 없습니다.</p>
+                <p class="text-sm text-gray-500 mb-6">정말로 <strong>'{{ itemToDelete?.name }}'</strong> 항목을 삭제하시겠습니까?</p>
                 <div class="flex justify-center gap-2">
-                    <button @click="itemToDelete = null" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg w-full">취소</button>
+                    <button @click="showDeleteModal = false" class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg w-full">취소</button>
                     <button @click="executeDelete" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg w-full">삭제하기</button>
                 </div>
             </div>
         </div>
 
-        <!-- 대리인 위임장 스마트 작성/미리보기 모달 -->
+        <!-- 스마트 위임장 모달 -->
         <div v-if="showProxyForm" class="fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex flex-col md:flex-row overflow-hidden">
-            <!-- 닫기 버튼 (모바일/데스크톱 공통) -->
             <button @click="showProxyForm = false" class="absolute top-4 right-4 z-50 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-100">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
-
-            <!-- 입력 폼 영역 (좌측) -->
             <div class="w-full md:w-1/3 h-1/2 md:h-full bg-white overflow-y-auto border-r border-gray-200 p-6 shadow-xl z-10 flex flex-col">
                 <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <i class="fa-solid fa-file-signature text-primary"></i> 위임장 양식 작성
+                    <i class="fa-solid fa-file-signature text-primary"></i> 위임장 양식 세팅
                 </h2>
                 
                 <div class="flex-1 space-y-5">
-                    <!-- 수임자(대리인) 정보 -->
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <h3 class="text-sm font-bold text-gray-700 mb-3">수임자 (대리인) 정보</h3>
                         <div class="space-y-3">
                             <div class="flex gap-2">
-                                <input type="text" v-model="proxyData.delegatee.name" placeholder="성명" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
-                                <input type="text" v-model="proxyData.delegatee.dept_pos" placeholder="소속 및 직위" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                                <input type="text" v-model="proxyData.delegatee.name" placeholder="성명" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                                <input type="text" v-model="proxyData.delegatee.dept_pos" placeholder="소속 및 직위" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm outline-none">
                             </div>
-                            <input type="text" v-model="proxyData.delegatee.id" placeholder="주민등록번호 (예: 900101-1234567)" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
-                            <input type="text" v-model="proxyData.delegatee.phone" placeholder="연락처" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
-                            <input type="text" v-model="proxyData.delegatee.address" placeholder="주소" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                            <input type="text" v-model="proxyData.delegatee.id" placeholder="주민등록번호" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                            <input type="text" v-model="proxyData.delegatee.phone" placeholder="연락처" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                            <input type="text" v-model="proxyData.delegatee.address" placeholder="주소" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
                         </div>
                     </div>
-
-                    <!-- 위임사항 및 기간 -->
+                    
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <div class="flex justify-between items-center mb-3">
                             <h3 class="text-sm font-bold text-gray-700">위임 사항 및 기간</h3>
                         </div>
                         <div class="flex gap-2 mb-3 overflow-x-auto pb-1">
-                            <button @click="applyTemplate('finance')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-blue-50 hover:text-primary hover:border-primary">금융업무</button>
-                            <button @click="applyTemplate('registry')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-blue-50 hover:text-primary hover:border-primary">법인등기</button>
-                            <button @click="applyTemplate('contract')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-blue-50 hover:text-primary hover:border-primary">계약체결</button>
-                            <button @click="applyTemplate('pg')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-blue-600 font-medium hover:bg-blue-50 hover:text-primary hover:border-primary">PG신청</button>
-                            <button @click="applyTemplate('reset')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-400 hover:bg-gray-100">초기화</button>
+                            <button @click="applyTemplate('finance')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600">금융</button>
+                            <button @click="applyTemplate('registry')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600">등기</button>
+                            <button @click="applyTemplate('contract')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600">계약</button>
+                            <button @click="applyTemplate('pg')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-blue-600 font-medium">PG신청</button>
                         </div>
                         <div class="space-y-3">
-                            <input type="text" v-model="proxyData.mandate.purpose" placeholder="위임 업무의 목적 (예: OO계약 체결의 건)" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
-                            <textarea v-model="proxyData.mandate.details" rows="3" placeholder="대리권의 세부 범위를 구체적으로 입력하세요." class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"></textarea>
-                            
-                            <!-- 위임 기간 -->
+                            <input type="text" v-model="proxyData.mandate.purpose" placeholder="위임 업무의 목적" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                            <textarea v-model="proxyData.mandate.details" rows="3" placeholder="대리권의 세부 범위" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none resize-none"></textarea>
                             <div class="space-y-2">
-                                <label class="block text-xs font-medium text-gray-600">위임(유효) 기간</label>
-                                <div class="flex gap-2 items-center">
-                                    <select v-model="proxyData.period.type" class="px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-primary outline-none bg-white">
-                                        <option value="date">날짜 지정</option>
-                                        <option value="condition">조건 지정</option>
-                                    </select>
-                                    <div v-if="proxyData.period.type === 'date'" class="flex gap-1 items-center flex-1">
-                                        <input type="date" v-model="proxyData.period.start" class="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:border-primary outline-none">
-                                        <span class="text-gray-500">~</span>
-                                        <input type="date" v-model="proxyData.period.end" class="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:border-primary outline-none">
-                                    </div>
-                                    <div v-else class="flex-1">
-                                        <input type="text" v-model="proxyData.period.condition" placeholder="예: 해당 계약 체결 완료 시까지" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-primary outline-none">
-                                    </div>
-                                </div>
+                                <label class="block text-xs font-medium text-gray-600">유효 기간</label>
+                                <input type="text" v-model="proxyData.period.condition" placeholder="예: 2026.08.08 ~ 09.08" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
                             </div>
                         </div>
                     </div>
 
-                    <!-- 위임자(본인/법인) 정보 수정 -->
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <h3 class="text-sm font-bold text-gray-700 mb-3">위임자 (법인) 정보 확인</h3>
-                        <div class="space-y-2">
-                            <input type="text" v-model="proxyData.delegator.name" placeholder="법인명(상호)" class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-white">
+                        <div class="space-y-2 text-sm">
+                            <input type="text" v-model="proxyData.delegator.name" class="w-full px-3 py-2 border border-gray-300 rounded bg-white">
                             <div class="flex gap-2">
-                                <input type="text" v-model="proxyData.delegator.corp_id" placeholder="법인등록번호" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm bg-white">
-                                <input type="text" v-model="proxyData.delegator.biz_id" placeholder="사업자번호" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm bg-white">
+                                <input type="text" v-model="proxyData.delegator.corp_id" class="w-1/2 px-3 py-2 border border-gray-300 rounded bg-white">
+                                <input type="text" v-model="proxyData.delegator.biz_id" class="w-1/2 px-3 py-2 border border-gray-300 rounded bg-white">
                             </div>
                             <div class="flex gap-2">
-                                <input type="text" v-model="proxyData.delegator.rep_name" placeholder="대표이사 성명" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm bg-white">
-                                <input type="text" v-model="proxyData.delegator.rep_id" placeholder="대표이사 주민번호" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm bg-white">
+                                <input type="text" v-model="proxyData.delegator.rep_name" class="w-1/2 px-3 py-2 border border-gray-300 rounded bg-white">
+                                <input type="text" v-model="proxyData.delegator.rep_id" class="w-1/2 px-3 py-2 border border-gray-300 rounded bg-white">
                             </div>
-                            <input type="text" v-model="proxyData.delegator.address" placeholder="본점 소재지" class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-white">
+                            <input type="text" v-model="proxyData.delegator.address" class="w-full px-3 py-2 border border-gray-300 rounded bg-white">
                         </div>
                     </div>
-
-                    <!-- 도장 업로드 -->
+                    
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <h3 class="text-sm font-bold text-gray-700 mb-3">법인인감(직인) 이미지 업로드</h3>
-                        <input type="file" accept="image/png, image/jpeg" @change="handleStampUpload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100">
-                        <p class="text-xs text-gray-400 mt-2">* 배경이 투명한 PNG 이미지를 권장합니다. (사용인감계 첨부 시 사용인감 가능)</p>
+                        <h3 class="text-sm font-bold text-gray-700 mb-3">법인인감(직인) 업로드</h3>
+                        <input type="file" accept="image/png, image/jpeg" @change="handleStampUpload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-primary">
                     </div>
                 </div>
 
                 <div class="mt-6 flex gap-2">
-                    <button @click="printForm" class="flex-1 py-3 bg-gray-800 text-white rounded-lg font-bold hover:bg-gray-900 shadow transition-colors flex justify-center items-center gap-2">
-                        <i class="fa-solid fa-print"></i> 인쇄
-                    </button>
-                    <button @click="generatePDF" class="flex-1 py-3 bg-primary text-white rounded-lg font-bold hover:bg-blue-800 shadow transition-colors flex justify-center items-center gap-2">
-                        <i class="fa-solid fa-file-pdf"></i> PDF 저장
-                    </button>
+                    <button @click="printForm" class="flex-1 py-3 bg-gray-800 text-white rounded-lg font-bold hover:bg-gray-900 shadow flex justify-center items-center gap-2"><i class="fa-solid fa-print"></i> 인쇄</button>
+                    <button @click="generatePDF" class="flex-1 py-3 bg-primary text-white rounded-lg font-bold hover:bg-blue-800 shadow flex justify-center items-center gap-2"><i class="fa-solid fa-file-pdf"></i> PDF 저장</button>
                 </div>
             </div>
 
-            <!-- 미리보기 영역 (우측) -->
+            <!-- 미리보기 영역 -->
             <div class="w-full md:w-2/3 h-1/2 md:h-full bg-gray-200 overflow-y-auto p-4 md:p-8 flex items-start justify-center">
-                <!-- A4 규격 캔버스 -->
                 <div id="print-area" class="a4-preview bg-white flex flex-col" style="transform: scale(min(1, calc(100vw / 850))); transform-origin: top center; margin-bottom: 50px;">
-                    <h1 class="text-4xl font-black text-center mt-12 mb-10 tracking-widest text-black">위 임 장</h1>
+                    <h1 class="text-4xl font-black text-center mt-12 mb-12 tracking-widest text-black">위 임 장</h1>
                     
-                    <div class="flex-1 flex flex-col gap-6 px-8">
-                        
-                        <!-- 1. 위임자 (본인) 테이블 -->
+                    <div class="flex-1 flex flex-col gap-8 px-10">
                         <table class="w-full border-collapse border border-black text-black text-sm">
                             <tbody>
                                 <tr>
-                                    <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold">위 임 자<br>(본 인)</th>
-                                    <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">법인명 (상호)</th>
-                                    <td colspan="3" class="border border-black p-2 font-bold">{{ proxyData.delegator.name }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">본점 소재지</th>
-                                    <td colspan="3" class="border border-black p-2">{{ proxyData.delegator.address }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">법인등록번호</th>
-                                    <td class="border border-black p-2 w-[22.5%]">{{ proxyData.delegator.corp_id }}</td>
-                                    <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">사업자번호</th>
-                                    <td class="border border-black p-2 w-[22.5%]">{{ proxyData.delegator.biz_id }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">대표이사 성명</th>
-                                    <td class="border border-black p-2 relative">
-                                        {{ proxyData.delegator.rep_name }}
-                                        <span class="float-right mr-4 text-base">(인)</span>
-                                        <!-- 도장 이미지 (이름 및 인 글자 옆에 자연스럽게 배치) -->
-                                        <img v-if="stampImage" :src="stampImage" class="absolute right-2 top-1/2 w-14 h-14 object-contain transform -translate-y-1/2 opacity-90 mix-blend-multiply" alt="직인">
-                                    </td>
-                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium text-[11px]">대표이사 주민번호</th>
-                                    <td class="border border-black p-2">{{ proxyData.delegator.rep_id }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                        <!-- 2. 대리인(수임자) 테이블 -->
-                        <table class="w-full border-collapse border border-black text-black text-sm">
-                            <tbody>
-                                <tr>
-                                    <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold">수 임 자<br>(대리인)</th>
+                                    <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">수 임 자<br>(대리인)</th>
                                     <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">성 명</th>
-                                    <td class="border border-black p-2 w-[22.5%]">{{ proxyData.delegatee.name }}</td>
+                                    <td class="border border-black p-2 w-[22.5%] text-center">{{ proxyData.delegatee.name }}</td>
                                     <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">주민등록번호</th>
-                                    <td class="border border-black p-2 w-[22.5%]">{{ proxyData.delegatee.id }}</td>
+                                    <td class="border border-black p-2 w-[22.5%] text-center">{{ proxyData.delegatee.id }}</td>
                                 </tr>
                                 <tr>
                                     <th class="border border-black bg-gray-50 p-2 text-center font-medium">소속 및 직위</th>
@@ -539,46 +448,61 @@
                             </tbody>
                         </table>
 
-                        <!-- 3. 위임사항 테이블 -->
                         <table class="w-full border-collapse border border-black text-black text-sm">
                             <tbody>
                                 <tr>
-                                    <th rowspan="3" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold">위임사항</th>
+                                    <th rowspan="3" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">위임사항</th>
                                     <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">위임 목적</th>
                                     <td class="border border-black p-2 font-bold">{{ proxyData.mandate.purpose }}</td>
                                 </tr>
                                 <tr>
                                     <th class="border border-black bg-gray-50 p-2 text-center font-medium align-top pt-4">세부 범위</th>
-                                    <td class="border border-black p-4 align-top min-h-[120px] whitespace-pre-wrap leading-relaxed">{{ proxyData.mandate.details }}</td>
+                                    <td class="border border-black p-4 align-top min-h-[140px] whitespace-pre-wrap leading-relaxed">{{ proxyData.mandate.details }}</td>
                                 </tr>
                                 <tr>
                                     <th class="border border-black bg-gray-50 p-2 text-center font-medium">위임 기간</th>
-                                    <td class="border border-black p-2">
-                                        <template v-if="proxyData.period.type === 'date'">
-                                            {{ proxyData.period.start }} ~ {{ proxyData.period.end }}
-                                        </template>
-                                        <template v-else>
-                                            {{ proxyData.period.condition }}
-                                        </template>
-                                    </td>
+                                    <td class="border border-black p-2">{{ proxyData.period.condition }}</td>
                                 </tr>
                             </tbody>
                         </table>
 
-                        <!-- 확약 문구 및 날짜 (하단 배치) -->
                         <div class="text-base text-black leading-relaxed mt-4 text-justify px-2">
                             본인(위임자)은 위 사람(수임자)을 대리인으로 정하고 상기 위임사항에 관한 일체의 권한을 포괄적으로 위임하며, 대리인이 행한 일체의 행위에 대하여 본인이 민·형사상의 모든 책임을 질 것을 확약합니다.
                         </div>
 
-                        <div class="text-center mt-12 mb-12 text-xl font-bold text-black">
+                        <div class="text-center mt-8 mb-8 text-xl font-bold text-black">
                             {{ formattedDate }}
                         </div>
+
+                        <table class="w-full border-collapse border border-black text-black text-sm mt-auto">
+                            <tbody>
+                                <tr>
+                                    <th rowspan="3" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">위 임 자<br>(본 인)</th>
+                                    <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">법인명 (상호)</th>
+                                    <td colspan="3" class="border border-black p-2 font-bold">{{ proxyData.delegator.name }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">본점 소재지</th>
+                                    <td colspan="3" class="border border-black p-2">{{ proxyData.delegator.address }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">법인/사업자번호</th>
+                                    <td class="border border-black p-2 w-[25%] text-center text-[11px]">{{ proxyData.delegator.corp_id }} / {{ proxyData.delegator.biz_id }}</td>
+                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">대표이사 성명</th>
+                                    <td class="border border-black p-2 relative text-center">
+                                        {{ proxyData.delegator.rep_name }}
+                                        <span class="float-right text-base mt-0.5">(인)</span>
+                                        <img v-if="stampImage" :src="stampImage" class="absolute right-1 top-1/2 w-14 h-14 object-contain transform -translate-y-1/2 opacity-95 mix-blend-multiply" alt="직인">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 알림(Toast) 메시지 -->
+        <!-- 알림 메시지 -->
         <div v-if="toast.show" class="fixed bottom-4 right-4 z-50 flex items-center p-4 rounded-lg shadow-lg text-white transition-opacity duration-300" :class="toast.type === 'error' ? 'bg-red-500' : 'bg-gray-800'">
             <i :class="['mr-3', toast.type === 'error' ? 'fa-solid fa-circle-exclamation' : 'fa-solid fa-circle-check']"></i>
             <span class="text-sm font-medium">{{ toast.message }}</span>
@@ -587,409 +511,249 @@
     </div>
 
     <script>
-        const { createApp, ref, computed } = Vue;
+        const { createApp, ref, computed, onMounted } = Vue;
 
         createApp({
             setup() {
-                // UI States
+                // Supabase Connection Settings
+                const supabaseUrl = 'https://zpzaiuqcoltshtsrllxx.supabase.co';
+                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwemFpdXFjb2x0c2h0c3JsbHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjA4MTcsImV4cCI6MjEwMTczNjgxN30.zWiMJ0RDpSZlWaSBKcO1X3HvF-NBLw2YTqH6sjfRbME';
+                const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+                const isDbConnected = ref(false); // DB 연동 성공 여부
                 const isSidebarOpen = ref(false);
                 const searchQuery = ref('');
-                const activeCategoryId = ref('planning'); // 기획 카테고리가 기본
-                const viewMode = ref('list'); // 기본 보기 방식: 리스트
+                const activeCategoryId = ref('');
+                const viewMode = ref('list');
                 
-                // Admin States
                 const isAdminMode = ref(false);
                 const showAdminAuth = ref(false);
                 const adminPassword = ref('');
                 
-                // Modal States (CRUD)
                 const showItemModal = ref(false);
                 const showDeleteModal = ref(false);
                 const isEditing = ref(false);
                 const itemToDelete = ref(null);
                 const modalForm = ref({ id: '', name: '', type: 'download', desc: '' });
-
-                // Toast State
                 const toast = ref({ show: false, message: '', type: 'success' });
                 let toastTimeout = null;
 
                 // Proxy Form States
                 const showProxyForm = ref(false);
                 const stampImage = ref(null);
-                
-                // 오늘 날짜 및 1달 뒤 날짜 계산
-                const today = new Date();
-                const nextMonth = new Date(today);
-                nextMonth.setMonth(today.getMonth() + 1);
-                
-                // 법인 기본 정보 업데이트 (주식회사 힘)
                 const proxyData = ref({
                     delegator: { 
                         name: '주식회사 힘', 
-                        corp_id: '134511-0078137',
-                        biz_id: '130-88-03645', 
-                        rep_name: '이혜윤',
-                        rep_id: '830421-2168311',
+                        corp_id: '134511-0078137', biz_id: '130-88-03645', 
+                        rep_name: '이혜윤', rep_id: '830421-2168311',
                         address: '경기도 용인시 수지구 용구대로2790번길, 302-제이77호(죽전동, 프라임조명)' 
                     },
                     delegatee: { name: '', id: '', dept_pos: '', phone: '', address: '' },
                     mandate: { purpose: '', details: '' },
-                    period: {
-                        type: 'date',
-                        start: today.toISOString().split('T')[0],
-                        end: nextMonth.toISOString().split('T')[0],
-                        condition: '해당 계약 체결 완료 시까지'
-                    },
-                    date: today.toISOString().split('T')[0]
+                    period: { condition: '해당 업무 종료 시까지' }
                 });
 
-                // Data Structure (Updated Categories with Sectors)
-                const menuGroups = ref([
+                // --- Default Mock Data (DB 폴백용) ---
+                const defaultMenuGroups = [
                     {
                         sectorName: '경영관리부문',
                         categories: [
-                            {
-                                id: 'planning',
-                                name: '기획',
-                                icon: 'fa-solid fa-lightbulb',
-                                items: [
-                                    { id: 'pl1', name: '2026년 사업계획서 양식', type: 'download' },
-                                    { id: 'pl2', name: '신규 사업 제안서', type: 'document' },
-                                    { id: 'pl3', name: '경영전략 회의록', type: 'document' },
-                                    { id: 'pl4', name: '핵심성과지표(KPI) 대시보드', type: 'system' }
-                                ]
-                            },
-                            {
-                                id: 'management',
-                                name: '경영관리',
-                                icon: 'fa-solid fa-briefcase',
-                                items: [
-                                    { id: 'm1', name: '정관', type: 'download' },
-                                    { id: 'm2', name: '법인등기부등본', type: 'download' },
-                                    { id: 'm3', name: '사업자등록증', type: 'download' },
-                                    { id: 'm4', name: '통장사본', type: 'download' },
-                                    { id: 'm5', name: '영업신고증', type: 'download' },
-                                    { id: 'm6', name: '주주총회 서류', type: 'document' },
-                                    { id: 'm7', name: '인감도장 (스캔본)', type: 'download' },
-                                    { id: 'm8', name: '사용인감계', type: 'document' },
-                                    { id: 'm9', name: '계약서 날인 서명', type: 'download' },
-                                    { id: 'm10', name: '대리인 위임장', type: 'proxy_form', desc: '스마트 입력 및 PDF 발급' },
-                                    { id: 'm11', name: '위임전결규정', type: 'download' }
-                                ]
-                            },
-                            {
-                                id: 'finance',
-                                name: '재무',
-                                icon: 'fa-solid fa-money-bill-wave',
-                                items: [
-                                    { id: 'f1', name: '입출금확인 (법인계좌)', type: 'system' },
-                                    { id: 'f2', name: '자금수지 현황표', type: 'system' },
-                                    { id: 'f3', name: '지출결의서', type: 'document' }
-                                ]
-                            },
-                            {
-                                id: 'tax_accounting',
-                                name: '세무/회계',
-                                icon: 'fa-solid fa-calculator',
-                                items: [
-                                    { id: 'ta1', name: '세금계산서 발행 시스템', type: 'system' },
-                                    { id: 'ta2', name: '부가세 신고 자료 모음', type: 'document' },
-                                    { id: 'ta3', name: '법인세 신고서', type: 'download' },
-                                    { id: 'ta4', name: '경비 청구 가이드라인', type: 'download' }
-                                ]
-                            },
-                            {
-                                id: 'hr',
-                                name: '인사',
-                                icon: 'fa-solid fa-users',
-                                items: [
-                                    { id: 'h1', name: '근로계약서 양식', type: 'document' },
-                                    { id: 'h2', name: '프리랜서 계약서', type: 'document' },
-                                    { id: 'h3', name: '급여 산정 내역서', type: 'system' },
-                                    { id: 'h4', name: '근로소득세 원천징수 신고', type: 'system' },
-                                    { id: 'h5', name: '4대보험 신고 및 정산', type: 'system' },
-                                    { id: 'h5_1', name: '퇴직금 정산 내역', type: 'document' },
-                                    { id: 'h6', name: '재직증명서 발급', type: 'system' },
-                                    { id: 'h6_1', name: '경력증명서 발급', type: 'system' },
-                                    { id: 'h7', name: '채용 공고문 양식', type: 'download' },
-                                    { id: 'h8', name: '인사 평가 관리표', type: 'document' },
-                                    { id: 'h9', name: '연차 휴가 관리 대장', type: 'system' },
-                                    { id: 'h10', name: '인사 발령장 양식', type: 'document' },
-                                    { id: 'h11', name: '법정 의무 교육 관리', type: 'link' }
-                                ]
-                            },
-                            {
-                                id: 'general_affairs',
-                                name: '총무',
-                                icon: 'fa-solid fa-building',
-                                items: [
-                                    { id: 'ga1', name: '비품/기기 구매 신청서', type: 'document' },
-                                    { id: 'ga2', name: '법인차량 운행 일지', type: 'document' },
-                                    { id: 'ga3', name: '회의실 예약 시스템', type: 'system' },
-                                    { id: 'ga4', name: '명함 제작 요청', type: 'document' }
-                                ]
-                            },
-                            {
-                                id: 'legal',
-                                name: '법무',
-                                icon: 'fa-solid fa-scale-balanced',
-                                items: [
-                                    { id: 'l1', name: '표준 계약서 작성 가이드', type: 'document' },
-                                    { id: 'l2', name: '법률 자문 요청서', type: 'document' },
-                                    { id: 'l3', name: '비밀유지계약서 (NDA)', type: 'download' }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        sectorName: '영업부문',
-                        categories: [
-                            {
-                                id: 'sales_management',
-                                name: '영업관리',
-                                icon: 'fa-solid fa-chart-line',
-                                items: [
-                                    { id: 'sm1', name: '영업 실적 대시보드', type: 'system' },
-                                    { id: 'sm2', name: '재고수불부 관리', type: 'system' },
-                                    { id: 'sm3', name: '고객 클레임 접수 대장', type: 'document' },
-                                    { id: 'sm4', name: '세금계산서 발행 내역', type: 'system' },
-                                    { id: 'sm5', name: '입출금확인 (영업용)', type: 'system' }
-                                ]
-                            },
-                            {
-                                id: 'marketing',
-                                name: '마케팅',
-                                icon: 'fa-solid fa-bullhorn',
-                                isOpen: false,
-                                subCategories: [
-                                    {
-                                        id: 'mk_brand',
-                                        name: '브랜드',
-                                        items: [
-                                            { id: 'mk_b1', name: '브랜드 로고 및 컬러 가이드라인', type: 'download' },
-                                            { id: 'mk_b2', name: '브랜드 에센스/비전 선언문', type: 'document' }
-                                        ]
-                                    },
-                                    {
-                                        id: 'mk_product',
-                                        name: '제품',
-                                        items: [
-                                            { id: 'mk_p1', name: '제품 카탈로그(국문/영문) 양식', type: 'download' },
-                                            { id: 'mk_p2', name: '제품 포지셔닝 맵', type: 'document' }
-                                        ]
-                                    },
-                                    {
-                                        id: 'mk_sns',
-                                        name: 'SNS',
-                                        items: [
-                                            { id: 'mk_s1', name: '공식 SNS 운영 매뉴얼', type: 'document' },
-                                            { id: 'mk_s2', name: '월간 콘텐츠 캘린더', type: 'system' }
-                                        ]
-                                    },
-                                    {
-                                        id: 'mk_pr',
-                                        name: '홍보',
-                                        items: [
-                                            { id: 'mk_pr1', name: '보도자료(Press Release) 템플릿', type: 'document' },
-                                            { id: 'mk_pr2', name: '언론사 및 기자 연락망', type: 'system' }
-                                        ]
-                                    },
-                                    {
-                                        id: 'mk_ad',
-                                        name: '광고',
-                                        items: [
-                                            { id: 'mk_a1', name: '광고/프로모션 집행 기안서', type: 'document' },
-                                            { id: 'mk_a2', name: '매체 운영 및 효율 리포트', type: 'system' }
-                                        ]
-                                    },
-                                    {
-                                        id: 'mk_graphic',
-                                        name: '그래픽디자인',
-                                        items: [
-                                            { id: 'mk_g1', name: '웹/앱 배너 템플릿 모음', type: 'download' },
-                                            { id: 'mk_g2', name: '사내 디자인 에셋 라이브러리', type: 'system' }
-                                        ]
-                                    },
-                                    {
-                                        id: 'mk_video',
-                                        name: '영상디자인',
-                                        items: [
-                                            { id: 'mk_v1', name: '영상 기획 스토리보드 양식', type: 'document' },
-                                            { id: 'mk_v2', name: '폰트/BGM 저작권 규정 및 라이선스', type: 'download' }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
-                                id: 'sales_domestic',
-                                name: '영업 (국내)',
-                                icon: 'fa-solid fa-store',
-                                isOpen: false,
-                                subCategories: [
-                                    {
-                                        id: 'sd_b2b',
-                                        name: 'B2B',
-                                        items: [
-                                            { id: 'sd1', name: '신규 거래처 등록 요청서', type: 'document' },
-                                            { id: 'sd2', name: '국내 표준 대리점/공급 계약서', type: 'document' },
-                                            { id: 'sd3', name: '국내 B2B 매출 현황', type: 'system' }
-                                        ]
-                                    },
-                                    {
-                                        id: 'sd_b2c',
-                                        name: 'B2C',
-                                        items: [
-                                            { id: 'sd4', name: '제품 소개서(국문)', type: 'download' },
-                                            { id: 'sd5', name: 'B2C 반품/교환 처리 기준안', type: 'document' },
-                                            { id: 'sd6', name: '온라인 채널 판매 현황', type: 'system' }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
-                                id: 'sales_overseas',
-                                name: '영업 (해외)',
-                                icon: 'fa-solid fa-globe',
-                                isOpen: false,
-                                subCategories: [
-                                    {
-                                        id: 'so_b2b',
-                                        name: 'B2B',
-                                        items: [
-                                            { id: 'so1', name: '영문 비밀유지계약서 (NDA)', type: 'document' },
-                                            { id: 'so2', name: '영문 판매계약서 (Sales Agreement)', type: 'document' },
-                                            { id: 'so3', name: 'Commercial Invoice 양식', type: 'document' },
-                                            { id: 'so4', name: '해외 배송(포워딩) 의뢰서', type: 'document' }
-                                        ]
-                                    },
-                                    {
-                                        id: 'so_b2c',
-                                        name: 'B2C',
-                                        items: [
-                                            { id: 'so5', name: '제품 소개서(영문)', type: 'download' },
-                                            { id: 'so6', name: '글로벌 CS 매뉴얼', type: 'download' },
-                                            { id: 'so7', name: '해외 D2C 채널 정산서', type: 'system' }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
-                                id: 'cs',
-                                name: 'CS',
-                                icon: 'fa-solid fa-headset',
-                                items: [
-                                    { id: 'cs1', name: '고객 응대 표준 매뉴얼', type: 'download' },
-                                    { id: 'cs2', name: 'A/S 및 교환/환불 접수 시스템', type: 'system' },
-                                    { id: 'cs3', name: 'VOC(고객의 소리) 리포트 양식', type: 'document' },
-                                    { id: 'cs4', name: '자주 묻는 질문(FAQ) 관리 대장', type: 'document' }
-                                ]
-                            }
+                            { id: 'planning', name: '기획', icon: 'fa-solid fa-lightbulb', items: [ { id: 'pl1', name: '2026년 사업계획서 양식', type: 'download' }, { id: 'pl2', name: '신규 사업 제안서', type: 'document' }, { id: 'pl3', name: 'KPI 및 OKR 실시간 모니터링', type: 'system' } ] },
+                            { id: 'management', name: '경영관리', icon: 'fa-solid fa-briefcase', items: [ { id: 'm1', name: '정관', type: 'download' }, { id: 'm2', name: '법인등기부등본', type: 'download' }, { id: 'm3', name: '사업자등록증', type: 'download' }, { id: 'm4', name: '통장사본', type: 'download' }, { id: 'm5', name: '영업신고증', type: 'download' }, { id: 'm6', name: '주주총회 서류', type: 'document' }, { id: 'm7', name: '인감도장', type: 'download' }, { id: 'm8', name: '사용인감계', type: 'document' }, { id: 'm9', name: '계약서 날인 서명', type: 'document' }, { id: 'm10', name: '대리인 위임장', type: 'proxy_form', desc: '스마트 폼' }, { id: 'm11', name: '위임전결규정', type: 'download' } ] },
+                            { id: 'finance', name: '재무', icon: 'fa-solid fa-money-bill-wave', items: [ { id: 'f1', name: '입출금확인', type: 'system' }, { id: 'f2', name: '지출결의서', type: 'document' } ] },
+                            { id: 'tax', name: '세무/회계', icon: 'fa-solid fa-calculator', items: [ { id: 't1', name: '세금계산서 발행', type: 'system' }, { id: 't2', name: '부가세 신고', type: 'document' }, { id: 't3', name: '법인세 신고', type: 'document' } ] },
+                            { id: 'hr', name: '인사', icon: 'fa-solid fa-users', items: [ { id: 'h1', name: '근로계약서', type: 'document' }, { id: 'h2', name: '프리랜서 계약서', type: 'document' }, { id: 'h3', name: '급여 산정', type: 'system' }, { id: 'h4', name: '근로소득세 원천징수 신고', type: 'system' }, { id: 'h5', name: '4대보험 신고 및 정산', type: 'system' }, { id: 'h6', name: '퇴직금 정산', type: 'document' }, { id: 'h7', name: '재직증명서 발급', type: 'document' }, { id: 'h8', name: '경력증명서 발급', type: 'document' }, { id: 'h9', name: '채용 공고문', type: 'document' }, { id: 'h10', name: '평가 관리', type: 'system' }, { id: 'h11', name: '연차 관리', type: 'system' }, { id: 'h12', name: '인사 이동 및 발령', type: 'document' }, { id: 'h13', name: '법정 의무 교육 관리', type: 'system' } ] },
+                            { id: 'ga', name: '총무', icon: 'fa-solid fa-building', items: [ { id: 'ga1', name: '비품 구매 신청서', type: 'document' }, { id: 'ga2', name: '법인차량 운행 일지', type: 'document' } ] },
+                            { id: 'legal', name: '법무', icon: 'fa-solid fa-scale-balanced', items: [ { id: 'l1', name: '계약서 작성', type: 'document' } ] }
                         ]
                     },
                     {
                         sectorName: '연구부문',
                         categories: [
-                            {
-                                id: 'research_planning',
-                                name: '연구기획',
-                                icon: 'fa-solid fa-flask',
-                                items: [
-                                    { id: 'rp1', name: '연구개발(R&D) 계획서 양식', type: 'document' },
-                                    { id: 'rp2', name: '국책과제 신청 가이드', type: 'download' },
-                                    { id: 'rp3', name: '특허 출원 요청서', type: 'document' }
-                                ]
-                            },
-                            {
-                                id: 'clinical',
-                                name: '임상',
-                                icon: 'fa-solid fa-notes-medical',
-                                items: [
-                                    { id: 'cl1', name: '임상시험계획서(IND) 템플릿', type: 'download' },
-                                    { id: 'cl2', name: '피험자 동의서(ICF) 양식', type: 'document' },
-                                    { id: 'cl3', name: '임상 데이터 관리 시스템(CDMS)', type: 'system' }
-                                ]
-                            },
-                            {
-                                id: 'product_dev',
-                                name: '상품개발',
-                                icon: 'fa-solid fa-box-open',
-                                items: [
-                                    { id: 'pd1', name: '신제품 제품사양서', type: 'document' },
-                                    { id: 'pd2', name: '시제품 제작 요청서', type: 'document' },
-                                    { id: 'pd3', name: '개발 프로젝트 일정표(Gantt)', type: 'system' }
-                                ]
-                            },
-                            {
-                                id: 'regulatory',
-                                name: '인허가',
-                                icon: 'fa-solid fa-stamp',
-                                items: [
-                                    { id: 'rg1', name: '식약처 품목허가증 사본 모음', type: 'download' },
-                                    { id: 'rg2', name: '인허가 진행 현황 트래커', type: 'system' },
-                                    { id: 'rg3', name: '공인기관 시험성적서', type: 'download' }
-                                ]
-                            }
+                            { id: 'rnd', name: '연구기획', icon: 'fa-solid fa-flask', items: [ { id: 'r1', name: 'R&D 계획서 양식', type: 'document' } ] },
+                            { id: 'cli', name: '임상', icon: 'fa-solid fa-notes-medical', items: [ { id: 'c1', name: '임상시험계획서', type: 'download' } ] },
+                            { id: 'dev', name: '상품개발', icon: 'fa-solid fa-box-open', items: [ { id: 'd1', name: '제품사양서', type: 'document' } ] },
+                            { id: 'reg', name: '인허가', icon: 'fa-solid fa-stamp', items: [ { id: 'rg1', name: '품목허가증 사본', type: 'download' } ] }
                         ]
                     },
                     {
                         sectorName: '생산부문',
                         categories: [
+                            { id: 'pm', name: '생산관리', icon: 'fa-solid fa-clipboard-list', items: [ { id: 'p1', name: '생산 계획서', type: 'document' } ] },
+                            { id: 'pr', name: '생산', icon: 'fa-solid fa-industry', items: [ { id: 'p2', name: '작업 표준서(SOP)', type: 'download' } ] },
+                            { id: 'qc', name: '품질', icon: 'fa-solid fa-check-double', items: [ { id: 'q1', name: '검사 성적서', type: 'document' } ] },
+                            { id: 'ft', name: '설비기술', icon: 'fa-solid fa-screwdriver-wrench', items: [ { id: 'ft1', name: '설비 점검 일지', type: 'document' } ] },
+                            { id: 'ml', name: '자재물류', icon: 'fa-solid fa-truck-fast', items: [ { id: 'ml1', name: '자재 발주서', type: 'document' } ] }
+                        ]
+                    },
+                    {
+                        sectorName: '영업부문',
+                        categories: [
+                            { id: 'sm', name: '영업관리', icon: 'fa-solid fa-chart-line', items: [ { id: 'sm1', name: '세금계산서 발행', type: 'system' }, { id: 'sm2', name: '입출금확인', type: 'system' }, { id: 'sm3', name: '재고수불부 관리', type: 'system' } ] },
                             {
-                                id: 'production_management',
-                                name: '생산관리',
-                                icon: 'fa-solid fa-clipboard-list',
-                                items: [
-                                    { id: 'pm1', name: '연간/월간 생산 계획서', type: 'document' },
-                                    { id: 'pm2', name: '제조원가 산출표', type: 'system' },
-                                    { id: 'pm3', name: '외주가공 의뢰서', type: 'document' }
+                                id: 'mk', name: '마케팅', icon: 'fa-solid fa-bullhorn', isOpen: false,
+                                subCategories: [
+                                    { id: 'mk_b', name: '브랜드', items: [ { id: 'mk1', name: '브랜드 가이드라인', type: 'download' } ] },
+                                    { id: 'mk_p', name: '제품', items: [ { id: 'mk2', name: '제품 카탈로그', type: 'download' } ] },
+                                    { id: 'mk_s', name: 'SNS', items: [ { id: 'mk3', name: '공식 SNS 메뉴얼', type: 'document' } ] },
+                                    { id: 'mk_pr', name: '홍보', items: [ { id: 'mk4', name: '보도자료 배포 양식', type: 'document' } ] },
+                                    { id: 'mk_ad', name: '광고', items: [ { id: 'mk5', name: '광고/프로모션 집행 내역서', type: 'document' } ] },
+                                    { id: 'mk_gd', name: '그래픽디자인', items: [ { id: 'mk6', name: '배너 템플릿', type: 'download' } ] },
+                                    { id: 'mk_vd', name: '영상디자인', items: [ { id: 'mk7', name: '영상 스토리보드', type: 'document' } ] }
                                 ]
                             },
                             {
-                                id: 'production',
-                                name: '생산',
-                                icon: 'fa-solid fa-industry',
-                                items: [
-                                    { id: 'pr1', name: '작업 표준서(SOP)', type: 'download' },
-                                    { id: 'pr2', name: '일일 생산 실적 보고', type: 'system' },
-                                    { id: 'pr3', name: '안전보건 관리 수칙', type: 'download' }
+                                id: 'sd', name: '영업(국내)', icon: 'fa-solid fa-store', isOpen: false,
+                                subCategories: [
+                                    { id: 'sd_b2b', name: 'B2B', items: [ { id: 'sd1', name: '신규 거래처 등록', type: 'document' } ] },
+                                    { id: 'sd_b2c', name: 'B2C', items: [ { id: 'sd2', name: '온라인 판매 현황', type: 'system' } ] }
                                 ]
                             },
                             {
-                                id: 'quality',
-                                name: '품질',
-                                icon: 'fa-solid fa-check-double',
-                                items: [
-                                    { id: 'qc1', name: '수입/공정/출하 검사 성적서', type: 'document' },
-                                    { id: 'qc2', name: '부적합품(N/C) 처리 대장', type: 'system' },
-                                    { id: 'qc3', name: '품질경영시스템(QMS) 매뉴얼', type: 'download' },
-                                    { id: 'qc4', name: '고객 클레임 원인분석 보고서(8D Report)', type: 'document' }
+                                id: 'so', name: '영업(해외)', icon: 'fa-solid fa-globe', isOpen: false,
+                                subCategories: [
+                                    { id: 'so_b2b', name: 'B2B', items: [ { id: 'so1', name: '영문 NDA', type: 'document' } ] },
+                                    { id: 'so_b2c', name: 'B2C', items: [ { id: 'so2', name: '해외 D2C 정산서', type: 'system' } ] }
                                 ]
                             },
-                            {
-                                id: 'facility_tech',
-                                name: '설비기술',
-                                icon: 'fa-solid fa-screwdriver-wrench',
-                                items: [
-                                    { id: 'ft1', name: '설비 정기 점검 일지', type: 'document' },
-                                    { id: 'ft2', name: '신규 설비 도입 검토서', type: 'document' },
-                                    { id: 'ft3', name: '주요 설비 유지보수 매뉴얼', type: 'download' }
-                                ]
-                            },
-                            {
-                                id: 'material_logistics',
-                                name: '자재물류',
-                                icon: 'fa-solid fa-truck-fast',
-                                items: [
-                                    { id: 'ml1', name: '자재 발주서(PO) 양식', type: 'document' },
-                                    { id: 'ml2', name: '원부자재 입출고 현황', type: 'system' },
-                                    { id: 'ml3', name: '창고 레이아웃 및 적재 규정', type: 'download' }
-                                ]
-                            }
+                            { id: 'cs', name: 'CS', icon: 'fa-solid fa-headset', items: [ { id: 'cs1', name: '고객 응대 매뉴얼', type: 'download' }, { id: 'cs2', name: 'A/S 접수 시스템', type: 'system' }, { id: 'cs3', name: 'VOC(고객의 소리) 리포트', type: 'document' } ] }
                         ]
                     }
-                ]);
+                ];
 
-                // Computed Properties
+                const menuGroups = ref([]);
+
+                // --- Supabase DB Load Logic ---
+                const loadData = async () => {
+                    try {
+                        const { data: cats, error: catError } = await supabase.from('categories').select('*');
+                        const { data: itms, error: itmError } = await supabase.from('items').select('*');
+
+                        if (!catError && cats && cats.length > 0) {
+                            isDbConnected.value = true;
+                            buildMenuTree(cats, itms || []);
+                        } else {
+                            // DB is empty or unauthorized -> fallback to local
+                            isDbConnected.value = false;
+                            menuGroups.value = JSON.parse(JSON.stringify(defaultMenuGroups));
+                            if(!activeCategoryId.value) activeCategoryId.value = 'planning';
+                        }
+                    } catch (e) {
+                        isDbConnected.value = false;
+                        menuGroups.value = JSON.parse(JSON.stringify(defaultMenuGroups));
+                        if(!activeCategoryId.value) activeCategoryId.value = 'planning';
+                    }
+                };
+
+                const buildMenuTree = (cats, itms) => {
+                    const built = [];
+                    const sectors = cats.filter(c => !c.parent_id).sort((a,b) => a.sort_order - b.sort_order);
+
+                    for (const sector of sectors) {
+                        const group = { sectorName: sector.name, sectorId: sector.id, categories: [] };
+                        const subCats = cats.filter(c => c.parent_id === sector.id).sort((a,b) => a.sort_order - b.sort_order);
+
+                        for (const cat of subCats) {
+                            const category = { id: cat.id, name: cat.name, icon: cat.icon, items: [] };
+                            const deepSubs = cats.filter(c => c.parent_id === cat.id).sort((a,b) => a.sort_order - b.sort_order);
+
+                            if (deepSubs.length > 0) {
+                                category.subCategories = [];
+                                category.isOpen = false;
+                                for (const sub of deepSubs) {
+                                    const subCategory = { id: sub.id, name: sub.name, items: [] };
+                                    subCategory.items = itms.filter(i => i.category_id === sub.id).map(i => ({ id: i.id, name: i.name, type: i.type, desc: i.description }));
+                                    category.subCategories.push(subCategory);
+                                }
+                            } else {
+                                category.items = itms.filter(i => i.category_id === cat.id).map(i => ({ id: i.id, name: i.name, type: i.type, desc: i.description }));
+                            }
+                            group.categories.push(category);
+                        }
+                        built.push(group);
+                    }
+                    menuGroups.value = built;
+                    
+                    // Set default active category
+                    if (!activeCategoryId.value && built.length > 0 && built[0].categories.length > 0) {
+                        activeCategoryId.value = built[0].categories[0].subCategories ? built[0].categories[0].subCategories[0].id : built[0].categories[0].id;
+                    }
+                };
+
+                onMounted(() => {
+                    loadData();
+                });
+
+                // --- Admin & DB Migration Logic ---
+                const verifyAdminPassword = async () => {
+                    try {
+                        const { data, error } = await supabase.auth.signInWithPassword({
+                            email: 'ceo@hyminternational.com',
+                            password: adminPassword.value
+                        });
+                        
+                        if (error) {
+                            // Supabase Auth Fail -> Fallback to Local auth check
+                            if (adminPassword.value === '245024') {
+                                isAdminMode.value = true;
+                                showAdminAuth.value = false;
+                                showToastMsg('관리자 모드가 활성화되었습니다. (로컬 권한)');
+                            } else {
+                                showToastMsg('비밀번호가 일치하지 않습니다.', 'error');
+                            }
+                        } else {
+                            isAdminMode.value = true;
+                            showAdminAuth.value = false;
+                            showToastMsg('관리자 모드가 활성화되었습니다. (Supabase 연결)');
+                            await loadData(); // Reload data with admin RLS permissions
+                        }
+                    } catch (e) {
+                        showToastMsg('인증 중 오류가 발생했습니다.', 'error');
+                    }
+                };
+
+                const seedDatabase = async () => {
+                    if(!confirm('로컬에 저장된 기본 카테고리와 항목들을 DB로 복사합니다. 진행하시겠습니까?')) return;
+                    showToastMsg('DB 데이터 생성을 시작합니다...', 'success');
+                    try {
+                        for (let i = 0; i < defaultMenuGroups.length; i++) {
+                            const group = defaultMenuGroups[i];
+                            const { data: sData, error: sErr } = await supabase.from('categories').insert({ name: group.sectorName, sort_order: i }).select();
+                            if(sErr) throw sErr;
+                            const sectorId = sData[0].id;
+
+                            for (let j = 0; j < group.categories.length; j++) {
+                                const cat = group.categories[j];
+                                const { data: cData, error: cErr } = await supabase.from('categories').insert({ name: cat.name, parent_id: sectorId, icon: cat.icon, sort_order: j }).select();
+                                if(cErr) throw cErr;
+                                const catId = cData[0].id;
+
+                                if (cat.subCategories) {
+                                    for (let k = 0; k < cat.subCategories.length; k++) {
+                                        const sub = cat.subCategories[k];
+                                        const { data: scData, error: scErr } = await supabase.from('categories').insert({ name: sub.name, parent_id: catId, sort_order: k }).select();
+                                        if(scErr) throw scErr;
+                                        
+                                        for (const item of sub.items) {
+                                            await supabase.from('items').insert({ category_id: scData[0].id, name: item.name, type: item.type, description: item.desc });
+                                        }
+                                    }
+                                } else if (cat.items) {
+                                    for (const item of cat.items) {
+                                        await supabase.from('items').insert({ category_id: catId, name: item.name, type: item.type, description: item.desc });
+                                    }
+                                }
+                            }
+                        }
+                        showToastMsg('DB 데이터 마이그레이션 완료!', 'success');
+                        await loadData();
+                    } catch (e) {
+                        console.error(e);
+                        showToastMsg('DB 저장 실패 (Supabase RLS/Admin 권한을 확인하세요)', 'error');
+                    }
+                };
+
+                // --- UI & Computed ---
                 const activeCategoryName = computed(() => {
                     for (const group of menuGroups.value) {
                         for (const cat of group.categories) {
@@ -1023,38 +787,31 @@
                 });
 
                 const formattedDate = computed(() => {
-                    const d = new Date(proxyData.value.date);
-                    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+                    const d = new Date(); return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
                 });
 
-                // Helper Functions
                 const showToastMsg = (msg, type = 'success') => {
                     toast.value = { show: true, message: msg, type };
                     if (toastTimeout) clearTimeout(toastTimeout);
                     toastTimeout = setTimeout(() => { toast.value.show = false; }, 3000);
                 };
 
+                // --- Navigation ---
                 const toggleSidebar = () => { isSidebarOpen.value = !isSidebarOpen.value; };
-
                 const selectCategory = (category) => {
                     if (category.subCategories) {
                         category.isOpen = !category.isOpen;
-                        if (category.isOpen && category.subCategories.length > 0) {
-                            activeCategoryId.value = category.subCategories[0].id;
-                        }
+                        if (category.isOpen && category.subCategories.length > 0) activeCategoryId.value = category.subCategories[0].id;
                     } else {
                         activeCategoryId.value = category.id;
                         searchQuery.value = '';
                         if (window.innerWidth < 768) isSidebarOpen.value = false;
                     }
                 };
-
                 const selectSubCategory = (subId) => {
-                    activeCategoryId.value = subId;
-                    searchQuery.value = '';
+                    activeCategoryId.value = subId; searchQuery.value = '';
                     if (window.innerWidth < 768) isSidebarOpen.value = false;
                 };
-
                 const isCategoryActive = (category) => {
                     if (activeCategoryId.value === category.id) return true;
                     if (category.subCategories && category.subCategories.some(s => s.id === activeCategoryId.value)) return true;
@@ -1062,25 +819,11 @@
                 };
 
                 const requestAdminModeToggle = () => {
-                    if (isAdminMode.value) {
-                        isAdminMode.value = false;
-                        showToastMsg('일반 모드로 전환되었습니다.');
-                    } else {
-                        adminPassword.value = '';
-                        showAdminAuth.value = true;
-                    }
+                    if (isAdminMode.value) { isAdminMode.value = false; showToastMsg('일반 모드로 전환되었습니다.'); } 
+                    else { adminPassword.value = ''; showAdminAuth.value = true; }
                 };
 
-                const verifyAdminPassword = () => {
-                    if (adminPassword.value === '245024') {
-                        isAdminMode.value = true;
-                        showAdminAuth.value = false;
-                        showToastMsg('관리자 모드가 활성화되었습니다.');
-                    } else {
-                        showToastMsg('비밀번호가 일치하지 않습니다.', 'error');
-                    }
-                };
-
+                // --- CRUD Operations (DB + Local) ---
                 const getTargetCategory = () => {
                     for (const group of menuGroups.value) {
                         for (const cat of group.categories) {
@@ -1094,171 +837,104 @@
                     return null;
                 };
 
-                // CRUD Functions
-                const openAddModal = () => {
-                    isEditing.value = false;
-                    modalForm.value = { id: '', name: '', type: 'download', desc: '' };
-                    showItemModal.value = true;
-                };
-
-                const openEditModal = (item) => {
-                    isEditing.value = true;
-                    modalForm.value = { ...item };
-                    showItemModal.value = true;
-                };
-
+                const openAddModal = () => { isEditing.value = false; modalForm.value = { id: '', name: '', type: 'download', desc: '' }; showItemModal.value = true; };
+                const openEditModal = (item) => { isEditing.value = true; modalForm.value = { ...item }; showItemModal.value = true; };
                 const closeModal = () => { showItemModal.value = false; };
 
-                const saveItem = () => {
-                    if (!modalForm.value.name.trim()) {
-                        showToastMsg('항목명을 입력해주세요.', 'error');
-                        return;
-                    }
+                const saveItem = async () => {
+                    if (!modalForm.value.name.trim()) return showToastMsg('항목명을 입력해주세요.', 'error');
                     
                     const targetCategory = getTargetCategory();
-                    if (!targetCategory || !targetCategory.items) return;
+                    if (!targetCategory) return;
 
-                    if (isEditing.value) {
-                        const index = targetCategory.items.findIndex(i => i.id === modalForm.value.id);
-                        if (index !== -1) {
-                            targetCategory.items[index] = { ...modalForm.value };
-                            showToastMsg('항목이 수정되었습니다.');
+                    if (isDbConnected.value) {
+                        // Supabase DB Update
+                        if (isEditing.value) {
+                            const { error } = await supabase.from('items').update({
+                                name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.desc
+                            }).eq('id', modalForm.value.id);
+                            if (error) return showToastMsg('DB 수정 실패: ' + error.message, 'error');
+                        } else {
+                            const { error } = await supabase.from('items').insert({
+                                category_id: targetCategory.id, name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.desc
+                            });
+                            if (error) return showToastMsg('DB 추가 실패: ' + error.message, 'error');
                         }
+                        await loadData();
                     } else {
-                        targetCategory.items.push({
-                            ...modalForm.value,
-                            id: 'item_' + Date.now()
-                        });
-                        showToastMsg('새 항목이 추가되었습니다.');
+                        // Local Fallback Update
+                        if (isEditing.value) {
+                            const index = targetCategory.items.findIndex(i => i.id === modalForm.value.id);
+                            if (index !== -1) targetCategory.items[index] = { ...modalForm.value };
+                        } else {
+                            targetCategory.items.push({ ...modalForm.value, id: 'item_' + Date.now() });
+                        }
                     }
                     closeModal();
+                    showToastMsg(isEditing.value ? '항목이 수정되었습니다.' : '새 항목이 추가되었습니다.');
                 };
 
-                const confirmDelete = (item) => {
-                    itemToDelete.value = item;
-                };
+                const confirmDelete = (item) => { itemToDelete.value = item; showDeleteModal.value = true; };
 
-                const executeDelete = () => {
+                const executeDelete = async () => {
                     if (!itemToDelete.value) return;
                     
-                    const targetCategory = getTargetCategory();
-                    if (targetCategory && targetCategory.items) {
-                        targetCategory.items = targetCategory.items.filter(i => i.id !== itemToDelete.value.id);
-                        showToastMsg('항목이 삭제되었습니다.');
+                    if (isDbConnected.value) {
+                        const { error } = await supabase.from('items').delete().eq('id', itemToDelete.value.id);
+                        if (error) return showToastMsg('DB 삭제 실패: ' + error.message, 'error');
+                        await loadData();
+                    } else {
+                        const targetCategory = getTargetCategory();
+                        if (targetCategory && targetCategory.items) {
+                            targetCategory.items = targetCategory.items.filter(i => i.id !== itemToDelete.value.id);
+                        }
                     }
-                    itemToDelete.value = null;
+                    showToastMsg('항목이 삭제되었습니다.');
+                    showDeleteModal.value = false; itemToDelete.value = null;
                 };
 
-                // Action Handling (Separated by Admin status for proxy form)
+                // --- Action Handlers & Tools ---
                 const handleAction = (item) => {
-                    if (item.type === 'proxy_form') {
-                        if (isAdminMode.value) {
-                            showProxyForm.value = true;
-                        } else {
-                            showToastMsg(`'${item.name}' 다운로드를 시작합니다.`);
-                        }
-                    } else {
-                        const action = getActionText(item.type);
-                        showToastMsg(`'${item.name}' ${action}를 시작합니다.`);
-                    }
+                    if (item.type === 'proxy_form' && isAdminMode.value) showProxyForm.value = true;
+                    else showToastMsg(`'${item.name}' ${getActionText(item.type)} 시작`);
                 };
 
-                // Proxy Form Logic
                 const applyTemplate = (type) => {
-                    const templates = {
-                        finance: {
-                            purpose: '금융 기관 관련 제반 업무 위임의 건',
-                            details: '1. 은행 계좌 개설 및 해지\n2. 예금 입출금 및 계좌이체\n3. 공인인증서 발급, 갱신 및 재발급\n4. 금융거래 정보 제공 동의 및 조회\n5. 기타 위 금융업무에 부수하는 일체의 행위'
-                        },
-                        registry: {
-                            purpose: '법인 등기 관련 관공서 업무 위임의 건',
-                            details: '1. 법인설립 및 변경 등기 신청 일체\n2. 인감도장 변경 및 인감증명서 발급 신청, 수령\n3. 등기사항전부증명서(등기부등본) 열람 및 발급\n4. 기타 위 법인등기 업무에 관하여 등기소에 제출하는 서류의 작성 및 제출 등 부수하는 일체의 행위'
-                        },
-                        contract: {
-                            purpose: '물품 공급 및 제휴 계약 체결의 건',
-                            details: '1. OOOO 주식회사와의 물품 공급(또는 업무 제휴) 계약 체결\n2. 계약 조건 협의, 변경 및 최종 날인\n3. 계약금 및 잔금의 수령, 영수증 발행\n4. 기타 위 계약 체결 및 이행에 부수하는 일체의 행위'
-                        },
-                        pg: {
-                            purpose: 'PG(전자결제지급대행) 서비스 도입 및 가입 신청의 건',
-                            details: '1. PG(전자결제지급대행) 서비스 가입 신청서 작성 및 제출\n2. 관련 부속 서류 제출 및 약관 동의\n3. 서비스 이용 수수료 및 정산 계좌 등록\n4. 기타 위 PG 서비스 가입 및 개통에 부수하는 일체의 행위'
-                        }
+                    const t = {
+                        finance: { purpose: '금융업무 위임의 건', details: '1. 계좌 개설/해지\n2. 예금 입출금\n3. 관련 부수 행위 일체' },
+                        registry: { purpose: '법인등기 업무 위임의 건', details: '1. 등기 신청 일체\n2. 인감증명서 발급' },
+                        contract: { purpose: '계약 체결 위임의 건', details: '1. 물품 공급 계약 체결\n2. 최종 날인 및 잔금 수령' },
+                        pg: { purpose: 'PG(전자결제대행) 서비스 가입 신청의 건', details: '1. PG서비스 가입 신청서 작성 및 제출\n2. 부속 서류 제출 및 약관 동의\n3. 서비스 이용 수수료 및 정산 계좌 등록' }
                     };
-                    
-                    if (templates[type]) {
-                        proxyData.value.mandate.purpose = templates[type].purpose;
-                        proxyData.value.mandate.details = templates[type].details;
-                    } else {
-                        proxyData.value.mandate.purpose = '';
-                        proxyData.value.mandate.details = '';
-                    }
+                    if (t[type]) { proxyData.value.mandate.purpose = t[type].purpose; proxyData.value.mandate.details = t[type].details; }
                 };
 
                 const handleStampUpload = (e) => {
                     const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => { stampImage.value = e.target.result; };
-                        reader.readAsDataURL(file);
-                    }
+                    if (file) { const reader = new FileReader(); reader.onload = (e) => { stampImage.value = e.target.result; }; reader.readAsDataURL(file); }
                 };
 
                 const generatePDF = () => {
                     const element = document.getElementById('print-area');
-                    const opt = {
-                        margin: 0,
-                        filename: '대리인위임장.pdf',
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2, useCORS: true },
-                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                    };
-                    showToastMsg('PDF를 생성중입니다...', 'success');
-                    html2pdf().set(opt).from(element).save().then(() => {
-                        showToastMsg('PDF 저장이 완료되었습니다.');
-                    });
+                    html2pdf().set({ margin: 0, filename: '위임장.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => showToastMsg('PDF 저장 완료'));
                 };
+                const printForm = () => { window.print(); };
+                const downloadCEOID = () => { showToastMsg('대표자 신분증 사본 다운로드 시작', 'success'); };
 
-                const printForm = () => {
-                    window.print();
-                };
-
-                const downloadCEOID = () => {
-                    showToastMsg('대표자 주민등록증 사본 다운로드를 시작합니다.', 'success');
-                };
-
-                // Type Mapping Utilities
-                const getIcon = (type) => {
-                    const icons = { download: 'fa-solid fa-file-arrow-down', document: 'fa-solid fa-file-signature', system: 'fa-solid fa-laptop-code', link: 'fa-solid fa-arrow-up-right-from-square', proxy_form: 'fa-solid fa-file-invoice' };
-                    return icons[type] || 'fa-solid fa-file';
-                };
-
-                const getIconClass = (type) => {
-                    const classes = { download: 'bg-blue-50 text-blue-600', document: 'bg-emerald-50 text-emerald-600', system: 'bg-purple-50 text-purple-600', link: 'bg-amber-50 text-amber-600', proxy_form: 'bg-rose-50 text-rose-600' };
-                    return classes[type] || 'bg-gray-50 text-gray-600';
-                };
-
-                const getTypeName = (type) => {
-                    const names = { download: '양식 파일', document: '내부 기안', system: '사내 시스템', link: '외부 링크', proxy_form: '스마트 폼' };
-                    return names[type] || '기타';
-                };
-
-                const getActionText = (type) => {
-                    const texts = { download: '다운로드', document: '작성하기', system: '시스템 열기', link: '바로가기', proxy_form: '작성/발급' };
-                    return texts[type] || '실행';
-                };
-
-                const getActionIcon = (type) => {
-                    const icons = { download: 'fa-solid fa-download', document: 'fa-solid fa-pen', system: 'fa-solid fa-desktop', link: 'fa-solid fa-link', proxy_form: 'fa-solid fa-wand-magic-sparkles' };
-                    return icons[type] || 'fa-solid fa-play';
-                };
+                const getIcon = (t) => ({ download: 'fa-solid fa-file-arrow-down', document: 'fa-solid fa-file-signature', system: 'fa-solid fa-laptop-code', link: 'fa-solid fa-arrow-up-right-from-square', proxy_form: 'fa-solid fa-file-invoice' }[t] || 'fa-solid fa-file');
+                const getIconClass = (t) => ({ download: 'bg-blue-50 text-blue-600', document: 'bg-emerald-50 text-emerald-600', system: 'bg-purple-50 text-purple-600', link: 'bg-amber-50 text-amber-600', proxy_form: 'bg-rose-50 text-rose-600' }[t] || 'bg-gray-50 text-gray-600');
+                const getTypeName = (t) => ({ download: '양식 파일', document: '내부 기안', system: '사내 시스템', link: '외부 링크', proxy_form: '스마트 폼' }[t] || '기타');
+                const getActionText = (t) => ({ download: '다운로드', document: '작성하기', system: '시스템 열기', link: '바로가기', proxy_form: '작성/발급' }[t] || '실행');
+                const getActionIcon = (t) => ({ download: 'fa-solid fa-download', document: 'fa-solid fa-pen', system: 'fa-solid fa-desktop', link: 'fa-solid fa-link', proxy_form: 'fa-solid fa-wand-magic-sparkles' }[t] || 'fa-solid fa-play');
 
                 return {
-                    isSidebarOpen, searchQuery, activeCategoryId, activeCategoryName, filteredItems, viewMode,
-                    menuGroups, toggleSidebar, selectCategory, selectSubCategory, isCategoryActive,
+                    isSidebarOpen, searchQuery, activeCategoryId, activeCategoryName, filteredItems, viewMode, menuGroups,
+                    toggleSidebar, selectCategory, selectSubCategory, isCategoryActive,
                     isAdminMode, showAdminAuth, adminPassword, requestAdminModeToggle, verifyAdminPassword,
+                    isDbConnected, seedDatabase, // DB Status and Actions
                     showItemModal, showDeleteModal, isEditing, modalForm, itemToDelete,
                     openAddModal, openEditModal, closeModal, saveItem, confirmDelete, executeDelete, handleAction,
-                    getIcon, getIconClass, getTypeName, getActionText, getActionIcon, downloadCEOID,
-                    toast,
+                    getIcon, getIconClass, getTypeName, getActionText, getActionIcon, downloadCEOID, toast,
                     showProxyForm, proxyData, formattedDate, stampImage, applyTemplate, handleStampUpload, generatePDF, printForm
                 };
             }
