@@ -1100,9 +1100,28 @@
 
                 const closePreviewModal = () => { showPreviewModal.value = false; previewItem.value = null; };
                 const printPreview = () => { window.print(); };
+                
                 const downloadPreviewPDF = () => {
                     const element = document.getElementById('preview-content');
-                    html2pdf().set({ margin: 10, filename: `${previewItem.value.name}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => showToast('PDF 다운로드 완료'));
+                    
+                    // 1. 축소(Scale)된 트랜스폼 속성을 임시 해제하여 캡처 왜곡 방지
+                    const originalTransform = element.style.transform;
+                    element.style.transform = 'none';
+                    // 2. 소수점 오차로 2페이지가 되는 것을 막기 위해 미세하게 높이 조절
+                    element.style.minHeight = '296mm';
+
+                    html2pdf().set({ 
+                        margin: 10, 
+                        filename: `${previewItem.value.name}.pdf`, 
+                        image: { type: 'jpeg', quality: 0.98 }, 
+                        html2canvas: { scale: 2, scrollY: 0 }, 
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+                    }).from(element).save().then(() => {
+                        showToast('PDF 다운로드 완료');
+                        // 3. 원래 스타일로 복원
+                        element.style.transform = originalTransform;
+                        element.style.minHeight = '';
+                    });
                 };
 
                 const applyTemplate = (type) => {
@@ -1118,8 +1137,33 @@
 
                 const generatePDF = () => {
                     const element = document.getElementById('print-area');
-                    html2pdf().set({ margin: 0, filename: '위임장.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => showToast('PDF 저장 완료'));
+                    
+                    // 1. 축소(Scale)된 트랜스폼 속성을 임시 해제하여 캡처 왜곡 방지
+                    const originalTransform = element.style.transform;
+                    element.style.transform = 'none';
+                    
+                    // 2. A4 꽉 찬 297mm 설정 시 발생하는 렌더링 픽셀 소수점 초과 오차를 막기 위해 높이를 살짝 줄임
+                    const originalHeight = element.style.height;
+                    element.style.height = '296mm';
+
+                    html2pdf().set({ 
+                        margin: 0, 
+                        filename: '위임장.pdf', 
+                        image: { type: 'jpeg', quality: 0.98 }, 
+                        html2canvas: { scale: 2, useCORS: true, scrollY: 0 }, 
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+                    }).from(element).save().then(() => {
+                        showToast('PDF 저장 완료');
+                        // 3. 원래 스타일로 복원
+                        element.style.transform = originalTransform;
+                        element.style.height = originalHeight || '';
+                    }).catch((error) => {
+                        console.error('PDF Generate Error:', error);
+                        element.style.transform = originalTransform;
+                        element.style.height = originalHeight || '';
+                    });
                 };
+                
                 const printForm = () => { window.print(); };
                 
                 const downloadCEOID = () => { 
