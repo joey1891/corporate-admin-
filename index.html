@@ -295,6 +295,11 @@
                                     </template>
                                     
                                     <div class="flex gap-2">
+                                        <!-- 스마트폼 전용 신분증 사본 버튼 복구 -->
+                                        <button v-if="item.type === 'proxy_form'" class="w-[110px] py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 shadow-sm">
+                                            <i class="fa-solid fa-id-card text-blue-500"></i> 신분증 사본
+                                        </button>
+
                                         <button @click="handleAction(item)" :class="['w-[120px] py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-1.5 shadow-sm transition-colors', item.type === 'my_business_card' && isAdminMode ? 'border-indigo-300 text-indigo-700 hover:bg-indigo-50' : 'hover:text-primary hover:border-primary']">
                                             <i :class="getActionIcon(item.type)"></i> {{ item.type === 'my_business_card' && isAdminMode ? '회원 명함 일괄등록' : getActionText(item.type, item) }}
                                         </button>
@@ -324,349 +329,15 @@
                             
                             <div class="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
                                 <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">{{ getTypeName(item.type) }}</span>
-                                <button @click="handleAction(item)" :class="['py-1.5 px-3 text-xs font-bold rounded flex items-center justify-center gap-1', item.type === 'my_business_card' && isAdminMode ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : 'text-primary bg-blue-50 hover:bg-blue-100']">
-                                    <i :class="getActionIcon(item.type)"></i> {{ item.type === 'my_business_card' && isAdminMode ? '일괄등록' : getActionText(item.type, item) }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <button v-if="isAdminMode" @click="openAddModal" class="absolute bottom-8 right-8 w-14 h-14 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 flex items-center justify-center text-xl z-40 transform hover:scale-105 transition-transform">
-                    <i class="fa-solid fa-plus"></i>
-                </button>
-            </main>
-
-            <!-- ===================== 모달 영역 ===================== -->
-
-            <!-- 1. 항목 추가/수정 모달 (다중 링크 지원) -->
-            <div v-if="showItemModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-5 border-b pb-3">
-                        <h3 class="text-lg font-bold text-gray-900">{{ isEditing ? '항목 수정' : '새 항목 추가' }}</h3>
-                        <button @click="closeModal" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
-                    </div>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">항목명</label>
-                            <input type="text" v-model="modalForm.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">유형</label>
-                            <select v-model="modalForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none">
-                                <option value="notice">공지사항 (게시글)</option>
-                                <option value="download">단순 파일 다운로드</option>
-                                <option value="document">내부 기안 양식</option>
-                                <option value="system">사내 시스템 연결</option>
-                                <option value="link">외부 링크 연결</option>
-                                <option value="proxy_form">스마트 폼 (위임장 등)</option>
-                                <option value="my_business_card">내 명함 (개인화)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">설명 / 내용</label>
-                            <textarea v-model="modalForm.description" rows="5" placeholder="내용을 입력하세요. (HTML 태그 지원: <h1>, <b>, <a> 등)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none"></textarea>
-                        </div>
-                        
-                        <!-- 파일 업로드 영역 -->
-                        <div v-if="['download', 'document', 'notice'].includes(modalForm.type)" class="pt-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">파일 첨부</label>
-                            <div @dragover.prevent="dragActive = true" @dragleave.prevent="dragActive = false" @drop.prevent="handleDrop" :class="['border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer', dragActive ? 'border-primary bg-blue-50' : 'border-gray-300 hover:bg-gray-50']" @click="$refs.fileInput.click()">
-                                <i class="fa-solid fa-cloud-arrow-up text-3xl text-gray-400 mb-2"></i>
-                                <p class="text-sm text-gray-600">클릭 또는 파일 드래그 앤 드롭</p>
-                                <input type="file" ref="fileInput" @change="handleFileSelect" multiple class="hidden">
-                            </div>
-                            <ul v-if="modalForm.files && modalForm.files.length > 0" class="space-y-2 mt-3">
-                                <li v-for="(file, idx) in modalForm.files" :key="idx" class="flex items-center p-2 bg-gray-50 border border-gray-200 rounded-lg gap-2">
-                                    <div class="flex flex-col gap-0.5">
-                                        <button @click.prevent="moveFile(idx, -1)" class="text-[10px] text-gray-400 hover:text-primary px-1"><i class="fa-solid fa-caret-up"></i></button>
-                                        <button @click.prevent="moveFile(idx, 1)" class="text-[10px] text-gray-400 hover:text-primary px-1"><i class="fa-solid fa-caret-down"></i></button>
-                                    </div>
-                                    <i class="fa-solid fa-file text-gray-400"></i>
-                                    <input type="text" v-model="file.name" class="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:border-primary" placeholder="표시될 파일명 수정 가능">
-                                    <button @click.prevent="removeFile(idx)" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-xmark"></i></button>
-                                </li>
-                            </ul>
-                        </div>
-                        
-                        <!-- 다중 링크 연결 영역 -->
-                        <div v-if="['system', 'link'].includes(modalForm.type)">
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="block text-sm font-medium text-gray-700">연결 주소 (URL)</label>
-                                <button @click.prevent="addLinkField" class="text-xs text-blue-600 font-bold hover:text-blue-800"><i class="fa-solid fa-plus mr-1"></i>링크 추가</button>
-                            </div>
-                            <ul class="space-y-2">
-                                <li v-for="(lnk, idx) in modalForm.links" :key="idx" class="flex items-center gap-2">
-                                    <input type="text" v-model="lnk.name" placeholder="링크명 (예: 사내망)" class="w-1/3 px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none text-sm">
-                                    <input type="text" v-model="lnk.url" placeholder="https://" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none text-sm">
-                                    <button @click.prevent="removeLinkField(idx)" class="text-gray-400 hover:text-red-600 p-2"><i class="fa-solid fa-xmark"></i></button>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-6 flex justify-end gap-2">
-                        <button @click="closeModal" class="px-5 py-2.5 text-sm font-medium bg-gray-100 rounded-lg">취소</button>
-                        <button @click="saveItem" :disabled="isUploading" class="px-5 py-2.5 text-sm font-bold text-white bg-primary rounded-lg flex items-center">
-                            <i v-if="isUploading" class="fa-solid fa-spinner fa-spin mr-2"></i> {{ isUploading ? '저장 중...' : '저장하기' }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 2. 자회사 추가 모달 -->
-            <div v-if="showCompanyModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 relative">
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">새 자회사(워크스페이스) 생성</h3>
-                    <p class="text-xs text-gray-500 mb-4">새 회사를 만들면 본사의 전체 메뉴 구조가 자동으로 복사(Clone)되어 기본 세팅됩니다.</p>
-                    <input type="text" v-model="newCompanyName" placeholder="자회사 이름 (예: 주식회사 다윗)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none mb-6">
-                    <div class="flex justify-end gap-2">
-                        <button @click="showCompanyModal = false" class="px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium">취소</button>
-                        <button @click="executeAddCompany" :disabled="isCloning" class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold flex items-center">
-                            <i v-if="isCloning" class="fa-solid fa-spinner fa-spin mr-2"></i> 생성 및 복사
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. 자회사 삭제 확인 모달 -->
-            <div v-if="showDeleteCompanyModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
-                    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mx-auto mb-4"><i class="fa-solid fa-building-circle-xmark"></i></div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">자회사 삭제 확인</h3>
-                    <p class="text-sm text-gray-800 font-bold mb-2">정말로 {{ currentCompanyName }}을(를) 삭제하시겠습니까?</p>
-                    <p class="text-xs text-red-500 mb-6 bg-red-50 p-2 rounded">※ 소속된 모든 메뉴와 파일, 항목이 영구 삭제되며 복구할 수 없습니다!</p>
-                    <div class="flex justify-center gap-2">
-                        <button @click="showDeleteCompanyModal = false" class="px-4 py-2 text-sm bg-gray-100 rounded-lg w-full">취소</button>
-                        <button @click="executeDeleteCompany" :disabled="isDeletingCompany" class="px-4 py-2 text-sm text-white bg-red-600 rounded-lg w-full font-bold">
-                            {{ isDeletingCompany ? '삭제 중...' : '삭제하기' }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4. 카테고리(메뉴) 추가/수정 모달 -->
-            <div v-if="showCatModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">{{ catModalData.title }}</h3>
-                    <input type="text" v-model="catModalData.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4" placeholder="메뉴 이름">
-                    <div class="flex justify-end gap-2">
-                        <button @click="showCatModal = false" class="px-4 py-2 bg-gray-100 rounded-lg text-sm">취소</button>
-                        <button @click="saveCategory" class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold">저장</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 5. 항목/카테고리 삭제 확인 모달 -->
-            <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
-                    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mx-auto mb-4"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">삭제 확인</h3>
-                    <p class="text-sm text-gray-500 mb-6">'{{ deleteTarget?.name }}'을(를)<br>정말로 삭제하시겠습니까?</p>
-                    <div class="flex justify-center gap-2">
-                        <button @click="showDeleteModal = false" class="px-4 py-2 text-sm bg-gray-100 rounded-lg w-full">취소</button>
-                        <button @click="executeDelete" class="px-4 py-2 text-sm text-white bg-red-600 rounded-lg w-full font-bold">삭제하기</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 6. 파일 미리보기 및 다중 링크 모달 -->
-            <div v-if="showPreviewModal" class="fixed inset-0 bg-black bg-opacity-60 z-[90] flex flex-col items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-full max-h-[85vh] flex flex-col overflow-hidden relative">
-                    <div class="flex justify-between items-center p-5 border-b bg-gray-50">
-                        <div class="flex items-center gap-3">
-                            <div :class="['w-10 h-10 rounded flex items-center justify-center text-lg', getIconClass(previewItem?.type)]"><i :class="getIcon(previewItem?.type)"></i></div>
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-900">{{ previewItem?.name }}</h3>
-                                <p class="text-xs text-gray-500">{{ getTypeName(previewItem?.type) }}</p>
-                            </div>
-                        </div>
-                        <button @click="showPreviewModal = false" class="text-gray-400 hover:text-gray-600 bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
-
-                    <div class="flex-1 overflow-y-auto bg-gray-100 p-6 flex flex-col items-center">
-                        <div v-if="previewItem?.description" class="w-full max-w-2xl bg-white p-8 rounded-lg border border-gray-200 mb-6 shadow-sm">
-                            <div v-if="previewItem.type === 'notice'" class="html-content text-gray-800" v-html="previewItem.description"></div>
-                            <p v-else class="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{{ previewItem.description }}</p>
-                        </div>
-                        
-                        <div v-if="previewFiles.length > 0" class="w-full max-w-2xl">
-                            <h4 class="text-sm font-bold text-gray-800 mb-3">
-                                <i :class="['fa-solid', ['system', 'link'].includes(previewItem?.type) ? 'fa-link' : 'fa-paperclip', 'text-blue-500']"></i> 
-                                {{ ['system', 'link'].includes(previewItem?.type) ? '연결된 링크' : '첨부 파일' }} ({{ previewFiles.length }}개)
-                            </h4>
-                            <ul class="space-y-2">
-                                <li v-for="(file, idx) in previewFiles" :key="idx" class="bg-white border border-gray-200 rounded-lg p-3 flex justify-between items-center shadow-sm hover:shadow transition-shadow">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 bg-blue-50 text-blue-500 rounded flex items-center justify-center">
-                                            <i :class="['fa-solid', ['system', 'link'].includes(previewItem?.type) ? 'fa-link' : 'fa-file']"></i>
-                                        </div>
-                                        <span class="text-sm font-bold text-gray-800">{{ file.name }}</span>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <button v-if="['download', 'document', 'notice'].includes(previewItem?.type)" @click="copyDownloadLink(file.url, file.name)" class="px-3 py-1.5 bg-gray-100 border border-gray-300 text-gray-700 text-xs font-bold rounded hover:bg-gray-200"><i class="fa-solid fa-link mr-1"></i>복사</button>
-                                        <button v-if="['download', 'document', 'notice'].includes(previewItem?.type)" @click="downloadActualFile(file.url, file.name)" class="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded hover:bg-gray-900"><i class="fa-solid fa-download mr-1"></i>다운로드</button>
-                                        <button v-else-if="['system', 'link'].includes(previewItem?.type)" @click="openLink(file.url)" class="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>바로가기</button>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 7. 개인화 명함 관리 모달 -->
-            <div v-if="showBusinessCardModal" class="fixed inset-0 bg-black bg-opacity-60 z-[110] flex flex-col items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden relative">
-                    <div class="flex justify-between items-center p-5 border-b bg-gray-50">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded flex items-center justify-center text-lg bg-indigo-50 text-indigo-600"><i class="fa-solid fa-address-card"></i></div>
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-900">{{ isAdminMode ? '회원 명함 일괄등록 (관리자용)' : '내 명함 조회 및 공유' }}</h3>
-                                <p class="text-xs text-gray-500">{{ isAdminMode ? '선택한 회원의 명함을 세팅합니다.' : '클립보드(Ctrl+V) 복사 및 SNS 즉시 공유가 지원됩니다.' }}</p>
-                            </div>
-                        </div>
-                        <button @click="showBusinessCardModal = false" class="text-gray-400 hover:text-gray-600 bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
-
-                    <div class="p-6 bg-gray-100 flex flex-col gap-6 overflow-y-auto max-h-[70vh]">
-                        <!-- 관리자용 회원 선택 박스 -->
-                        <div v-if="isAdminMode" class="bg-indigo-50 border border-indigo-200 p-4 rounded-lg flex items-center justify-between shadow-sm">
-                            <span class="text-sm font-bold text-indigo-800"><i class="fa-solid fa-user-tag mr-2"></i>명함을 세팅할 회원 선택</span>
-                            <select v-model="selectedCardUserId" @change="loadAdminSelectedUserCard" class="px-3 py-2 border border-indigo-300 rounded font-bold text-sm bg-white outline-none min-w-[200px]">
-                                <option v-for="u in cardManagerUsers" :key="u.id" :value="u.id">{{ u.full_name }} ({{ u.email }})</option>
-                            </select>
-                        </div>
-
-                        <!-- 앞면 -->
-                        <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                            <h4 class="font-bold text-gray-800 mb-3 border-b pb-2 flex justify-between">
-                                명함 앞면 <span v-if="isAdminMode" class="text-xs font-normal text-gray-400">Ctrl+V 붙여넣기 지원</span>
-                            </h4>
-                            <div v-if="businessCardData.front" class="mb-4 relative group">
-                                <img :src="businessCardData.front" class="w-full max-w-sm rounded border border-gray-200 mx-auto block shadow-sm">
-                                <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded max-w-sm mx-auto">
-                                    <button @click="shareBusinessCard(businessCardData.front, 'front')" class="px-4 py-2 bg-blue-500 text-white rounded font-bold text-sm shadow"><i class="fa-solid fa-share-nodes mr-1"></i> 복사 및 공유</button>
-                                    <button v-if="isAdminMode" @click="businessCardData.front = null" class="px-4 py-2 bg-gray-700 text-white rounded font-bold text-sm shadow"><i class="fa-solid fa-trash"></i></button>
-                                </div>
-                            </div>
-                            <!-- 관리자만 업로드 컨트롤 노출 -->
-                            <div v-if="isAdminMode" @dragover.prevent="e => e.currentTarget.classList.add('bg-blue-50')" @dragleave.prevent="e => e.currentTarget.classList.remove('bg-blue-50')" @drop.prevent="e => handleCardDrop(e, 'front')" tabindex="0" @paste="e => handleCardPaste(e, 'front')" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 outline-none" @click="$refs.cardFrontInput.click()">
-                                <p class="text-xs text-gray-500"><i class="fa-solid fa-image mr-1"></i> 클릭하여 파일 선택 또는 이미지를 끌어다 놓으세요.</p>
-                                <input type="file" ref="cardFrontInput" @change="e => handleCardFileSelect(e, 'front')" accept="image/*" class="hidden">
-                            </div>
-                        </div>
-
-                        <!-- 뒷면 -->
-                        <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                            <h4 class="font-bold text-gray-800 mb-3 border-b pb-2 flex justify-between">
-                                명함 뒷면 <span v-if="isAdminMode" class="text-xs font-normal text-gray-400">Ctrl+V 붙여넣기 지원</span>
-                            </h4>
-                            <div v-if="businessCardData.back" class="mb-4 relative group">
-                                <img :src="businessCardData.back" class="w-full max-w-sm rounded border border-gray-200 mx-auto block shadow-sm">
-                                <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded max-w-sm mx-auto">
-                                    <button @click="shareBusinessCard(businessCardData.back, 'back')" class="px-4 py-2 bg-blue-500 text-white rounded font-bold text-sm shadow"><i class="fa-solid fa-share-nodes mr-1"></i> 복사 및 공유</button>
-                                    <button v-if="isAdminMode" @click="businessCardData.back = null" class="px-4 py-2 bg-gray-700 text-white rounded font-bold text-sm shadow"><i class="fa-solid fa-trash"></i></button>
-                                </div>
-                            </div>
-                            <div v-if="isAdminMode" @dragover.prevent="e => e.currentTarget.classList.add('bg-blue-50')" @dragleave.prevent="e => e.currentTarget.classList.remove('bg-blue-50')" @drop.prevent="e => handleCardDrop(e, 'back')" tabindex="0" @paste="e => handleCardPaste(e, 'back')" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 outline-none" @click="$refs.cardBackInput.click()">
-                                <p class="text-xs text-gray-500"><i class="fa-solid fa-image mr-1"></i> 클릭하여 파일 선택 또는 이미지를 끌어다 놓으세요.</p>
-                                <input type="file" ref="cardBackInput" @change="e => handleCardFileSelect(e, 'back')" accept="image/*" class="hidden">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div v-if="isAdminMode" class="p-4 border-t bg-white flex justify-end">
-                        <button @click="saveAdminBusinessCard" :disabled="isMgrCardUploading" class="px-6 py-2 bg-primary text-white rounded-lg font-bold flex items-center shadow-md">
-                            <i v-if="isMgrCardUploading" class="fa-solid fa-spinner fa-spin mr-2"></i> {{ isMgrCardUploading ? '저장 중...' : '선택 회원의 명함 저장' }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 8. 회원 권한 관리 모달 -->
-            <div v-if="showUserModal" class="fixed inset-0 bg-black bg-opacity-50 z-[120] flex items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
-                    <div class="flex justify-between items-center p-5 border-b bg-gray-50">
-                        <h3 class="text-lg font-bold text-gray-900"><i class="fa-solid fa-users-gear text-primary mr-2"></i> 회원 및 권한 관리</h3>
-                        <button @click="showUserModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
-                    </div>
-                    
-                    <div class="flex flex-1 overflow-hidden">
-                        <!-- 좌측 리스트 -->
-                        <div class="w-1/3 border-r border-gray-200 overflow-y-auto bg-white">
-                            <ul class="divide-y divide-gray-100">
-                                <li v-for="user in usersList" :key="user.id" @click="selectUserForEdit(user)" :class="['p-4 cursor-pointer hover:bg-blue-50 transition-colors', editingUser?.id === user.id ? 'bg-blue-50 border-l-4 border-primary' : '']">
-                                    <div class="flex justify-between items-start mb-1">
-                                        <span class="font-bold text-sm text-gray-900">{{ user.full_name }}</span>
-                                        <span v-if="user.status === 'pending'" class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">승인대기</span>
-                                        <span v-else-if="user.role === 'admin'" class="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">Admin</span>
-                                    </div>
-                                    <p class="text-xs text-gray-500 truncate">{{ user.email }}</p>
-                                    <p class="text-[10px] text-gray-400 mt-1"><i class="fa-solid fa-building mr-1"></i>{{ getCompanyName(user.company_id) || '미배정' }}</p>
-                                </li>
-                            </ul>
-                        </div>
-                        
-                        <!-- 우측 패널 -->
-                        <div class="w-2/3 p-6 overflow-y-auto bg-gray-50 relative" v-if="editingUser">
-                            <div class="flex justify-between items-center mb-6">
-                                <h4 class="text-lg font-bold text-gray-900">{{ editingUser.full_name }} 님의 권한 설정</h4>
-                                <div class="flex gap-2">
-                                    <button @click="updateUserStatus('approved')" v-if="editingUser.status === 'pending'" class="px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded">가입 승인</button>
-                                    <button @click="updateUserStatus('rejected')" v-if="editingUser.status === 'pending'" class="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded">가입 거절</button>
-                                </div>
-                            </div>
-                            
-                            <div class="space-y-5 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-xs font-bold text-gray-600 mb-1">계정 권한 (Role)</label>
-                                        <select v-model="editingUser.role" class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50">
-                                            <option value="user">일반 사용자</option>
-                                            <option value="admin">최고 관리자</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-gray-600 mb-1">소속 회사 (Workspace)</label>
-                                        <select v-model="editingUser.company_id" @change="loadMenuGroupsForEditingUser" class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50">
-                                            <option value="">-- 회사 선택 --</option>
-                                            <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                <div class="pt-4 border-t border-gray-100 mt-4 relative">
-                                    <label class="block text-sm font-bold text-gray-800 mb-3"><i class="fa-solid fa-lock text-gray-400 mr-1"></i> 메뉴별 접근 권한 설정</label>
+                                <div class="flex gap-1.5">
+                                    <!-- 스마트폼 전용 신분증 버튼 (그리드용) 복구 -->
+                                    <button v-if="item.type === 'proxy_form'" class="py-1.5 px-2 text-[10px] font-bold rounded flex items-center justify-center gap-1 bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200">
+                                        <i class="fa-solid fa-id-card text-blue-500"></i> 신분증
+                                    </button>
                                     
-                                    <!-- 관리자일 경우 권한 무시 블라인드 처리 -->
-                                    <div v-if="editingUser.role === 'admin'" class="absolute inset-0 bg-white/80 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center pt-8">
-                                        <div class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg">최고 관리자는 모든 권한을 가집니다.</div>
-                                    </div>
-
-                                    <div v-if="!editingUser.company_id" class="text-sm text-gray-500 italic p-4 bg-gray-50 rounded">소속 회사를 먼저 배정해주세요.</div>
-                                    <div v-else class="space-y-4 max-h-[300px] overflow-y-auto pr-2">
-                                        <div v-for="group in menuGroupsForEditingUser" :key="group.sectorId" class="border border-gray-200 rounded-lg overflow-hidden">
-                                            <div class="bg-gray-100 px-3 py-2 border-b border-gray-200">
-                                                <label class="flex items-center font-bold text-sm text-gray-800 cursor-pointer">
-                                                    <input type="checkbox" v-model="editingUser.allowed_menus" :value="group.sectorId" class="w-4 h-4 text-primary rounded mr-2">
-                                                    {{ group.sectorName }} (전체 부문)
-                                                </label>
-                                            </div>
-                                            <div class="p-3 grid grid-cols-2 gap-2 bg-white">
-                                                <label v-for="cat in group.categories" :key="cat.id" class="flex items-center text-xs text-gray-600 cursor-pointer hover:text-primary">
-                                                    <input type="checkbox" v-model="editingUser.allowed_menus" :value="cat.id" class="w-3.5 h-3.5 text-secondary rounded mr-2">
-                                                    <i :class="[cat.icon || 'fa-solid fa-folder', 'mr-1.5 text-gray-400']"></i> {{ cat.name }}
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <p v-if="editingUser.company_id" class="text-[10px] text-gray-400 mt-3">* 상위 부문을 체크하면 하위 메뉴 전체가 자동으로 보입니다. 하위 메뉴만 개별 체크도 가능합니다.</p>
-                                </div>
-                                
-                                <div class="flex justify-end pt-4 border-t border-gray-100 mt-4">
-                                    <button @click="saveUserPermissions" class="px-6 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow hover:bg-blue-800">변경사항 저장</button>
+                                    <button @click="handleAction(item)" :class="['py-1.5 px-3 text-xs font-bold rounded flex items-center justify-center gap-1', item.type === 'my_business_card' && isAdminMode ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : 'text-primary bg-blue-50 hover:bg-blue-100']">
+                                        <i :class="getActionIcon(item.type)"></i> {{ item.type === 'my_business_card' && isAdminMode ? '일괄등록' : getActionText(item.type, item) }}
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1111,13 +782,13 @@
                         if (isAdminMode.value) { openAdminCardManager(); } 
                         else {
                             try {
-                                const { data } = await supabase.from('profiles').select('business_card_data').eq('id', userProfile.value.id).single();
-                                if (data) userProfile.value.business_card_data = data.business_card_data;
-                            } catch(e) {}
+                                const { data, error } = await supabase.from('profiles').select('business_card_data').eq('id', userProfile.value.id).single();
+                                if (!error && data) { userProfile.value.business_card_data = data.business_card_data; }
+                            } catch(e) { console.error('명함 데이터 새로고침 실패', e); }
                             businessCardData.value = userProfile.value?.business_card_data || { front: null, back: null };
                             showBusinessCardModal.value = true;
                         }
-                    } else if (['download', 'document', 'notice'].includes(item.type)) {
+                    } else if (['download', 'document', 'notice', 'proxy_form'].includes(item.type)) { // proxy_form 추가
                         previewItem.value = item;
                         previewFiles.value = hasFiles(item) ? JSON.parse(item.file_path) : [];
                         showPreviewModal.value = true;
@@ -1322,11 +993,11 @@
                     showBusinessCardModal, businessCardData, selectedCardUserId, cardManagerUsers, isMgrCardUploading, handleCardFileSelect, handleCardDrop, handleCardPaste, saveAdminBusinessCard, shareBusinessCard,
                     showUserModal, usersList, editingUser, menuGroupsForEditingUser, openUserManagement, selectUserForEdit, updateUserStatus, loadMenuGroupsForEditingUser, saveUserPermissions, getCompanyName,
                     toast, getIcon: (t) => ({notice:'fa-solid fa-bullhorn', download:'fa-solid fa-file-arrow-down', document:'fa-solid fa-file-signature', system:'fa-solid fa-laptop-code', link:'fa-solid fa-link', proxy_form:'fa-solid fa-id-card', my_business_card:'fa-solid fa-address-card'}[t]||'fa-solid fa-file'),
-                    getIconClass: (t) => ({notice:'bg-red-50 text-red-600', download:'bg-blue-50 text-blue-600', my_business_card:'bg-indigo-50 text-indigo-600'}[t]||'bg-gray-50 text-gray-600'),
-                    getTypeBorderClass: (t) => ({notice:'border-red-100', download:'border-blue-100', my_business_card:'border-indigo-100'}[t]||'border-gray-200'),
+                    getIconClass: (t) => ({notice:'bg-red-50 text-red-600', download:'bg-blue-50 text-blue-600', my_business_card:'bg-indigo-50 text-indigo-600', proxy_form:'bg-emerald-50 text-emerald-600'}[t]||'bg-gray-50 text-gray-600'),
+                    getTypeBorderClass: (t) => ({notice:'border-red-100', download:'border-blue-100', my_business_card:'border-indigo-100', proxy_form:'border-emerald-100'}[t]||'border-gray-200'),
                     getTypeName: (t) => ({notice:'공지사항', download:'일반파일', document:'사내기안', system:'시스템', link:'외부링크', proxy_form:'스마트폼', my_business_card:'개인명함'}[t]||'기타'),
-                    getActionText: (t,i) => hasFiles(i) && !['system','link'].includes(t) ? '열람/다운로드' : ({notice:'내용확인', download:'다운로드', link:'바로가기', system:'바로가기'}[t]||'실행'),
-                    getActionIcon: (t) => ({notice:'fa-solid fa-book-open', link:'fa-solid fa-arrow-up-right-from-square', system:'fa-solid fa-arrow-up-right-from-square', my_business_card:'fa-solid fa-image-portrait'}[t]||'fa-solid fa-download')
+                    getActionText: (t,i) => hasFiles(i) && !['system','link'].includes(t) ? '열람/다운로드' : ({notice:'내용확인', download:'다운로드', link:'바로가기', system:'바로가기', proxy_form:'스마트폼 작성'}[t]||'실행'),
+                    getActionIcon: (t) => ({notice:'fa-solid fa-book-open', link:'fa-solid fa-arrow-up-right-from-square', system:'fa-solid fa-arrow-up-right-from-square', my_business_card:'fa-solid fa-image-portrait', proxy_form:'fa-solid fa-file-pen'}[t]||'fa-solid fa-download')
                 };
             }
         }).mount('#app');
