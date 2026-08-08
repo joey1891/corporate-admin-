@@ -742,11 +742,64 @@
                                 id: 'marketing',
                                 name: '마케팅',
                                 icon: 'fa-solid fa-bullhorn',
-                                items: [
-                                    { id: 'mk1', name: '브랜드 로고 및 가이드라인', type: 'download' },
-                                    { id: 'mk2', name: '마케팅 기획안 양식', type: 'document' },
-                                    { id: 'mk3', name: '광고/프로모션 집행 내역서', type: 'document' },
-                                    { id: 'mk4', name: '홍보물 제작 요청', type: 'system' }
+                                isOpen: false,
+                                subCategories: [
+                                    {
+                                        id: 'mk_brand',
+                                        name: '브랜드',
+                                        items: [
+                                            { id: 'mk_b1', name: '브랜드 로고 및 컬러 가이드라인', type: 'download' },
+                                            { id: 'mk_b2', name: '브랜드 에센스/비전 선언문', type: 'document' }
+                                        ]
+                                    },
+                                    {
+                                        id: 'mk_product',
+                                        name: '제품',
+                                        items: [
+                                            { id: 'mk_p1', name: '제품 카탈로그(국문/영문) 양식', type: 'download' },
+                                            { id: 'mk_p2', name: '제품 포지셔닝 맵', type: 'document' }
+                                        ]
+                                    },
+                                    {
+                                        id: 'mk_sns',
+                                        name: 'SNS',
+                                        items: [
+                                            { id: 'mk_s1', name: '공식 SNS 운영 매뉴얼', type: 'document' },
+                                            { id: 'mk_s2', name: '월간 콘텐츠 캘린더', type: 'system' }
+                                        ]
+                                    },
+                                    {
+                                        id: 'mk_pr',
+                                        name: '홍보',
+                                        items: [
+                                            { id: 'mk_pr1', name: '보도자료(Press Release) 템플릿', type: 'document' },
+                                            { id: 'mk_pr2', name: '언론사 및 기자 연락망', type: 'system' }
+                                        ]
+                                    },
+                                    {
+                                        id: 'mk_ad',
+                                        name: '광고',
+                                        items: [
+                                            { id: 'mk_a1', name: '광고/프로모션 집행 기안서', type: 'document' },
+                                            { id: 'mk_a2', name: '매체 운영 및 효율 리포트', type: 'system' }
+                                        ]
+                                    },
+                                    {
+                                        id: 'mk_graphic',
+                                        name: '그래픽디자인',
+                                        items: [
+                                            { id: 'mk_g1', name: '웹/앱 배너 템플릿 모음', type: 'download' },
+                                            { id: 'mk_g2', name: '사내 디자인 에셋 라이브러리', type: 'system' }
+                                        ]
+                                    },
+                                    {
+                                        id: 'mk_video',
+                                        name: '영상디자인',
+                                        items: [
+                                            { id: 'mk_v1', name: '영상 기획 스토리보드 양식', type: 'document' },
+                                            { id: 'mk_v2', name: '폰트/BGM 저작권 규정 및 라이선스', type: 'download' }
+                                        ]
+                                    }
                                 ]
                             },
                             {
