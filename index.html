@@ -914,11 +914,23 @@
 
                     if (isDbConnected.value) {
                         try {
-                            const updates = items.map(it => ({ id: it.id, sort_order: it.sort_order }));
-                            const { error } = await supabase.from('items').upsert(updates);
-                            if (error) throw error;
+                            // upsert 대신 update를 Promise.all로 묶어 필수값 누락 에러(NOT NULL constraint) 방지
+                            const updatePromises = items.map(it => 
+                                supabase.from('items').update({ sort_order: it.sort_order }).eq('id', it.id)
+                            );
+                            
+                            const results = await Promise.all(updatePromises);
+                            
+                            // 통신 결과 중 에러가 있는지 체크
+                            const errorResult = results.find(res => res.error);
+                            if (errorResult) {
+                                console.error('순서 저장 상세 에러:', errorResult.error);
+                                throw errorResult.error;
+                            }
                         } catch (e) {
-                            showToast('순서 저장 실패: DB 컬럼이 없거나 권한이 부족합니다.', 'error');
+                            console.error('순서 저장 실패:', e);
+                            // (수정됨) 에러의 진짜 원인을 화면에 직접 띄우도록 변경
+                            showToast(`저장 실패: ${e.message || '알 수 없는 오류'}`, 'error');
                         }
                     }
                 };
