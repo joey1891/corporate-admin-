@@ -32,11 +32,12 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .a4-preview { width: 210mm; height: 297mm; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 0 auto; padding: 20mm; position: relative; transform-origin: top center; }
+        /* 좌우 여백을 최소화하고 완벽한 1페이지 고정을 위해 CSS 속성 강화 */
+        .a4-preview { width: 210mm; height: 297mm; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 0 auto; padding: 12mm; position: relative; transform-origin: top center; overflow: hidden; box-sizing: border-box; }
         @media print { 
             body * { visibility: hidden; } 
             .print-target, .print-target * { visibility: visible; } 
-            .print-target { position: absolute; left: 0; top: 0; width: 210mm; min-height: 297mm; padding: 20mm; box-shadow: none !important; margin: 0 !important; transform: none !important; } 
+            .print-target { position: absolute; left: 0; top: 0; width: 210mm; height: 297mm; padding: 12mm; box-shadow: none !important; margin: 0 !important; transform: none !important; overflow: hidden; box-sizing: border-box; } 
         }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
@@ -237,7 +238,11 @@
                                         <i :class="getIcon(item.type)"></i>
                                     </div>
                                     <div class="min-w-0">
-                                        <h3 class="text-base font-semibold text-gray-900 truncate">{{ item.name }}</h3>
+                                        <h3 class="text-base font-semibold text-gray-900 truncate">
+                                            {{ item.name }}
+                                            <!-- 파일 아이콘 표시 (업로드된 실제 파일이 있는 경우) -->
+                                            <i v-if="item.file_path" class="fa-solid fa-paperclip text-xs text-blue-500 ml-1" title="첨부파일 있음"></i>
+                                        </h3>
                                         <div class="flex items-center gap-2 mt-0.5">
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">{{ getTypeName(item.type) }}</span>
                                             <p v-if="item.desc" class="text-xs text-gray-500 truncate">{{ item.desc }}</p>
@@ -255,7 +260,7 @@
                                             <i class="fa-solid fa-id-card text-blue-500"></i><span class="hidden md:inline">신분증 사본</span>
                                         </button>
                                         <button @click="handleAction(item)" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-primary flex items-center gap-2 shadow-sm">
-                                            <i :class="getActionIcon(item.type)"></i><span class="hidden sm:inline">{{ getActionText(item.type) }}</span>
+                                            <i :class="getActionIcon(item.type)"></i><span class="hidden sm:inline">{{ item.file_path ? '다운로드' : getActionText(item.type) }}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -269,18 +274,21 @@
                                 <button @click.stop="openEditModal(item)" class="p-1.5 text-gray-400 hover:bg-gray-100 rounded text-xs"><i class="fa-solid fa-pen"></i></button>
                                 <button @click.stop="confirmDelete(item)" class="p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded text-xs"><i class="fa-solid fa-trash"></i></button>
                             </div>
-                            <div :class="['w-12 h-12 rounded-lg flex items-center justify-center text-xl mb-4', getIconClass(item.type)]">
+                            <div :class="['w-12 h-12 rounded-lg flex items-center justify-center text-xl mb-4 relative', getIconClass(item.type)]">
                                 <i :class="getIcon(item.type)"></i>
+                                <div v-if="item.file_path" class="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center border border-white">
+                                    <i class="fa-solid fa-paperclip text-[8px] text-white"></i>
+                                </div>
                             </div>
-                            <h3 class="text-base font-semibold text-gray-900 mb-1 truncate pr-8">{{ item.name }}</h3>
-                            <p v-if="item.desc" class="text-xs text-gray-500 mb-4 line-clamp-2 h-8">{{ item.desc }}</p>
+                            <h3 class="text-base font-semibold text-gray-900 mb-1 truncate pr-8" :title="item.name">{{ item.name }}</h3>
+                            <p v-if="item.desc" class="text-xs text-gray-500 mb-4 line-clamp-2 h-8" :title="item.desc">{{ item.desc }}</p>
                             <div v-else class="h-8 mb-4"></div>
                             <div class="flex items-center justify-between mt-auto">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">{{ getTypeName(item.type) }}</span>
                                 <div class="flex items-center gap-1.5">
                                     <button v-if="item.type === 'proxy_form'" @click="downloadCEOID" class="text-sm font-medium text-gray-600 hover:text-blue-700 bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-100"><i class="fa-solid fa-id-card"></i></button>
                                     <button @click="handleAction(item)" class="text-sm font-medium text-primary hover:text-blue-800 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 shadow-sm">
-                                        <i :class="getActionIcon(item.type)"></i> {{ getActionText(item.type) }}
+                                        <i :class="getActionIcon(item.type)"></i> {{ item.file_path ? '다운로드' : getActionText(item.type) }}
                                     </button>
                                 </div>
                             </div>
@@ -336,7 +344,13 @@
             </div>
 
             <div v-if="showItemModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+                <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
+                    <!-- 업로드 로딩 오버레이 -->
+                    <div v-if="isUploading" class="absolute inset-0 bg-white/80 z-10 flex flex-col items-center justify-center rounded-xl">
+                        <i class="fa-solid fa-spinner fa-spin text-4xl text-primary mb-3"></i>
+                        <p class="text-sm font-medium text-gray-700">파일 업로드 중...</p>
+                    </div>
+
                     <div class="flex justify-between items-center mb-5">
                         <h3 class="text-lg font-bold text-gray-900">{{ isEditing ? '항목 수정' : '새 항목 추가' }}</h3>
                         <button @click="closeModal" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
@@ -360,10 +374,22 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">설명 (선택)</label>
                             <input type="text" v-model="modalForm.desc" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none">
                         </div>
+                        
+                        <!-- 파일 업로드 UI -->
+                        <div v-if="['download', 'document'].includes(modalForm.type)">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">파일 첨부 (선택)</label>
+                            <input type="file" @change="handleFileUpload" class="w-full text-sm border border-gray-300 rounded-lg p-1 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100">
+                            <p v-if="modalForm.file_path" class="text-xs text-blue-600 mt-1"><i class="fa-solid fa-check"></i> 기존 파일이 연결되어 있습니다.</p>
+                        </div>
+                        <!-- 링크 입력 UI -->
+                        <div v-if="['system', 'link'].includes(modalForm.type)">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">연결 URL (선택)</label>
+                            <input type="text" v-model="modalForm.file_path" placeholder="https://" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm">
+                        </div>
                     </div>
                     <div class="mt-6 flex justify-end gap-2">
-                        <button @click="closeModal" class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg">취소</button>
-                        <button @click="saveItem" class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-800 rounded-lg">저장하기</button>
+                        <button @click="closeModal" class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg" :disabled="isUploading">취소</button>
+                        <button @click="saveItem" class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-800 rounded-lg" :disabled="isUploading">저장하기</button>
                     </div>
                 </div>
             </div>
@@ -380,40 +406,43 @@
                 </div>
             </div>
 
+            <!-- ================= 스마트 위임장 작성 폼 ================= -->
             <div v-if="showProxyForm" class="fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex flex-col md:flex-row overflow-hidden">
                 <button @click="showProxyForm = false" class="absolute top-4 right-4 z-50 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-100"><i class="fa-solid fa-xmark text-xl"></i></button>
                 <div class="w-full md:w-1/3 h-1/2 md:h-full bg-white overflow-y-auto border-r border-gray-200 p-6 shadow-xl z-10 flex flex-col">
-                    <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><i class="fa-solid fa-file-signature text-primary"></i> {{ isAdminMode ? '위임장 양식 세팅' : '위임장 정보 입력 및 발급' }}</h2>
+                    <h2 class="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2"><i class="fa-solid fa-file-signature text-primary"></i> {{ isAdminMode ? '위임장 양식 세팅' : '위임장 정보 입력 및 발급' }}</h2>
+                    <p v-if="!isAdminMode" class="text-xs text-blue-600 mb-6 font-medium"><i class="fa-solid fa-cloud-arrow-up"></i> 작성 중인 내용은 브라우저에 자동 임시저장됩니다.</p>
                     
                     <div class="flex-1 space-y-5">
                         <!-- 1. 위임자 (법인) 정보 확인 -->
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                             <h3 class="text-sm font-bold text-gray-700 mb-3">위임자 (법인) 정보 확인</h3>
                             <div class="space-y-2 text-sm">
-                                <input type="text" v-model="proxyData.delegator.name" :readonly="!isAdminMode" :class="['w-full px-3 py-2 border border-gray-300 rounded', !isAdminMode ? 'bg-gray-100 text-gray-500 outline-none cursor-not-allowed' : 'bg-white']">
-                                <input type="text" v-model="proxyData.delegator.address" :readonly="!isAdminMode" :class="['w-full px-3 py-2 border border-gray-300 rounded', !isAdminMode ? 'bg-gray-100 text-gray-500 outline-none cursor-not-allowed' : 'bg-white']">
+                                <input type="text" v-model="proxyData.delegator.name" :readonly="!isAdminMode" :class="['w-full px-3 py-2 border border-gray-300 rounded', !isAdminMode ? 'bg-gray-100 text-gray-500 outline-none cursor-not-allowed' : 'bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none']">
+                                <input type="text" v-model="proxyData.delegator.address" :readonly="!isAdminMode" :class="['w-full px-3 py-2 border border-gray-300 rounded', !isAdminMode ? 'bg-gray-100 text-gray-500 outline-none cursor-not-allowed' : 'bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none']">
                                 <div class="flex gap-2">
-                                    <input type="text" v-model="proxyData.delegator.corp_id" :readonly="!isAdminMode" :class="['w-1/2 px-3 py-2 border border-gray-300 rounded', !isAdminMode ? 'bg-gray-100 text-gray-500 outline-none cursor-not-allowed' : 'bg-white']">
-                                    <input type="text" v-model="proxyData.delegator.biz_id" :readonly="!isAdminMode" :class="['w-1/2 px-3 py-2 border border-gray-300 rounded', !isAdminMode ? 'bg-gray-100 text-gray-500 outline-none cursor-not-allowed' : 'bg-white']">
+                                    <input type="text" v-model="proxyData.delegator.corp_id" :readonly="!isAdminMode" :class="['w-1/2 px-3 py-2 border border-gray-300 rounded', !isAdminMode ? 'bg-gray-100 text-gray-500 outline-none cursor-not-allowed' : 'bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none']">
+                                    <input type="text" v-model="proxyData.delegator.biz_id" :readonly="!isAdminMode" :class="['w-1/2 px-3 py-2 border border-gray-300 rounded', !isAdminMode ? 'bg-gray-100 text-gray-500 outline-none cursor-not-allowed' : 'bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none']">
                                 </div>
                                 <div class="flex gap-2">
-                                    <input type="text" v-model="proxyData.delegator.rep_name" :readonly="!isAdminMode" :class="['w-1/2 px-3 py-2 border border-gray-300 rounded', !isAdminMode ? 'bg-gray-100 text-gray-500 outline-none cursor-not-allowed' : 'bg-white']">
-                                    <input type="text" v-model="proxyData.delegator.rep_id" :readonly="!isAdminMode" :class="['w-1/2 px-3 py-2 border border-gray-300 rounded', !isAdminMode ? 'bg-gray-100 text-gray-500 outline-none cursor-not-allowed' : 'bg-white']">
+                                    <input type="text" v-model="proxyData.delegator.rep_name" :readonly="!isAdminMode" :class="['w-1/2 px-3 py-2 border border-gray-300 rounded', !isAdminMode ? 'bg-gray-100 text-gray-500 outline-none cursor-not-allowed' : 'bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none']">
+                                    <input type="text" v-model="proxyData.delegator.rep_id" :readonly="!isAdminMode" :class="['w-1/2 px-3 py-2 border border-gray-300 rounded', !isAdminMode ? 'bg-gray-100 text-gray-500 outline-none cursor-not-allowed' : 'bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none']">
                                 </div>
                             </div>
                         </div>
 
                         <!-- 2. 수임자 (대리인) 정보 -->
-                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                            <h3 class="text-sm font-bold text-gray-700 mb-3">수임자 (대리인) 정보</h3>
+                        <div class="bg-white p-4 rounded-lg border border-blue-200 shadow-sm relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
+                            <h3 class="text-sm font-bold text-gray-800 mb-3 ml-1">수임자 (대리인) 정보</h3>
                             <div class="space-y-3">
                                 <div class="flex gap-2">
-                                    <input type="text" v-model="proxyData.delegatee.name" placeholder="성명" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                                    <input type="text" v-model="proxyData.delegatee.id" placeholder="주민등록번호" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                                    <input type="text" v-model="proxyData.delegatee.name" placeholder="성명" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50 focus:bg-white">
+                                    <input type="text" v-model="proxyData.delegatee.id" placeholder="주민등록번호" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50 focus:bg-white">
                                 </div>
-                                <input type="text" v-model="proxyData.delegatee.dept_pos" placeholder="소속 및 직위" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                                <input type="text" v-model="proxyData.delegatee.phone" placeholder="연락처" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                                <input type="text" v-model="proxyData.delegatee.address" placeholder="주소" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                                <input type="text" v-model="proxyData.delegatee.dept_pos" placeholder="소속 및 직위" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50 focus:bg-white">
+                                <input type="text" v-model="proxyData.delegatee.phone" placeholder="연락처" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50 focus:bg-white">
+                                <input type="text" v-model="proxyData.delegatee.address" placeholder="주소" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-gray-50 focus:bg-white">
                             </div>
                         </div>
                         
@@ -421,16 +450,16 @@
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                             <div class="flex justify-between items-center mb-3"><h3 class="text-sm font-bold text-gray-700">위임 사항 및 기간</h3></div>
                             <div class="flex gap-2 mb-3 overflow-x-auto pb-1">
-                                <button @click="applyTemplate('finance')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50">금융</button>
-                                <button @click="applyTemplate('registry')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50">등기</button>
-                                <button @click="applyTemplate('contract')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50">계약</button>
-                                <button @click="applyTemplate('biz_reg')" class="flex-shrink-0 px-2 py-1 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-700 font-bold hover:bg-emerald-100">사업자등록</button>
-                                <button @click="applyTemplate('pg')" class="flex-shrink-0 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700 font-bold hover:bg-blue-100">PG신청</button>
+                                <button @click="applyTemplate('finance')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50 transition-colors">금융</button>
+                                <button @click="applyTemplate('registry')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50 transition-colors">등기</button>
+                                <button @click="applyTemplate('contract')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50 transition-colors">계약</button>
+                                <button @click="applyTemplate('biz_reg')" class="flex-shrink-0 px-2 py-1 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-700 font-bold hover:bg-emerald-100 transition-colors">사업자등록</button>
+                                <button @click="applyTemplate('pg')" class="flex-shrink-0 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700 font-bold hover:bg-blue-100 transition-colors">PG신청</button>
                             </div>
                             <div class="space-y-3">
-                                <input type="text" v-model="proxyData.mandate.purpose" placeholder="위임 업무의 목적" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                                <textarea v-model="proxyData.mandate.details" rows="3" placeholder="대리권의 세부 범위" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none resize-none"></textarea>
-                                <input type="text" v-model="proxyData.period.condition" placeholder="유효 기간" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                                <input type="text" v-model="proxyData.mandate.purpose" placeholder="위임 업무의 목적" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white">
+                                <textarea v-model="proxyData.mandate.details" rows="3" placeholder="대리권의 세부 범위" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white resize-none"></textarea>
+                                <input type="text" v-model="proxyData.period.condition" placeholder="유효 기간" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white">
                             </div>
                         </div>
                     </div>
@@ -441,18 +470,18 @@
                     </div>
                 </div>
 
-                <div class="w-full md:w-2/3 h-1/2 md:h-full bg-gray-200 overflow-y-auto p-4 md:p-8 flex items-start justify-center">
-                    <div id="print-area" class="print-target a4-preview bg-white flex flex-col" style="transform: scale(min(1, calc(100vw / 850))); transform-origin: top center; margin-bottom: 50px;">
-                        <h1 class="text-4xl font-black text-center mt-12 mb-12 tracking-widest text-black">위 임 장</h1>
+                <div class="w-full md:w-2/3 h-1/2 md:h-full bg-gray-200 overflow-y-auto p-4 md:p-8 flex items-start justify-center pb-24">
+                    <div id="print-area" class="print-target a4-preview bg-white flex flex-col" style="transform: scale(min(1, calc(100vw / 850))); transform-origin: top center;">
+                        <h1 class="text-4xl font-black text-center mt-10 mb-10 tracking-widest text-black">위 임 장</h1>
                         
-                        <div class="flex-1 flex flex-col px-10">
+                        <div class="flex-1 flex flex-col w-full">
                             
                             <!-- 위임자 (본인) -->
-                            <table class="w-full border-collapse border border-black text-black text-sm mb-6">
+                            <table class="w-full border-collapse border border-black text-black text-sm mb-6 table-fixed">
                                 <tbody>
                                     <tr>
-                                        <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">위 임 자<br>(본 인)</th>
-                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">법인명 (상호)</th>
+                                        <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[14%] text-center font-bold text-base">위 임 자<br>(본 인)</th>
+                                        <th class="border border-black bg-gray-50 p-2 w-[18%] text-center font-medium">법인명 (상호)</th>
                                         <td colspan="3" class="border border-black p-2 font-bold">{{ proxyData.delegator.name }}</td>
                                     </tr>
                                     <tr>
@@ -461,35 +490,31 @@
                                     </tr>
                                     <tr>
                                         <th class="border border-black bg-gray-50 p-2 text-center font-medium">법인등록번호</th>
-                                        <td class="border border-black p-2 w-[22.5%] text-center text-sm">{{ proxyData.delegator.corp_id }}</td>
-                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">사업자번호</th>
-                                        <td class="border border-black p-2 w-[22.5%] text-center text-sm">{{ proxyData.delegator.biz_id }}</td>
+                                        <td class="border border-black p-2 w-[25%] text-center text-sm">{{ proxyData.delegator.corp_id }}</td>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium w-[18%]">사업자번호</th>
+                                        <td class="border border-black p-2 w-[25%] text-center text-sm">{{ proxyData.delegator.biz_id }}</td>
                                     </tr>
                                     <tr>
                                         <th class="border border-black bg-gray-50 p-2 text-center font-medium">대표이사 성명</th>
-                                        <td class="border border-black p-2 relative text-center">
-                                            {{ proxyData.delegator.rep_name }}
-                                            <span class="float-right text-base mt-0.5">(인)</span>
-                                            <img v-if="stampImage" :src="stampImage" class="absolute right-1 top-1/2 w-14 h-14 object-contain transform -translate-y-1/2 opacity-95 mix-blend-multiply" alt="직인">
-                                        </td>
+                                        <td class="border border-black p-2 text-center">{{ proxyData.delegator.rep_name }}</td>
                                         <th class="border border-black bg-gray-50 p-2 text-center font-medium">대표이사 주민번호</th>
-                                        <td class="border border-black p-2 text-center text-sm">{{ proxyData.delegator.rep_id }}</td>
+                                        <td class="border border-black p-2 text-center text-sm tracking-tighter">{{ proxyData.delegator.rep_id }}</td>
                                     </tr>
                                 </tbody>
                             </table>
 
                             <!-- 수임자 (대리인) -->
-                            <table class="w-full border-collapse border border-black text-black text-sm mb-6">
+                            <table class="w-full border-collapse border border-black text-black text-sm mb-6 table-fixed">
                                 <tbody>
                                     <tr>
-                                        <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">수 임 자<br>(대리인)</th>
-                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">성 명</th>
-                                        <td class="border border-black p-2 w-[22.5%] text-center">{{ proxyData.delegatee.name }}</td>
-                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">주민등록번호</th>
-                                        <td class="border border-black p-2 w-[22.5%] text-center">{{ proxyData.delegatee.id }}</td>
+                                        <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[14%] text-center font-bold text-base">수 임 자<br>(대리인)</th>
+                                        <th class="border border-black bg-gray-50 p-2 w-[18%] text-center font-medium">성 명</th>
+                                        <td class="border border-black p-2 w-[25%] text-center">{{ proxyData.delegatee.name }}</td>
+                                        <th class="border border-black bg-gray-50 p-2 w-[18%] text-center font-medium">주민번호</th>
+                                        <td class="border border-black p-2 w-[25%] text-center tracking-tighter">{{ proxyData.delegatee.id }}</td>
                                     </tr>
                                     <tr>
-                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">소속 및 직위</th>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">소속/직위</th>
                                         <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.dept_pos }}</td>
                                     </tr>
                                     <tr>
@@ -504,11 +529,11 @@
                             </table>
 
                             <!-- 위임사항 -->
-                            <table class="w-full border-collapse border border-black text-black text-sm mb-4">
+                            <table class="w-full border-collapse border border-black text-black text-sm mb-4 table-fixed">
                                 <tbody>
                                     <tr>
-                                        <th rowspan="3" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">위임사항</th>
-                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">위임 목적</th>
+                                        <th rowspan="3" class="border border-black bg-gray-100 p-2 w-[14%] text-center font-bold text-base">위임사항</th>
+                                        <th class="border border-black bg-gray-50 p-2 w-[18%] text-center font-medium">위임 목적</th>
                                         <td class="border border-black p-2 font-bold">{{ proxyData.mandate.purpose }}</td>
                                     </tr>
                                     <tr>
@@ -522,12 +547,17 @@
                                 </tbody>
                             </table>
 
-                            <div class="text-base text-black leading-relaxed mt-2 text-justify px-2">
+                            <div class="text-base text-black leading-relaxed mt-2 text-justify px-1">
                                 본인(위임자)은 위 사람(수임자)을 대리인으로 정하고 상기 위임사항에 관한 일체의 권한을 포괄적으로 위임하며, 대리인이 행한 일체의 행위에 대하여 본인이 민·형사상의 모든 책임을 질 것을 확약합니다.
                             </div>
 
-                            <div class="text-center mt-auto mb-10 text-xl font-bold text-black">
-                                {{ formattedDate }}
+                            <div class="mt-auto pt-6 pb-4 flex flex-col items-center justify-center relative">
+                                <div class="text-xl font-bold text-black mb-8">{{ formattedDate }}</div>
+                                <div class="text-xl font-bold text-black flex items-center relative pr-4">
+                                    위 임 자 : &nbsp;&nbsp;&nbsp;{{ proxyData.delegator.name }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(인)
+                                    <!-- crossorigin="anonymous" 속성 유지. PDF 캡처 시 CORS 문제 방지 -->
+                                    <img v-if="stampImage" :src="stampImage" crossorigin="anonymous" class="absolute right-0 top-1/2 w-16 h-16 object-contain transform -translate-y-1/2 opacity-95 mix-blend-multiply" alt="직인">
+                                </div>
                             </div>
                             
                         </div>
@@ -605,7 +635,7 @@
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted } = Vue;
+        const { createApp, ref, computed, onMounted, watch } = Vue;
 
         createApp({
             setup() {
@@ -634,8 +664,9 @@
                 const showItemModal = ref(false);
                 const showDeleteModal = ref(false);
                 const isEditing = ref(false);
+                const isUploading = ref(false);
                 const itemToDelete = ref(null);
-                const modalForm = ref({ id: '', name: '', type: 'download', desc: '' });
+                const modalForm = ref({ id: '', name: '', type: 'download', desc: '', file: null, file_path: '' });
                 const toast = ref({ show: false, message: '', type: 'success' });
                 let toastTimeout = null;
 
@@ -658,6 +689,32 @@
                     mandate: { purpose: '', details: '' },
                     period: { condition: '해당 업무 종료 시까지' }
                 });
+
+                const loadProxyDraft = () => {
+                    const draft = localStorage.getItem('proxyDraft');
+                    if (draft) {
+                        try {
+                            const parsed = JSON.parse(draft);
+                            // 관리자가 설정한 위임자 정보는 덮어쓰지 않고 대리인/위임사항만 불러옴
+                            if (parsed.delegatee) proxyData.value.delegatee = parsed.delegatee;
+                            if (parsed.mandate) proxyData.value.mandate = parsed.mandate;
+                            if (parsed.period) proxyData.value.period = parsed.period;
+                        } catch (e) {
+                            console.error('임시저장 파일 파싱 오류:', e);
+                        }
+                    }
+                };
+
+                // 입력 폼 내용이 변경될 때마다 자동으로 로컬 스토리지에 임시저장
+                watch(() => proxyData.value, (newVal) => {
+                    if (!isAdminMode.value) { // 일반 사용자일 때만 자동 임시저장
+                        localStorage.setItem('proxyDraft', JSON.stringify({
+                            delegatee: newVal.delegatee,
+                            mandate: newVal.mandate,
+                            period: newVal.period
+                        }));
+                    }
+                }, { deep: true });
 
                 const showPreviewModal = ref(false);
                 const previewItem = ref(null);
@@ -840,11 +897,11 @@
                                 category.subCategories = []; category.isOpen = false;
                                 for (const sub of deepSubs) {
                                     const subCategory = { id: sub.id, name: sub.name, items: [] };
-                                    subCategory.items = itms.filter(i => i.category_id === sub.id).map(i => ({ id: i.id, name: i.name, type: i.type, desc: i.description }));
+                                    subCategory.items = itms.filter(i => i.category_id === sub.id).map(i => ({ id: i.id, name: i.name, type: i.type, desc: i.description, file_path: i.file_path }));
                                     category.subCategories.push(subCategory);
                                 }
                             } else {
-                                category.items = itms.filter(i => i.category_id === cat.id).map(i => ({ id: i.id, name: i.name, type: i.type, desc: i.description }));
+                                category.items = itms.filter(i => i.category_id === cat.id).map(i => ({ id: i.id, name: i.name, type: i.type, desc: i.description, file_path: i.file_path }));
                             }
                             group.categories.push(category);
                         }
@@ -955,23 +1012,60 @@
                     } return null;
                 };
 
-                const openAddModal = () => { isEditing.value = false; modalForm.value = { id: '', name: '', type: 'download', desc: '' }; showItemModal.value = true; };
-                const openEditModal = (item) => { isEditing.value = true; modalForm.value = { ...item }; showItemModal.value = true; };
+                const openAddModal = () => { isEditing.value = false; modalForm.value = { id: '', name: '', type: 'download', desc: '', file: null, file_path: '' }; showItemModal.value = true; };
+                const openEditModal = (item) => { isEditing.value = true; modalForm.value = { ...item, file: null }; showItemModal.value = true; };
                 const closeModal = () => { showItemModal.value = false; };
+                
+                const handleFileUpload = (e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                        modalForm.value.file = e.target.files[0];
+                    }
+                };
 
                 const saveItem = async () => {
                     if (!modalForm.value.name.trim()) return showToast('항목명을 입력해주세요.', 'error');
                     const targetCategory = getTargetCategory();
                     if (!targetCategory) return;
+                    
+                    let finalPath = modalForm.value.file_path;
+
                     if (isDbConnected.value) {
-                        if (isEditing.value) await supabase.from('items').update({ name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.desc }).eq('id', modalForm.value.id);
-                        else await supabase.from('items').insert({ category_id: targetCategory.id, name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.desc });
+                        isUploading.value = true;
+                        
+                        // Storage Upload 처리
+                        if (modalForm.value.file && ['download', 'document'].includes(modalForm.value.type)) {
+                            const file = modalForm.value.file;
+                            const fileName = `${Date.now()}_${file.name}`;
+                            const { data, error } = await supabase.storage.from('documents').upload(fileName, file);
+                            
+                            if (error) {
+                                isUploading.value = false;
+                                return showToast('파일 업로드 실패 (스토리지 권한을 확인하세요)', 'error');
+                            }
+                            const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName);
+                            finalPath = urlData.publicUrl;
+                        }
+
+                        const payload = { 
+                            name: modalForm.value.name, 
+                            type: modalForm.value.type, 
+                            description: modalForm.value.desc,
+                            file_path: finalPath
+                        };
+
+                        if (isEditing.value) await supabase.from('items').update(payload).eq('id', modalForm.value.id);
+                        else {
+                            payload.category_id = targetCategory.id;
+                            await supabase.from('items').insert(payload);
+                        }
                         await loadData();
+                        isUploading.value = false;
                     } else {
+                        // Local Mode fallback
                         if (isEditing.value) {
                             const index = targetCategory.items.findIndex(i => i.id === modalForm.value.id);
-                            if (index !== -1) targetCategory.items[index] = { ...modalForm.value };
-                        } else { targetCategory.items.push({ ...modalForm.value, id: 'item_' + Date.now() }); }
+                            if (index !== -1) targetCategory.items[index] = { ...modalForm.value, file_path: finalPath };
+                        } else { targetCategory.items.push({ ...modalForm.value, file_path: finalPath, id: 'item_' + Date.now() }); }
                     }
                     closeModal(); showToast(isEditing.value ? '수정되었습니다.' : '추가되었습니다.');
                 };
@@ -991,7 +1085,11 @@
 
                 const handleAction = (item) => {
                     if (item.type === 'proxy_form') {
+                        loadProxyDraft(); // 작성 시작 시 임시저장 내용 로드
                         showProxyForm.value = true;
+                    } else if (item.file_path) {
+                        // 실제 업로드/연결된 파일/링크가 있으면 바로 열림
+                        window.open(item.file_path, '_blank');
                     } else if (['download', 'document'].includes(item.type)) {
                         previewItem.value = item;
                         showPreviewModal.value = true;
@@ -1020,7 +1118,7 @@
 
                 const generatePDF = () => {
                     const element = document.getElementById('print-area');
-                    html2pdf().set({ margin: 0, filename: '위임장.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => showToast('PDF 저장 완료'));
+                    html2pdf().set({ margin: 0, filename: '위임장.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => showToast('PDF 저장 완료'));
                 };
                 const printForm = () => { window.print(); };
                 
@@ -1048,8 +1146,8 @@
                     isSidebarOpen, searchQuery, activeCategoryId, activeCategoryName, filteredItems, viewMode, menuGroups,
                     toggleSidebar, selectCategory, selectSubCategory, isCategoryActive,
                     isAdminMode, isDbConnected, seedDatabase,
-                    showItemModal, showDeleteModal, isEditing, modalForm, itemToDelete,
-                    openAddModal, openEditModal, closeModal, saveItem, confirmDelete, executeDelete, handleAction,
+                    showItemModal, showDeleteModal, isEditing, isUploading, modalForm, itemToDelete,
+                    openAddModal, openEditModal, closeModal, handleFileUpload, saveItem, confirmDelete, executeDelete, handleAction,
                     getIcon, getIconClass, getTypeName, getActionText, getActionIcon, downloadCEOID, toast,
                     showProxyForm, proxyData, formattedDate, stampImage, applyTemplate, generatePDF, printForm,
                     showPreviewModal, previewItem, closePreviewModal, printPreview, downloadPreviewPDF
