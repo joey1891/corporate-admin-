@@ -575,7 +575,7 @@
         createApp({
             setup() {
                 const isSidebarOpen = ref(false);
-                const activeCategoryId = ref('management');
+                const activeCategoryId = ref('planning');
                 const searchQuery = ref('');
                 
                 // Admin States
@@ -836,6 +836,17 @@
                 // Types: 'download' (PDF, DOC, etc.), 'link' (external site), 'system' (internal system), 'document' (internal form)
                 const categories = ref([
                     {
+                        id: 'planning',
+                        name: '기획',
+                        icon: 'fa-solid fa-lightbulb',
+                        items: [
+                            { id: 'p1', name: '회사소개서', type: 'download' },
+                            { id: 'p2', name: '사업계획서 양식', type: 'document' },
+                            { id: 'p3', name: '기안서(품의서) 양식', type: 'document' },
+                            { id: 'p4', name: '회의록 양식', type: 'document' }
+                        ]
+                    },
+                    {
                         id: 'management',
                         name: '경영관리',
                         icon: 'fa-solid fa-briefcase',
@@ -855,14 +866,23 @@
                     },
                     {
                         id: 'finance',
-                        name: '재무/세무/회계',
-                        icon: 'fa-solid fa-calculator',
+                        name: '재무',
+                        icon: 'fa-solid fa-wallet',
                         items: [
                             { id: 'f1', name: '입출금확인 시스템', type: 'system' },
                             { id: 'f2', name: '지출결의서 양식', type: 'document' },
-                            { id: 'f3', name: '세금계산서 발행 시스템', type: 'system' },
-                            { id: 'f4', name: '부가세 신고 안내', type: 'link' },
-                            { id: 'f5', name: '법인세 신고 자료 제출', type: 'system' }
+                            { id: 'f3', name: '자금일보/주보 양식', type: 'document' }
+                        ]
+                    },
+                    {
+                        id: 'tax_accounting',
+                        name: '세무/회계',
+                        icon: 'fa-solid fa-calculator',
+                        items: [
+                            { id: 't1', name: '세금계산서 발행 시스템', type: 'system' },
+                            { id: 't2', name: '부가세 신고 안내', type: 'link' },
+                            { id: 't3', name: '법인세 신고 자료 제출', type: 'system' },
+                            { id: 't4', name: '원천세 신고 안내', type: 'link' }
                         ]
                     },
                     {
@@ -886,6 +906,18 @@
                         ]
                     },
                     {
+                        id: 'general_affairs',
+                        name: '총무',
+                        icon: 'fa-solid fa-building-user',
+                        items: [
+                            { id: 'g1', name: '비품 구매 신청서', type: 'document' },
+                            { id: 'g2', name: '명함 제작 신청서', type: 'document' },
+                            { id: 'g3', name: '출장 신청서 및 결과보고서', type: 'document' },
+                            { id: 'g4', name: '법인차량 배차 관리 시스템', type: 'system' },
+                            { id: 'g5', name: '사원증 발급 신청', type: 'system' }
+                        ]
+                    },
+                    {
                         id: 'legal',
                         name: '법무',
                         icon: 'fa-solid fa-scale-balanced',
@@ -905,6 +937,41 @@
                             { id: 's2', name: '입출금확인 (영업부)', type: 'system' },
                             { id: 's3', name: '재고수불부 관리 시스템', type: 'system' },
                             { id: 's4', name: '영업 주간 보고서 양식', type: 'document' }
+                        ]
+                    },
+                    {
+                        id: 'marketing',
+                        name: '마케팅',
+                        icon: 'fa-solid fa-bullhorn',
+                        items: [
+                            { id: 'mk1', name: '브랜드 로고 및 가이드라인', type: 'download' },
+                            { id: 'mk2', name: '마케팅 기획안 양식', type: 'document' },
+                            { id: 'mk3', name: '광고/프로모션 집행 내역서', type: 'document' },
+                            { id: 'mk4', name: '홍보물 제작 요청', type: 'system' }
+                        ]
+                    },
+                    {
+                        id: 'sales_domestic',
+                        name: '영업 (국내)',
+                        icon: 'fa-solid fa-store',
+                        items: [
+                            { id: 'sd1', name: '신규 거래처 등록 요청서', type: 'document' },
+                            { id: 'sd2', name: '국내 표준 대리점/공급 계약서', type: 'document' },
+                            { id: 'sd3', name: '국내 매출 실적 대시보드', type: 'system' },
+                            { id: 'sd4', name: '제품 소개서(국문)', type: 'download' }
+                        ]
+                    },
+                    {
+                        id: 'sales_overseas',
+                        name: '영업 (해외)',
+                        icon: 'fa-solid fa-globe',
+                        items: [
+                            { id: 'so1', name: '영문 비밀유지계약서 (NDA)', type: 'document' },
+                            { id: 'so2', name: '영문 판매계약서 (Sales Agreement)', type: 'document' },
+                            { id: 'so3', name: 'Commercial Invoice 양식', type: 'document' },
+                            { id: 'so4', name: 'Packing List 양식', type: 'document' },
+                            { id: 'so5', name: '수출입 통관 서류 및 가이드', type: 'download' },
+                            { id: 'so6', name: '제품 소개서(영문)', type: 'download' }
                         ]
                     }
                 ]);
