@@ -19,15 +19,8 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: {
-                        primary: '#1e40af', // blue-800
-                        secondary: '#3b82f6', // blue-500
-                        background: '#f3f4f6',
-                        surface: '#ffffff',
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'Pretendard', 'sans-serif'],
-                    }
+                    colors: { primary: '#1e40af', secondary: '#3b82f6', background: '#f3f4f6', surface: '#ffffff', },
+                    fontFamily: { sans: ['Inter', 'Pretendard', 'sans-serif'], }
                 }
             }
         }
@@ -35,475 +28,529 @@
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         body { font-family: 'Pretendard', sans-serif; background-color: #f3f4f6; }
-        
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        .a4-preview {
-            width: 210mm;
-            height: 297mm;
-            background: white;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            margin: 0 auto;
-            padding: 20mm;
-            position: relative;
-            transform-origin: top center;
-        }
-
-        @media print {
-            body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible; }
-            #print-area {
-                position: absolute; left: 0; top: 0; width: 210mm; height: 297mm;
-                padding: 20mm; box-shadow: none; margin: 0;
-            }
-        }
+        .a4-preview { width: 210mm; height: 297mm; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 0 auto; padding: 20mm; position: relative; transform-origin: top center; }
+        @media print { body * { visibility: hidden; } #print-area, #print-area * { visibility: visible; } #print-area { position: absolute; left: 0; top: 0; width: 210mm; height: 297mm; padding: 20mm; box-shadow: none; margin: 0; } }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
     </style>
 </head>
 <body class="text-gray-800 h-screen overflow-hidden">
     <div id="app" class="flex h-full w-full relative">
         
-        <!-- 모바일 사이드바 배경 -->
-        <div v-if="isSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"></div>
+        <!-- ================= 인증 (로그인/회원가입) 오버레이 ================= -->
+        <transition name="fade">
+            <div v-if="authState !== 'authenticated'" class="fixed inset-0 z-[100] bg-gray-100 flex items-center justify-center p-4">
+                
+                <!-- 1. 로딩 화면 -->
+                <div v-if="authState === 'loading'" class="flex flex-col items-center">
+                    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary mb-4"></i>
+                    <p class="text-gray-500 font-medium">시스템 접속 중...</p>
+                </div>
 
-        <!-- 사이드바 -->
-        <aside :class="['fixed md:static inset-y-0 left-0 z-30 w-64 bg-surface border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col', isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
-            <!-- 로고 -->
-            <div class="h-16 flex items-center px-6 border-b border-gray-100 flex-shrink-0">
-                <i class="fa-solid fa-building text-primary text-xl mr-3"></i>
-                <span class="text-lg font-bold text-gray-900 tracking-tight">업무 지원 포털</span>
-            </div>
-
-            <!-- 카테고리 목록 -->
-            <div class="overflow-y-auto overflow-x-hidden flex-grow py-4 px-3">
-                <div v-for="(group, groupIdx) in menuGroups" :key="groupIdx" class="mb-6 last:mb-0">
-                    <h3 class="px-3 text-xs font-bold text-gray-400 mb-2 tracking-wider">{{ group.sectorName }}</h3>
+                <!-- 2. 로그인 / 회원가입 폼 -->
+                <div v-else-if="['login', 'register'].includes(authState)" class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+                    <div class="p-8 text-center bg-gray-50 border-b border-gray-100">
+                        <div class="w-16 h-16 bg-primary text-white rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg">
+                            <i class="fa-solid fa-building"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-900 tracking-tight mb-1">힘 인터내셔널</h2>
+                        <p class="text-sm text-gray-500">사내 업무 지원 포털</p>
+                    </div>
                     
-                    <ul class="space-y-1">
-                        <li v-for="category in group.categories" :key="category.id">
-                            <button 
-                                @click="selectCategory(category)"
-                                :class="[
-                                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200',
-                                    (!category.subCategories && activeCategoryId === category.id) ? 'bg-blue-50 text-primary' : '',
-                                    (category.subCategories && isCategoryActive(category)) ? 'text-primary' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                ]"
-                            >
-                                <i :class="['w-5 text-center', category.icon || 'fa-solid fa-folder', isCategoryActive(category) ? 'text-primary' : 'text-gray-400']"></i>
-                                {{ category.name }}
-                                
-                                <i v-if="category.subCategories" :class="['ml-auto fa-solid transition-transform duration-200 text-xs', category.isOpen ? 'fa-chevron-down' : 'fa-chevron-right']"></i>
-                                <span v-else-if="category.items && category.items.length > 0" class="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
-                                    {{ category.items.length }}
-                                </span>
-                            </button>
-                            
-                            <!-- 서브 카테고리 -->
-                            <ul v-if="category.subCategories" v-show="category.isOpen" class="mt-1 space-y-1 pl-9">
-                                <li v-for="sub in category.subCategories" :key="sub.id">
-                                    <button 
-                                        @click="selectSubCategory(sub.id)"
-                                        :class="[
-                                            'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200',
-                                            activeCategoryId === sub.id ? 'bg-blue-50 text-primary' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                                        ]"
-                                    >
-                                        <i class="fa-solid fa-minus text-[10px] w-3 text-center" :class="activeCategoryId === sub.id ? 'text-primary' : 'text-gray-300'"></i>
-                                        {{ sub.name }}
-                                        <span v-if="sub.items && sub.items.length > 0" class="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
-                                            {{ sub.items.length }}
-                                        </span>
-                                    </button>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            
-            <!-- 하단 DB 상태 표시 및 프로필 -->
-            <div class="p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
-                <div class="mb-3 px-1 flex items-center justify-between">
-                    <span class="text-xs font-medium text-gray-500">DB 연동 상태</span>
-                    <span v-if="isDbConnected" class="flex items-center text-xs text-emerald-600 font-bold"><span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>Connected</span>
-                    <span v-else class="flex items-center text-xs text-amber-500 font-bold"><span class="w-2 h-2 rounded-full bg-amber-400 mr-1.5"></span>Local Mode</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">
-                        CE
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 truncate">관리자 계정</p>
-                        <p class="text-xs text-gray-500 truncate">ceo@hyminternational.com</p>
-                    </div>
-                </div>
-            </div>
-        </aside>
+                    <div class="p-8">
+                        <!-- 탭 -->
+                        <div class="flex bg-gray-100 p-1 rounded-lg mb-6">
+                            <button @click="authState = 'login'" :class="['flex-1 py-2 text-sm font-bold rounded-md transition-colors', authState === 'login' ? 'bg-white shadow text-primary' : 'text-gray-500']">로그인</button>
+                            <button @click="authState = 'register'" :class="['flex-1 py-2 text-sm font-bold rounded-md transition-colors', authState === 'register' ? 'bg-white shadow text-primary' : 'text-gray-500']">회원가입</button>
+                        </div>
 
-        <!-- 메인 콘텐츠 -->
-        <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
-            <!-- 헤더 -->
-            <header class="h-16 bg-surface border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 z-10 flex-shrink-0">
-                <div class="flex items-center flex-1">
-                    <button @click="toggleSidebar" class="md:hidden mr-4 text-gray-500 hover:text-gray-700">
-                        <i class="fa-solid fa-bars text-xl"></i>
+                        <form @submit.prevent="authState === 'login' ? handleLogin() : handleRegister()" class="space-y-4">
+                            <div v-if="authState === 'register'">
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">이름 (실명)</label>
+                                <input type="text" v-model="authForm.name" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">이메일 (사내 계정)</label>
+                                <input type="email" v-model="authForm.email" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">비밀번호</label>
+                                <input type="password" v-model="authForm.password" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all">
+                            </div>
+                            
+                            <button type="submit" :disabled="isAuthLoading" class="w-full py-3 px-4 bg-primary text-white rounded-lg font-bold shadow-md hover:bg-blue-800 focus:ring-4 focus:ring-blue-500/50 transition-all disabled:opacity-50 mt-2 flex justify-center items-center">
+                                <i v-if="isAuthLoading" class="fa-solid fa-spinner fa-spin mr-2"></i>
+                                {{ authState === 'login' ? '로그인' : '가입 신청하기' }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 3. 승인 대기 화면 -->
+                <div v-else-if="authState === 'pending'" class="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 text-center border-t-4 border-amber-500">
+                    <div class="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">
+                        <i class="fa-solid fa-hourglass-half"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-3">관리자 승인 대기 중</h2>
+                    <p class="text-gray-500 mb-8 text-sm leading-relaxed">
+                        가입 신청이 완료되었습니다.<br>
+                        보안을 위해 관리자의 승인 후 시스템을<br>이용하실 수 있습니다.
+                    </p>
+                    <button @click="handleLogout" class="px-6 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium text-sm transition-colors">
+                        다른 계정으로 로그인
                     </button>
-                    <!-- 검색 -->
-                    <div class="relative w-full max-w-md hidden sm:block">
-                        <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" v-model="searchQuery" placeholder="필요한 서류나 시스템을 검색해보세요" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-gray-50 focus:bg-white">
+                </div>
+            </div>
+        </transition>
+
+
+        <!-- ================= 메인 앱 콘텐츠 (인증 및 승인 완료 시 표시) ================= -->
+        <template v-if="authState === 'authenticated'">
+            <!-- 모바일 사이드바 배경 -->
+            <div v-if="isSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"></div>
+
+            <!-- 사이드바 -->
+            <aside :class="['fixed md:static inset-y-0 left-0 z-30 w-64 bg-surface border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col', isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
+                <!-- 로고 -->
+                <div class="h-16 flex items-center px-6 border-b border-gray-100 flex-shrink-0">
+                    <i class="fa-solid fa-building text-primary text-xl mr-3"></i>
+                    <span class="text-lg font-bold text-gray-900 tracking-tight">업무 지원 포털</span>
+                </div>
+
+                <!-- 카테고리 목록 -->
+                <div class="overflow-y-auto overflow-x-hidden flex-grow py-4 px-3">
+                    <div v-for="(group, groupIdx) in menuGroups" :key="groupIdx" class="mb-6 last:mb-0">
+                        <h3 class="px-3 text-xs font-bold text-gray-400 mb-2 tracking-wider">{{ group.sectorName }}</h3>
+                        <ul class="space-y-1">
+                            <li v-for="category in group.categories" :key="category.id">
+                                <button @click="selectCategory(category)" :class="['w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200', (!category.subCategories && activeCategoryId === category.id) ? 'bg-blue-50 text-primary' : '', (category.subCategories && isCategoryActive(category)) ? 'text-primary' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900']">
+                                    <i :class="['w-5 text-center', category.icon || 'fa-solid fa-folder', isCategoryActive(category) ? 'text-primary' : 'text-gray-400']"></i>
+                                    {{ category.name }}
+                                    <i v-if="category.subCategories" :class="['ml-auto fa-solid transition-transform duration-200 text-xs', category.isOpen ? 'fa-chevron-down' : 'fa-chevron-right']"></i>
+                                    <span v-else-if="category.items && category.items.length > 0" class="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">{{ category.items.length }}</span>
+                                </button>
+                                <!-- 서브 카테고리 -->
+                                <ul v-if="category.subCategories" v-show="category.isOpen" class="mt-1 space-y-1 pl-9">
+                                    <li v-for="sub in category.subCategories" :key="sub.id">
+                                        <button @click="selectSubCategory(sub.id)" :class="['w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200', activeCategoryId === sub.id ? 'bg-blue-50 text-primary' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900']">
+                                            <i class="fa-solid fa-minus text-[10px] w-3 text-center" :class="activeCategoryId === sub.id ? 'text-primary' : 'text-gray-300'"></i>
+                                            {{ sub.name }}
+                                            <span v-if="sub.items && sub.items.length > 0" class="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">{{ sub.items.length }}</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
                     </div>
                 </div>
                 
-                <div class="flex items-center gap-4">
-                    <!-- DB 초기 데이터 삽입 버튼 (관리자용) -->
-                    <button v-if="isAdminMode && !isDbConnected" @click="seedDatabase" class="hidden lg:flex items-center px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300 rounded text-xs font-bold transition-colors">
-                        <i class="fa-solid fa-database mr-1.5"></i> DB에 기본 데이터 세팅
-                    </button>
-
-                    <!-- 뷰어 모드 토글 -->
-                    <div class="flex bg-gray-100 rounded-lg p-1">
-                        <button @click="viewMode = 'list'" :class="['px-3 py-1.5 rounded text-sm font-medium transition-colors', viewMode === 'list' ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700']">
-                            <i class="fa-solid fa-list mr-1"></i>
-                        </button>
-                        <button @click="viewMode = 'grid'" :class="['px-3 py-1.5 rounded text-sm font-medium transition-colors', viewMode === 'grid' ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700']">
-                            <i class="fa-solid fa-border-all mr-1"></i>
-                        </button>
+                <!-- 하단 상태 표시 및 프로필 -->
+                <div class="p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+                    <div class="mb-3 px-1 flex items-center justify-between">
+                        <span class="text-xs font-medium text-gray-500">DB 연결 상태</span>
+                        <span v-if="isDbConnected" class="flex items-center text-xs text-emerald-600 font-bold"><span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>Supabase</span>
+                        <span v-else class="flex items-center text-xs text-amber-500 font-bold"><span class="w-2 h-2 rounded-full bg-amber-400 mr-1.5"></span>Local Mode</span>
                     </div>
-
-                    <!-- 관리자 모드 토글 -->
-                    <div class="flex items-center gap-2 border-l pl-4 border-gray-200">
-                        <span class="text-sm font-medium text-gray-600">관리자 모드</span>
-                        <button 
-                            @click="requestAdminModeToggle"
-                            :class="['relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none', isAdminMode ? 'bg-primary' : 'bg-gray-200']"
-                        >
-                            <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition-transform', isAdminMode ? 'translate-x-6' : 'translate-x-1']"></span>
-                        </button>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">
+                                {{ userProfile?.full_name ? userProfile.full_name.substring(0,2) : 'US' }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">{{ userProfile?.full_name || '사용자' }} <span v-if="userProfile?.role === 'admin'" class="text-[10px] bg-red-100 text-red-600 px-1 py-0.5 rounded ml-1">Admin</span></p>
+                                <p class="text-xs text-gray-500 truncate">{{ userProfile?.email || '' }}</p>
+                            </div>
+                        </div>
+                        <button @click="handleLogout" class="text-gray-400 hover:text-red-500 p-2" title="로그아웃"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
                     </div>
                 </div>
-            </header>
+            </aside>
 
-            <!-- 내부 콘텐츠 영역 -->
-            <div class="flex-1 overflow-y-auto p-4 sm:p-8">
-                <!-- 카테고리 헤더 -->
-                <div class="mb-6 flex justify-between items-end">
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900 mb-1">{{ activeCategoryName }}</h1>
-                        <p class="text-sm text-gray-500">총 {{ filteredItems.length }}개의 항목이 있습니다.</p>
+            <!-- 메인 콘텐츠 -->
+            <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
+                <!-- 헤더 -->
+                <header class="h-16 bg-surface border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 z-10 flex-shrink-0">
+                    <div class="flex items-center flex-1">
+                        <button @click="toggleSidebar" class="md:hidden mr-4 text-gray-500 hover:text-gray-700">
+                            <i class="fa-solid fa-bars text-xl"></i>
+                        </button>
+                        <!-- 검색 -->
+                        <div class="relative w-full max-w-md hidden sm:block">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" v-model="searchQuery" placeholder="필요한 서류나 시스템을 검색해보세요" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-gray-50 focus:bg-white">
+                        </div>
                     </div>
-                </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <!-- DB 초기 데이터 삽입 버튼 (최고 관리자용) -->
+                        <button v-if="isAdminMode && !isDbConnected" @click="seedDatabase" class="hidden lg:flex items-center px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300 rounded text-xs font-bold transition-colors shadow-sm">
+                            <i class="fa-solid fa-database mr-1.5"></i> DB에 기본 데이터 세팅
+                        </button>
+                        
+                        <!-- 회원 관리 버튼 (관리자 전용) -->
+                        <button v-if="userProfile?.role === 'admin'" @click="openUserManagement" class="flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300 rounded text-xs font-bold transition-colors shadow-sm">
+                            <i class="fa-solid fa-users-gear mr-1.5"></i> 회원 관리
+                        </button>
 
-                <!-- 내용물이 없을 때 -->
-                <div v-if="filteredItems.length === 0" class="flex flex-col items-center justify-center py-20 bg-surface rounded-xl border border-gray-200 border-dashed">
-                    <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-400 text-2xl">
-                        <i class="fa-solid fa-folder-open"></i>
+                        <!-- 뷰어 모드 토글 -->
+                        <div class="flex bg-gray-100 rounded-lg p-1 ml-2">
+                            <button @click="viewMode = 'list'" :class="['px-3 py-1.5 rounded text-sm font-medium transition-colors', viewMode === 'list' ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700']"><i class="fa-solid fa-list mr-1"></i></button>
+                            <button @click="viewMode = 'grid'" :class="['px-3 py-1.5 rounded text-sm font-medium transition-colors', viewMode === 'grid' ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700']"><i class="fa-solid fa-border-all mr-1"></i></button>
+                        </div>
+
+                        <!-- 관리자(수정/편집) 모드 토글 -->
+                        <div v-if="userProfile?.role === 'admin'" class="flex items-center gap-2 border-l pl-4 border-gray-200 ml-2">
+                            <span class="text-xs font-bold text-gray-600">편집 모드</span>
+                            <button @click="isAdminMode = !isAdminMode" :class="['relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none', isAdminMode ? 'bg-red-500' : 'bg-gray-200']">
+                                <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow', isAdminMode ? 'translate-x-6' : 'translate-x-1']"></span>
+                            </button>
+                        </div>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-1">항목이 없습니다</h3>
-                    <p class="text-sm text-gray-500">현재 카테고리에 등록된 문서나 시스템이 없습니다.</p>
-                </div>
+                </header>
 
-                <!-- 리스트 뷰 -->
-                <div v-else-if="viewMode === 'list'" class="bg-surface rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                    <ul class="divide-y divide-gray-200">
-                        <li v-for="item in filteredItems" :key="item.id" class="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between gap-4 group">
-                            <div class="flex items-center gap-4 min-w-0">
-                                <div :class="['w-10 h-10 rounded-lg flex flex-shrink-0 items-center justify-center text-lg', getIconClass(item.type)]">
-                                    <i :class="getIcon(item.type)"></i>
-                                </div>
-                                <div class="min-w-0">
-                                    <h3 class="text-base font-semibold text-gray-900 truncate">{{ item.name }}</h3>
-                                    <div class="flex items-center gap-2 mt-0.5">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">
-                                            {{ getTypeName(item.type) }}
-                                        </span>
-                                        <p v-if="item.desc" class="text-xs text-gray-500 truncate">{{ item.desc }}</p>
+                <!-- 내부 콘텐츠 영역 -->
+                <div class="flex-1 overflow-y-auto p-4 sm:p-8">
+                    <!-- 카테고리 헤더 -->
+                    <div class="mb-6 flex justify-between items-end">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900 mb-1">{{ activeCategoryName }}</h1>
+                            <p class="text-sm text-gray-500">총 {{ filteredItems.length }}개의 항목이 있습니다.</p>
+                        </div>
+                    </div>
+
+                    <!-- 내용물이 없을 때 -->
+                    <div v-if="filteredItems.length === 0" class="flex flex-col items-center justify-center py-20 bg-surface rounded-xl border border-gray-200 border-dashed">
+                        <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-400 text-2xl"><i class="fa-solid fa-folder-open"></i></div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-1">항목이 없습니다</h3>
+                        <p class="text-sm text-gray-500">현재 카테고리에 등록된 문서나 시스템이 없습니다.</p>
+                    </div>
+
+                    <!-- 리스트 뷰 (기본값) -->
+                    <div v-else-if="viewMode === 'list'" class="bg-surface rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                        <ul class="divide-y divide-gray-200">
+                            <li v-for="item in filteredItems" :key="item.id" class="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between gap-4 group">
+                                <div class="flex items-center gap-4 min-w-0">
+                                    <div :class="['w-10 h-10 rounded-lg flex flex-shrink-0 items-center justify-center text-lg', getIconClass(item.type)]">
+                                        <i :class="getIcon(item.type)"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <h3 class="text-base font-semibold text-gray-900 truncate">{{ item.name }}</h3>
+                                        <div class="flex items-center gap-2 mt-0.5">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">{{ getTypeName(item.type) }}</span>
+                                            <p v-if="item.desc" class="text-xs text-gray-500 truncate">{{ item.desc }}</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div class="flex items-center gap-2 flex-shrink-0">
-                                <!-- 관리자 전용 수정/삭제 -->
-                                <template v-if="isAdminMode">
-                                    <button @click.stop="openEditModal(item)" class="p-2 text-gray-400 hover:text-primary transition-colors opacity-0 group-hover:opacity-100"><i class="fa-solid fa-pen"></i></button>
-                                    <button @click.stop="confirmDelete(item)" class="p-2 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
-                                </template>
                                 
-                                <div class="flex items-center gap-2">
-                                    <button v-if="item.id === 'm10' || item.name.includes('위임장')" @click="downloadCEOID" class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 flex items-center gap-1.5" title="대표자 신분증 사본">
-                                        <i class="fa-solid fa-id-card text-blue-500"></i><span class="hidden md:inline">신분증 사본</span>
-                                    </button>
-                                    <button @click="handleAction(item)" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-primary flex items-center gap-2">
-                                        <i :class="getActionIcon(item.type)"></i><span class="hidden sm:inline">{{ getActionText(item.type) }}</span>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <template v-if="isAdminMode">
+                                        <button @click.stop="openEditModal(item)" class="p-2 text-gray-400 hover:text-primary transition-colors opacity-0 group-hover:opacity-100"><i class="fa-solid fa-pen"></i></button>
+                                        <button @click.stop="confirmDelete(item)" class="p-2 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
+                                    </template>
+                                    <div class="flex items-center gap-2">
+                                        <button v-if="item.id === 'm10' || item.name.includes('위임장')" @click="downloadCEOID" class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 flex items-center gap-1.5" title="대표자 신분증 사본">
+                                            <i class="fa-solid fa-id-card text-blue-500"></i><span class="hidden md:inline">신분증 사본</span>
+                                        </button>
+                                        <button @click="handleAction(item)" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-primary flex items-center gap-2 shadow-sm">
+                                            <i :class="getActionIcon(item.type)"></i><span class="hidden sm:inline">{{ getActionText(item.type) }}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- 그리드 뷰 -->
+                    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div v-for="item in filteredItems" :key="item.id" class="bg-surface border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow relative group">
+                            <div v-if="isAdminMode" class="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button @click.stop="openEditModal(item)" class="p-1.5 text-gray-400 hover:bg-gray-100 rounded text-xs"><i class="fa-solid fa-pen"></i></button>
+                                <button @click.stop="confirmDelete(item)" class="p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded text-xs"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                            <div :class="['w-12 h-12 rounded-lg flex items-center justify-center text-xl mb-4', getIconClass(item.type)]">
+                                <i :class="getIcon(item.type)"></i>
+                            </div>
+                            <h3 class="text-base font-semibold text-gray-900 mb-1 truncate pr-8">{{ item.name }}</h3>
+                            <p v-if="item.desc" class="text-xs text-gray-500 mb-4 line-clamp-2 h-8">{{ item.desc }}</p>
+                            <div v-else class="h-8 mb-4"></div>
+                            <div class="flex items-center justify-between mt-auto">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">{{ getTypeName(item.type) }}</span>
+                                <div class="flex items-center gap-1.5">
+                                    <button v-if="item.id === 'm10' || item.name.includes('위임장')" @click="downloadCEOID" class="text-sm font-medium text-gray-600 hover:text-blue-700 bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-100"><i class="fa-solid fa-id-card"></i></button>
+                                    <button @click="handleAction(item)" class="text-sm font-medium text-primary hover:text-blue-800 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 shadow-sm">
+                                        <i :class="getActionIcon(item.type)"></i> {{ getActionText(item.type) }}
                                     </button>
                                 </div>
                             </div>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- 그리드 뷰 -->
-                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    <div v-for="item in filteredItems" :key="item.id" class="bg-surface border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow relative group">
-                        <div v-if="isAdminMode" class="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button @click.stop="openEditModal(item)" class="p-1.5 text-gray-400 hover:bg-gray-100 rounded text-xs"><i class="fa-solid fa-pen"></i></button>
-                            <button @click.stop="confirmDelete(item)" class="p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded text-xs"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                        <div :class="['w-12 h-12 rounded-lg flex items-center justify-center text-xl mb-4', getIconClass(item.type)]">
-                            <i :class="getIcon(item.type)"></i>
-                        </div>
-                        <h3 class="text-base font-semibold text-gray-900 mb-1 truncate pr-8">{{ item.name }}</h3>
-                        <p v-if="item.desc" class="text-xs text-gray-500 mb-4 line-clamp-2 h-8">{{ item.desc }}</p>
-                        <div v-else class="h-8 mb-4"></div>
-                        
-                        <div class="flex items-center justify-between mt-auto">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                                {{ getTypeName(item.type) }}
-                            </span>
-                            <div class="flex items-center gap-1.5">
-                                <button v-if="item.id === 'm10' || item.name.includes('위임장')" @click="downloadCEOID" class="text-sm font-medium text-gray-600 hover:text-blue-700 bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-100"><i class="fa-solid fa-id-card"></i></button>
-                                <button @click="handleAction(item)" class="text-sm font-medium text-primary hover:text-blue-800 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">
-                                    <i :class="getActionIcon(item.type)"></i> {{ getActionText(item.type) }}
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- 항목 추가 버튼 (관리자 전용) -->
-            <button v-if="isAdminMode" @click="openAddModal" class="absolute bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-blue-800 flex items-center justify-center text-xl focus:outline-none">
-                <i class="fa-solid fa-plus"></i>
-            </button>
-        </main>
+                <!-- 항목 추가 버튼 (편집 모드 시) -->
+                <button v-if="isAdminMode" @click="openAddModal" class="absolute bottom-8 right-8 w-14 h-14 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 flex items-center justify-center text-xl focus:outline-none z-40 transform hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </main>
 
-        <!-- 관리자 인증 모달 -->
-        <div v-if="showAdminAuth" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-                <div class="flex justify-between items-center mb-5">
-                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2"><i class="fa-solid fa-lock text-primary"></i> 관리자 인증</h3>
-                    <button @click="showAdminAuth = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-                <div class="mb-5">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호를 입력하세요</label>
-                    <input type="password" v-model="adminPassword" @keyup.enter="verifyAdminPassword" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
-                </div>
-                <div class="flex justify-end gap-2">
-                    <button @click="showAdminAuth = false" class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg">취소</button>
-                    <button @click="verifyAdminPassword" class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-800 rounded-lg">확인</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 항목 추가/수정 모달 -->
-        <div v-if="showItemModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-                <div class="flex justify-between items-center mb-5">
-                    <h3 class="text-lg font-bold text-gray-900">{{ isEditing ? '항목 수정' : '새 항목 추가' }}</h3>
-                    <button @click="closeModal" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">항목명 <span class="text-red-500">*</span></label>
-                        <input type="text" v-model="modalForm.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+            <!-- ================= 모달 창 영역 ================= -->
+            
+            <!-- 1. 회원 관리 모달 (관리자용) -->
+            <div v-if="showUserModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+                    <div class="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50">
+                        <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2"><i class="fa-solid fa-users-gear text-purple-600"></i> 포털 가입자 관리</h3>
+                        <button @click="showUserModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">유형 <span class="text-red-500">*</span></label>
-                        <select v-model="modalForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none">
-                            <option value="download">단순 파일 다운로드</option>
-                            <option value="document">내부 기안 양식</option>
-                            <option value="system">사내 시스템 연결</option>
-                            <option value="link">외부 링크 연결</option>
-                            <option value="proxy_form">스마트 위임장 양식 (PDF 생성)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">설명 (선택)</label>
-                        <input type="text" v-model="modalForm.desc" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none">
-                    </div>
-                </div>
-                <div class="mt-6 flex justify-end gap-2">
-                    <button @click="closeModal" class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg">취소</button>
-                    <button @click="saveItem" class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-800 rounded-lg">저장하기</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 삭제 확인 모달 -->
-        <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
-                <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mx-auto mb-4">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                </div>
-                <h3 class="text-lg font-bold text-gray-900 mb-2">항목 삭제</h3>
-                <p class="text-sm text-gray-500 mb-6">정말로 <strong>'{{ itemToDelete?.name }}'</strong> 항목을 삭제하시겠습니까?</p>
-                <div class="flex justify-center gap-2">
-                    <button @click="showDeleteModal = false" class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg w-full">취소</button>
-                    <button @click="executeDelete" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg w-full">삭제하기</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 스마트 위임장 모달 -->
-        <div v-if="showProxyForm" class="fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex flex-col md:flex-row overflow-hidden">
-            <button @click="showProxyForm = false" class="absolute top-4 right-4 z-50 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-100">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-            <div class="w-full md:w-1/3 h-1/2 md:h-full bg-white overflow-y-auto border-r border-gray-200 p-6 shadow-xl z-10 flex flex-col">
-                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <i class="fa-solid fa-file-signature text-primary"></i> 위임장 양식 세팅
-                </h2>
-                
-                <div class="flex-1 space-y-5">
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <h3 class="text-sm font-bold text-gray-700 mb-3">수임자 (대리인) 정보</h3>
-                        <div class="space-y-3">
-                            <div class="flex gap-2">
-                                <input type="text" v-model="proxyData.delegatee.name" placeholder="성명" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                                <input type="text" v-model="proxyData.delegatee.dept_pos" placeholder="소속 및 직위" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                            </div>
-                            <input type="text" v-model="proxyData.delegatee.id" placeholder="주민등록번호" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                            <input type="text" v-model="proxyData.delegatee.phone" placeholder="연락처" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                            <input type="text" v-model="proxyData.delegatee.address" placeholder="주소" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <div class="flex justify-between items-center mb-3">
-                            <h3 class="text-sm font-bold text-gray-700">위임 사항 및 기간</h3>
-                        </div>
-                        <div class="flex gap-2 mb-3 overflow-x-auto pb-1">
-                            <button @click="applyTemplate('finance')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600">금융</button>
-                            <button @click="applyTemplate('registry')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600">등기</button>
-                            <button @click="applyTemplate('contract')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600">계약</button>
-                            <button @click="applyTemplate('pg')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-blue-600 font-medium">PG신청</button>
-                        </div>
-                        <div class="space-y-3">
-                            <input type="text" v-model="proxyData.mandate.purpose" placeholder="위임 업무의 목적" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                            <textarea v-model="proxyData.mandate.details" rows="3" placeholder="대리권의 세부 범위" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none resize-none"></textarea>
-                            <div class="space-y-2">
-                                <label class="block text-xs font-medium text-gray-600">유효 기간</label>
-                                <input type="text" v-model="proxyData.period.condition" placeholder="예: 2026.08.08 ~ 09.08" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <h3 class="text-sm font-bold text-gray-700 mb-3">위임자 (법인) 정보 확인</h3>
-                        <div class="space-y-2 text-sm">
-                            <input type="text" v-model="proxyData.delegator.name" class="w-full px-3 py-2 border border-gray-300 rounded bg-white">
-                            <div class="flex gap-2">
-                                <input type="text" v-model="proxyData.delegator.corp_id" class="w-1/2 px-3 py-2 border border-gray-300 rounded bg-white">
-                                <input type="text" v-model="proxyData.delegator.biz_id" class="w-1/2 px-3 py-2 border border-gray-300 rounded bg-white">
-                            </div>
-                            <div class="flex gap-2">
-                                <input type="text" v-model="proxyData.delegator.rep_name" class="w-1/2 px-3 py-2 border border-gray-300 rounded bg-white">
-                                <input type="text" v-model="proxyData.delegator.rep_id" class="w-1/2 px-3 py-2 border border-gray-300 rounded bg-white">
-                            </div>
-                            <input type="text" v-model="proxyData.delegator.address" class="w-full px-3 py-2 border border-gray-300 rounded bg-white">
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <h3 class="text-sm font-bold text-gray-700 mb-3">법인인감(직인) 업로드</h3>
-                        <input type="file" accept="image/png, image/jpeg" @change="handleStampUpload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-primary">
-                    </div>
-                </div>
-
-                <div class="mt-6 flex gap-2">
-                    <button @click="printForm" class="flex-1 py-3 bg-gray-800 text-white rounded-lg font-bold hover:bg-gray-900 shadow flex justify-center items-center gap-2"><i class="fa-solid fa-print"></i> 인쇄</button>
-                    <button @click="generatePDF" class="flex-1 py-3 bg-primary text-white rounded-lg font-bold hover:bg-blue-800 shadow flex justify-center items-center gap-2"><i class="fa-solid fa-file-pdf"></i> PDF 저장</button>
-                </div>
-            </div>
-
-            <!-- 미리보기 영역 -->
-            <div class="w-full md:w-2/3 h-1/2 md:h-full bg-gray-200 overflow-y-auto p-4 md:p-8 flex items-start justify-center">
-                <div id="print-area" class="a4-preview bg-white flex flex-col" style="transform: scale(min(1, calc(100vw / 850))); transform-origin: top center; margin-bottom: 50px;">
-                    <h1 class="text-4xl font-black text-center mt-12 mb-12 tracking-widest text-black">위 임 장</h1>
-                    
-                    <div class="flex-1 flex flex-col gap-8 px-10">
-                        <table class="w-full border-collapse border border-black text-black text-sm">
+                    <div class="overflow-y-auto p-6 flex-1 bg-white">
+                        <table class="w-full text-left text-sm text-gray-600">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3">이름</th>
+                                    <th class="px-4 py-3">이메일</th>
+                                    <th class="px-4 py-3">가입일시</th>
+                                    <th class="px-4 py-3 text-center">상태</th>
+                                    <th class="px-4 py-3 text-right">관리</th>
+                                </tr>
+                            </thead>
                             <tbody>
-                                <tr>
-                                    <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">수 임 자<br>(대리인)</th>
-                                    <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">성 명</th>
-                                    <td class="border border-black p-2 w-[22.5%] text-center">{{ proxyData.delegatee.name }}</td>
-                                    <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">주민등록번호</th>
-                                    <td class="border border-black p-2 w-[22.5%] text-center">{{ proxyData.delegatee.id }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">소속 및 직위</th>
-                                    <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.dept_pos }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">연 락 처</th>
-                                    <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.phone }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">주 소</th>
-                                    <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.address }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                        <table class="w-full border-collapse border border-black text-black text-sm">
-                            <tbody>
-                                <tr>
-                                    <th rowspan="3" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">위임사항</th>
-                                    <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">위임 목적</th>
-                                    <td class="border border-black p-2 font-bold">{{ proxyData.mandate.purpose }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium align-top pt-4">세부 범위</th>
-                                    <td class="border border-black p-4 align-top min-h-[140px] whitespace-pre-wrap leading-relaxed">{{ proxyData.mandate.details }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">위임 기간</th>
-                                    <td class="border border-black p-2">{{ proxyData.period.condition }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                        <div class="text-base text-black leading-relaxed mt-4 text-justify px-2">
-                            본인(위임자)은 위 사람(수임자)을 대리인으로 정하고 상기 위임사항에 관한 일체의 권한을 포괄적으로 위임하며, 대리인이 행한 일체의 행위에 대하여 본인이 민·형사상의 모든 책임을 질 것을 확약합니다.
-                        </div>
-
-                        <div class="text-center mt-8 mb-8 text-xl font-bold text-black">
-                            {{ formattedDate }}
-                        </div>
-
-                        <table class="w-full border-collapse border border-black text-black text-sm mt-auto">
-                            <tbody>
-                                <tr>
-                                    <th rowspan="3" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">위 임 자<br>(본 인)</th>
-                                    <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">법인명 (상호)</th>
-                                    <td colspan="3" class="border border-black p-2 font-bold">{{ proxyData.delegator.name }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">본점 소재지</th>
-                                    <td colspan="3" class="border border-black p-2">{{ proxyData.delegator.address }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">법인/사업자번호</th>
-                                    <td class="border border-black p-2 w-[25%] text-center text-[11px]">{{ proxyData.delegator.corp_id }} / {{ proxyData.delegator.biz_id }}</td>
-                                    <th class="border border-black bg-gray-50 p-2 text-center font-medium">대표이사 성명</th>
-                                    <td class="border border-black p-2 relative text-center">
-                                        {{ proxyData.delegator.rep_name }}
-                                        <span class="float-right text-base mt-0.5">(인)</span>
-                                        <img v-if="stampImage" :src="stampImage" class="absolute right-1 top-1/2 w-14 h-14 object-contain transform -translate-y-1/2 opacity-95 mix-blend-multiply" alt="직인">
+                                <tr v-for="user in userList" :key="user.id" class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="px-4 py-3 font-medium text-gray-900">{{ user.full_name }}</td>
+                                    <td class="px-4 py-3">{{ user.email }}</td>
+                                    <td class="px-4 py-3 text-xs">{{ new Date(user.created_at).toLocaleDateString() }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span v-if="user.status === 'approved'" class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">승인됨</span>
+                                        <span v-else-if="user.status === 'pending'" class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold">대기중</span>
+                                        <span v-else class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">거절됨</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right">
+                                        <button v-if="user.status === 'pending'" @click="updateUserStatus(user.id, 'approved')" class="bg-primary text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-800 mr-2 shadow-sm">승인</button>
+                                        <button v-if="user.status === 'pending'" @click="updateUserStatus(user.id, 'rejected')" class="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs font-medium hover:bg-gray-300 shadow-sm">거절</button>
+                                        
+                                        <button v-if="user.status === 'approved' && user.role !== 'admin'" @click="updateUserStatus(user.id, 'pending')" class="border border-gray-300 text-gray-600 px-3 py-1.5 rounded text-xs font-medium hover:bg-gray-50">권한 회수</button>
                                     </td>
                                 </tr>
+                                <tr v-if="userList.length === 0">
+                                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">가입한 사용자가 없습니다.</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 알림 메시지 -->
-        <div v-if="toast.show" class="fixed bottom-4 right-4 z-50 flex items-center p-4 rounded-lg shadow-lg text-white transition-opacity duration-300" :class="toast.type === 'error' ? 'bg-red-500' : 'bg-gray-800'">
+            <!-- 2. 항목 추가/수정 모달 -->
+            <div v-if="showItemModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+                    <div class="flex justify-between items-center mb-5">
+                        <h3 class="text-lg font-bold text-gray-900">{{ isEditing ? '항목 수정' : '새 항목 추가' }}</h3>
+                        <button @click="closeModal" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">항목명 <span class="text-red-500">*</span></label>
+                            <input type="text" v-model="modalForm.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">유형 <span class="text-red-500">*</span></label>
+                            <select v-model="modalForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                                <option value="download">단순 파일 다운로드</option>
+                                <option value="document">내부 기안 양식</option>
+                                <option value="system">사내 시스템 연결</option>
+                                <option value="link">외부 링크 연결</option>
+                                <option value="proxy_form">스마트 폼 (위임장 등)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">설명 (선택)</label>
+                            <input type="text" v-model="modalForm.desc" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button @click="closeModal" class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg">취소</button>
+                        <button @click="saveItem" class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-800 rounded-lg">저장하기</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 삭제 확인 모달 -->
+            <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
+                    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mx-auto mb-4"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">항목 삭제</h3>
+                    <p class="text-sm text-gray-500 mb-6">정말로 <strong>'{{ itemToDelete?.name }}'</strong> 항목을 삭제하시겠습니까?</p>
+                    <div class="flex justify-center gap-2">
+                        <button @click="showDeleteModal = false" class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg w-full">취소</button>
+                        <button @click="executeDelete" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg w-full">삭제하기</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. 스마트 위임장 모달 -->
+            <div v-if="showProxyForm" class="fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex flex-col md:flex-row overflow-hidden">
+                <button @click="showProxyForm = false" class="absolute top-4 right-4 z-50 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-100"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <div class="w-full md:w-1/3 h-1/2 md:h-full bg-white overflow-y-auto border-r border-gray-200 p-6 shadow-xl z-10 flex flex-col">
+                    <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><i class="fa-solid fa-file-signature text-primary"></i> 위임장 양식 세팅</h2>
+                    
+                    <div class="flex-1 space-y-5">
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <h3 class="text-sm font-bold text-gray-700 mb-3">수임자 (대리인) 정보</h3>
+                            <div class="space-y-3">
+                                <div class="flex gap-2">
+                                    <input type="text" v-model="proxyData.delegatee.name" placeholder="성명" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                                    <input type="text" v-model="proxyData.delegatee.dept_pos" placeholder="소속 및 직위" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                                </div>
+                                <input type="text" v-model="proxyData.delegatee.id" placeholder="주민등록번호" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                                <input type="text" v-model="proxyData.delegatee.phone" placeholder="연락처" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                                <input type="text" v-model="proxyData.delegatee.address" placeholder="주소" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <div class="flex justify-between items-center mb-3"><h3 class="text-sm font-bold text-gray-700">위임 사항 및 기간</h3></div>
+                            <div class="flex gap-2 mb-3 overflow-x-auto pb-1">
+                                <button @click="applyTemplate('finance')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600">금융</button>
+                                <button @click="applyTemplate('registry')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600">등기</button>
+                                <button @click="applyTemplate('contract')" class="flex-shrink-0 px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-600">계약</button>
+                                <button @click="applyTemplate('pg')" class="flex-shrink-0 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700 font-bold">PG신청</button>
+                            </div>
+                            <div class="space-y-3">
+                                <input type="text" v-model="proxyData.mandate.purpose" placeholder="위임 업무의 목적" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                                <textarea v-model="proxyData.mandate.details" rows="3" placeholder="대리권의 세부 범위" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none resize-none"></textarea>
+                                <div class="space-y-2">
+                                    <label class="block text-xs font-medium text-gray-600">유효 기간</label>
+                                    <input type="text" v-model="proxyData.period.condition" placeholder="예: 2026.08.08 ~ 09.08" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <h3 class="text-sm font-bold text-gray-700 mb-3">위임자 (법인) 정보 확인</h3>
+                            <div class="space-y-2 text-sm">
+                                <input type="text" v-model="proxyData.delegator.name" class="w-full px-3 py-2 border border-gray-300 rounded bg-white">
+                                <input type="text" v-model="proxyData.delegator.address" class="w-full px-3 py-2 border border-gray-300 rounded bg-white">
+                                <div class="flex gap-2">
+                                    <input type="text" v-model="proxyData.delegator.corp_id" class="w-1/2 px-3 py-2 border border-gray-300 rounded bg-white">
+                                    <input type="text" v-model="proxyData.delegator.biz_id" class="w-1/2 px-3 py-2 border border-gray-300 rounded bg-white">
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="text" v-model="proxyData.delegator.rep_name" class="w-1/2 px-3 py-2 border border-gray-300 rounded bg-white">
+                                    <input type="text" v-model="proxyData.delegator.rep_id" class="w-1/2 px-3 py-2 border border-gray-300 rounded bg-white">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <h3 class="text-sm font-bold text-gray-700 mb-3">법인인감(직인) 업로드 (선택)</h3>
+                            <input type="file" accept="image/png, image/jpeg" @change="handleStampUpload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-primary">
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex gap-2">
+                        <button @click="printForm" class="flex-1 py-3 bg-gray-800 text-white rounded-lg font-bold hover:bg-gray-900 shadow flex justify-center items-center gap-2"><i class="fa-solid fa-print"></i> 인쇄</button>
+                        <button @click="generatePDF" class="flex-1 py-3 bg-primary text-white rounded-lg font-bold hover:bg-blue-800 shadow flex justify-center items-center gap-2"><i class="fa-solid fa-file-pdf"></i> PDF 저장</button>
+                    </div>
+                </div>
+
+                <!-- 미리보기 영역 -->
+                <div class="w-full md:w-2/3 h-1/2 md:h-full bg-gray-200 overflow-y-auto p-4 md:p-8 flex items-start justify-center">
+                    <div id="print-area" class="a4-preview bg-white flex flex-col" style="transform: scale(min(1, calc(100vw / 850))); transform-origin: top center; margin-bottom: 50px;">
+                        <h1 class="text-4xl font-black text-center mt-12 mb-12 tracking-widest text-black">위 임 장</h1>
+                        
+                        <div class="flex-1 flex flex-col gap-8 px-10">
+                            <!-- 위임자 (본인) -->
+                            <table class="w-full border-collapse border border-black text-black text-sm">
+                                <tbody>
+                                    <tr>
+                                        <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">위 임 자<br>(본 인)</th>
+                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">법인명 (상호)</th>
+                                        <td colspan="3" class="border border-black p-2 font-bold">{{ proxyData.delegator.name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">본점 소재지</th>
+                                        <td colspan="3" class="border border-black p-2">{{ proxyData.delegator.address }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">법인등록번호</th>
+                                        <td class="border border-black p-2 w-[22.5%] text-center text-sm">{{ proxyData.delegator.corp_id }}</td>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">사업자번호</th>
+                                        <td class="border border-black p-2 w-[22.5%] text-center text-sm">{{ proxyData.delegator.biz_id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">대표이사 성명</th>
+                                        <td class="border border-black p-2 relative text-center">
+                                            {{ proxyData.delegator.rep_name }}
+                                            <span class="float-right text-base mt-0.5">(인)</span>
+                                            <img v-if="stampImage" :src="stampImage" class="absolute right-1 top-1/2 w-14 h-14 object-contain transform -translate-y-1/2 opacity-95 mix-blend-multiply" alt="직인">
+                                        </td>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">대표이사 주민번호</th>
+                                        <td class="border border-black p-2 text-center text-sm">{{ proxyData.delegator.rep_id }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- 수임자 (대리인) -->
+                            <table class="w-full border-collapse border border-black text-black text-sm">
+                                <tbody>
+                                    <tr>
+                                        <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">수 임 자<br>(대리인)</th>
+                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">성 명</th>
+                                        <td class="border border-black p-2 w-[22.5%] text-center">{{ proxyData.delegatee.name }}</td>
+                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">주민등록번호</th>
+                                        <td class="border border-black p-2 w-[22.5%] text-center">{{ proxyData.delegatee.id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">소속 및 직위</th>
+                                        <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.dept_pos }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">연 락 처</th>
+                                        <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.phone }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">주 소</th>
+                                        <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.address }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- 위임사항 -->
+                            <table class="w-full border-collapse border border-black text-black text-sm mb-auto">
+                                <tbody>
+                                    <tr>
+                                        <th rowspan="3" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">위임사항</th>
+                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">위임 목적</th>
+                                        <td class="border border-black p-2 font-bold">{{ proxyData.mandate.purpose }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium align-top pt-4">세부 범위</th>
+                                        <td class="border border-black p-4 align-top min-h-[140px] whitespace-pre-wrap leading-relaxed">{{ proxyData.mandate.details }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">위임 기간</th>
+                                        <td class="border border-black p-2">{{ proxyData.period.condition }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="text-base text-black leading-relaxed mt-4 text-justify px-2">
+                                본인(위임자)은 위 사람(수임자)을 대리인으로 정하고 상기 위임사항에 관한 일체의 권한을 포괄적으로 위임하며, 대리인이 행한 일체의 행위에 대하여 본인이 민·형사상의 모든 책임을 질 것을 확약합니다.
+                            </div>
+
+                            <div class="text-center mt-12 mb-12 text-xl font-bold text-black">
+                                {{ formattedDate }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template> <!-- /authState === 'authenticated' -->
+
+        <!-- 알림 메시지 (Toast) -->
+        <div v-if="toast.show" class="fixed bottom-4 right-4 z-[150] flex items-center p-4 rounded-lg shadow-lg text-white transition-opacity duration-300" :class="toast.type === 'error' ? 'bg-red-500' : 'bg-gray-800'">
             <i :class="['mr-3', toast.type === 'error' ? 'fa-solid fa-circle-exclamation' : 'fa-solid fa-circle-check']"></i>
             <span class="text-sm font-medium">{{ toast.message }}</span>
         </div>
@@ -520,16 +567,27 @@
                 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwemFpdXFjb2x0c2h0c3JsbHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjA4MTcsImV4cCI6MjEwMTczNjgxN30.zWiMJ0RDpSZlWaSBKcO1X3HvF-NBLw2YTqH6sjfRbME';
                 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-                const isDbConnected = ref(false); // DB 연동 성공 여부
+                // ================= 인증(Auth) 상태 관리 =================
+                const authState = ref('loading'); // 'loading', 'login', 'register', 'pending', 'authenticated'
+                const authForm = ref({ email: '', password: '', name: '' });
+                const isAuthLoading = ref(false);
+                const userSession = ref(null);
+                const userProfile = ref(null);
+
+                // ================= 앱 상태 관리 =================
+                const isDbConnected = ref(false);
+                const isAdminMode = ref(false); // UI 편집 모드 (관리자만 토글 가능)
+                
                 const isSidebarOpen = ref(false);
                 const searchQuery = ref('');
                 const activeCategoryId = ref('');
                 const viewMode = ref('list');
                 
-                const isAdminMode = ref(false);
-                const showAdminAuth = ref(false);
-                const adminPassword = ref('');
-                
+                // 관리자용 회원관리 모달
+                const showUserModal = ref(false);
+                const userList = ref([]);
+
+                // 모달 및 토스트
                 const showItemModal = ref(false);
                 const showDeleteModal = ref(false);
                 const isEditing = ref(false);
@@ -537,6 +595,12 @@
                 const modalForm = ref({ id: '', name: '', type: 'download', desc: '' });
                 const toast = ref({ show: false, message: '', type: 'success' });
                 let toastTimeout = null;
+
+                const showToast = (msg, type = 'success') => {
+                    toast.value = { show: true, message: msg, type };
+                    if (toastTimeout) clearTimeout(toastTimeout);
+                    toastTimeout = setTimeout(() => { toast.value.show = false; }, 3000);
+                };
 
                 // Proxy Form States
                 const showProxyForm = ref(false);
@@ -553,77 +617,186 @@
                     period: { condition: '해당 업무 종료 시까지' }
                 });
 
-                // --- Default Mock Data (DB 폴백용) ---
-                const defaultMenuGroups = [
+                // --- Default Mock Data (DB 연동 안될때 기본값) ---
+                const menuGroups = ref([
                     {
                         sectorName: '경영관리부문',
                         categories: [
                             { id: 'planning', name: '기획', icon: 'fa-solid fa-lightbulb', items: [ { id: 'pl1', name: '2026년 사업계획서 양식', type: 'download' }, { id: 'pl2', name: '신규 사업 제안서', type: 'document' }, { id: 'pl3', name: 'KPI 및 OKR 실시간 모니터링', type: 'system' } ] },
-                            { id: 'management', name: '경영관리', icon: 'fa-solid fa-briefcase', items: [ { id: 'm1', name: '정관', type: 'download' }, { id: 'm2', name: '법인등기부등본', type: 'download' }, { id: 'm3', name: '사업자등록증', type: 'download' }, { id: 'm4', name: '통장사본', type: 'download' }, { id: 'm5', name: '영업신고증', type: 'download' }, { id: 'm6', name: '주주총회 서류', type: 'document' }, { id: 'm7', name: '인감도장', type: 'download' }, { id: 'm8', name: '사용인감계', type: 'document' }, { id: 'm9', name: '계약서 날인 서명', type: 'document' }, { id: 'm10', name: '대리인 위임장', type: 'proxy_form', desc: '스마트 폼' }, { id: 'm11', name: '위임전결규정', type: 'download' } ] },
-                            { id: 'finance', name: '재무', icon: 'fa-solid fa-money-bill-wave', items: [ { id: 'f1', name: '입출금확인', type: 'system' }, { id: 'f2', name: '지출결의서', type: 'document' } ] },
-                            { id: 'tax', name: '세무/회계', icon: 'fa-solid fa-calculator', items: [ { id: 't1', name: '세금계산서 발행', type: 'system' }, { id: 't2', name: '부가세 신고', type: 'document' }, { id: 't3', name: '법인세 신고', type: 'document' } ] },
-                            { id: 'hr', name: '인사', icon: 'fa-solid fa-users', items: [ { id: 'h1', name: '근로계약서', type: 'document' }, { id: 'h2', name: '프리랜서 계약서', type: 'document' }, { id: 'h3', name: '급여 산정', type: 'system' }, { id: 'h4', name: '근로소득세 원천징수 신고', type: 'system' }, { id: 'h5', name: '4대보험 신고 및 정산', type: 'system' }, { id: 'h6', name: '퇴직금 정산', type: 'document' }, { id: 'h7', name: '재직증명서 발급', type: 'document' }, { id: 'h8', name: '경력증명서 발급', type: 'document' }, { id: 'h9', name: '채용 공고문', type: 'document' }, { id: 'h10', name: '평가 관리', type: 'system' }, { id: 'h11', name: '연차 관리', type: 'system' }, { id: 'h12', name: '인사 이동 및 발령', type: 'document' }, { id: 'h13', name: '법정 의무 교육 관리', type: 'system' } ] },
-                            { id: 'ga', name: '총무', icon: 'fa-solid fa-building', items: [ { id: 'ga1', name: '비품 구매 신청서', type: 'document' }, { id: 'ga2', name: '법인차량 운행 일지', type: 'document' } ] },
-                            { id: 'legal', name: '법무', icon: 'fa-solid fa-scale-balanced', items: [ { id: 'l1', name: '계약서 작성', type: 'document' } ] }
+                            { id: 'management', name: '경영관리', icon: 'fa-solid fa-briefcase', items: [ { id: 'm1', name: '정관', type: 'download' }, { id: 'm2', name: '법인등기부등본', type: 'download' }, { id: 'm3', name: '사업자등록증', type: 'download' }, { id: 'm4', name: '통장사본', type: 'download' }, { id: 'm5', name: '영업신고증', type: 'download' }, { id: 'm6', name: '주주총회 서류', type: 'document' }, { id: 'm7', name: '인감도장', type: 'download' }, { id: 'm8', name: '사용인감계', type: 'document' }, { id: 'm9', name: '계약서 날인 서명', type: 'download' }, { id: 'm10', name: '대리인 위임장', type: 'proxy_form', desc: '스마트 입력 및 PDF 발급' }, { id: 'm11', name: '위임전결규정', type: 'download' } ] },
+                            { id: 'finance', name: '재무', icon: 'fa-solid fa-money-bill-wave', items: [ { id: 'f1', name: '입출금확인 (법인계좌)', type: 'system' }, { id: 'f2', name: '자금수지 현황표', type: 'document' } ] },
+                            { id: 'tax_accounting', name: '세무/회계', icon: 'fa-solid fa-calculator', items: [ { id: 'ta1', name: '세금계산서 발행 시스템', type: 'system' }, { id: 'ta2', name: '부가세 신고 자료 모음', type: 'document' }, { id: 'ta3', name: '법인세 신고서', type: 'document' }, { id: 'ta4', name: '경비 청구 가이드라인', type: 'download' } ] },
+                            { id: 'hr', name: '인사', icon: 'fa-solid fa-users', items: [ { id: 'h1', name: '근로계약서', type: 'document' }, { id: 'h2', name: '프리랜서 계약서', type: 'document' }, { id: 'h3', name: '급여 명세서 조회', type: 'system' }, { id: 'h4', name: '재직증명서/경력증명서', type: 'document' }, { id: 'h5', name: '연차 휴가 관리', type: 'system' }, { id: 'h6', name: '퇴직금 정산 내역', type: 'document' }, { id: 'h7', name: '법정 의무 교육 수강', type: 'link' } ] },
+                            { id: 'general_affairs', name: '총무', icon: 'fa-solid fa-building', items: [ { id: 'ga1', name: '비품/기기 구매 신청서', type: 'document' }, { id: 'ga2', name: '법인차량 운행 일지', type: 'document' }, { id: 'ga3', name: '회의실 예약 시스템', type: 'system' } ] },
+                            { id: 'legal', name: '법무', icon: 'fa-solid fa-scale-balanced', items: [ { id: 'l1', name: '표준 계약서 작성 가이드', type: 'document' }, { id: 'l2', name: '법률 자문 요청서', type: 'document' }, { id: 'l3', name: '비밀유지계약서 (NDA)', type: 'download' } ] }
                         ]
                     },
                     {
                         sectorName: '연구부문',
                         categories: [
-                            { id: 'rnd', name: '연구기획', icon: 'fa-solid fa-flask', items: [ { id: 'r1', name: 'R&D 계획서 양식', type: 'document' } ] },
-                            { id: 'cli', name: '임상', icon: 'fa-solid fa-notes-medical', items: [ { id: 'c1', name: '임상시험계획서', type: 'download' } ] },
-                            { id: 'dev', name: '상품개발', icon: 'fa-solid fa-box-open', items: [ { id: 'd1', name: '제품사양서', type: 'document' } ] },
-                            { id: 'reg', name: '인허가', icon: 'fa-solid fa-stamp', items: [ { id: 'rg1', name: '품목허가증 사본', type: 'download' } ] }
+                            { id: 'rnd', name: '연구기획', icon: 'fa-solid fa-flask', items: [ { id: 'r1', name: 'R&D 프로젝트 기획서', type: 'document' } ] },
+                            { id: 'clinical', name: '임상', icon: 'fa-solid fa-notes-medical', items: [ { id: 'c1', name: '임상시험계획서(IND)', type: 'download' }, { id: 'c2', name: '임상 데이터 관리(EDC)', type: 'system' } ] },
+                            { id: 'dev', name: '상품개발', icon: 'fa-solid fa-box-open', items: [ { id: 'd1', name: '신제품 사양서(스펙)', type: 'document' } ] },
+                            { id: 'regulatory', name: '인허가', icon: 'fa-solid fa-stamp', items: [ { id: 'rg1', name: '국내외 품목허가증 사본', type: 'download' } ] }
                         ]
                     },
                     {
                         sectorName: '생산부문',
                         categories: [
-                            { id: 'pm', name: '생산관리', icon: 'fa-solid fa-clipboard-list', items: [ { id: 'p1', name: '생산 계획서', type: 'document' } ] },
-                            { id: 'pr', name: '생산', icon: 'fa-solid fa-industry', items: [ { id: 'p2', name: '작업 표준서(SOP)', type: 'download' } ] },
-                            { id: 'qc', name: '품질', icon: 'fa-solid fa-check-double', items: [ { id: 'q1', name: '검사 성적서', type: 'document' } ] },
-                            { id: 'ft', name: '설비기술', icon: 'fa-solid fa-screwdriver-wrench', items: [ { id: 'ft1', name: '설비 점검 일지', type: 'document' } ] },
-                            { id: 'ml', name: '자재물류', icon: 'fa-solid fa-truck-fast', items: [ { id: 'ml1', name: '자재 발주서', type: 'document' } ] }
+                            { id: 'prod_mgmt', name: '생산관리', icon: 'fa-solid fa-clipboard-list', items: [ { id: 'pm1', name: '월간 생산 계획서', type: 'document' } ] },
+                            { id: 'production', name: '생산', icon: 'fa-solid fa-industry', items: [ { id: 'pr1', name: '작업 표준서 (SOP)', type: 'download' }, { id: 'pr2', name: '생산 실적 보고', type: 'system' } ] },
+                            { id: 'qa_qc', name: '품질', icon: 'fa-solid fa-check-double', items: [ { id: 'qc1', name: '품질 검사 성적서 (COA)', type: 'document' }, { id: 'qc2', name: '부적합품 보고서', type: 'document' } ] },
+                            { id: 'facility', name: '설비기술', icon: 'fa-solid fa-screwdriver-wrench', items: [ { id: 'ft1', name: '설비 정기 점검 일지', type: 'document' } ] },
+                            { id: 'logistics', name: '자재물류', icon: 'fa-solid fa-truck-fast', items: [ { id: 'ml1', name: '자재 발주서', type: 'document' }, { id: 'ml2', name: '원자재 입출고 대장', type: 'system' } ] }
                         ]
                     },
                     {
                         sectorName: '영업부문',
                         categories: [
-                            { id: 'sm', name: '영업관리', icon: 'fa-solid fa-chart-line', items: [ { id: 'sm1', name: '세금계산서 발행', type: 'system' }, { id: 'sm2', name: '입출금확인', type: 'system' }, { id: 'sm3', name: '재고수불부 관리', type: 'system' } ] },
+                            { id: 'sales_management', name: '영업관리', icon: 'fa-solid fa-chart-line', items: [ { id: 'sm1', name: '영업 실적 대시보드', type: 'system' }, { id: 'sm2', name: '재고수불부 관리', type: 'system' } ] },
                             {
-                                id: 'mk', name: '마케팅', icon: 'fa-solid fa-bullhorn', isOpen: false,
+                                id: 'marketing', name: '마케팅', icon: 'fa-solid fa-bullhorn', isOpen: false,
                                 subCategories: [
-                                    { id: 'mk_b', name: '브랜드', items: [ { id: 'mk1', name: '브랜드 가이드라인', type: 'download' } ] },
-                                    { id: 'mk_p', name: '제품', items: [ { id: 'mk2', name: '제품 카탈로그', type: 'download' } ] },
-                                    { id: 'mk_s', name: 'SNS', items: [ { id: 'mk3', name: '공식 SNS 메뉴얼', type: 'document' } ] },
+                                    { id: 'mk_brand', name: '브랜드', items: [ { id: 'mk1', name: '브랜드 로고 및 가이드라인', type: 'download' } ] },
+                                    { id: 'mk_product', name: '제품', items: [ { id: 'mk2', name: '제품 카탈로그 PDF', type: 'download' } ] },
+                                    { id: 'mk_sns', name: 'SNS', items: [ { id: 'mk3', name: '공식 SNS 운영 매뉴얼', type: 'document' } ] },
                                     { id: 'mk_pr', name: '홍보', items: [ { id: 'mk4', name: '보도자료 배포 양식', type: 'document' } ] },
                                     { id: 'mk_ad', name: '광고', items: [ { id: 'mk5', name: '광고/프로모션 집행 내역서', type: 'document' } ] },
-                                    { id: 'mk_gd', name: '그래픽디자인', items: [ { id: 'mk6', name: '배너 템플릿', type: 'download' } ] },
-                                    { id: 'mk_vd', name: '영상디자인', items: [ { id: 'mk7', name: '영상 스토리보드', type: 'document' } ] }
+                                    { id: 'mk_graphic', name: '그래픽디자인', items: [ { id: 'mk6', name: '배너/웹진 템플릿', type: 'download' } ] },
+                                    { id: 'mk_video', name: '영상디자인', items: [ { id: 'mk7', name: '영상 스토리보드 양식', type: 'document' } ] }
                                 ]
                             },
                             {
-                                id: 'sd', name: '영업(국내)', icon: 'fa-solid fa-store', isOpen: false,
+                                id: 'sales_domestic', name: '영업(국내)', icon: 'fa-solid fa-store', isOpen: false,
                                 subCategories: [
-                                    { id: 'sd_b2b', name: 'B2B', items: [ { id: 'sd1', name: '신규 거래처 등록', type: 'document' } ] },
-                                    { id: 'sd_b2c', name: 'B2C', items: [ { id: 'sd2', name: '온라인 판매 현황', type: 'system' } ] }
+                                    { id: 'sd_b2b', name: 'B2B', items: [ { id: 'sd1', name: '신규 거래처 등록 요청서', type: 'document' }, { id: 'sd2', name: '국내 대리점 계약서', type: 'document' } ] },
+                                    { id: 'sd_b2c', name: 'B2C', items: [ { id: 'sd3', name: '온라인 채널 판매 현황', type: 'system' } ] }
                                 ]
                             },
                             {
-                                id: 'so', name: '영업(해외)', icon: 'fa-solid fa-globe', isOpen: false,
+                                id: 'sales_overseas', name: '영업(해외)', icon: 'fa-solid fa-globe', isOpen: false,
                                 subCategories: [
-                                    { id: 'so_b2b', name: 'B2B', items: [ { id: 'so1', name: '영문 NDA', type: 'document' } ] },
-                                    { id: 'so_b2c', name: 'B2C', items: [ { id: 'so2', name: '해외 D2C 정산서', type: 'system' } ] }
+                                    { id: 'so_b2b', name: 'B2B', items: [ { id: 'so1', name: '영문 NDA 양식', type: 'document' }, { id: 'so2', name: '수출 인보이스(Invoice)', type: 'download' } ] },
+                                    { id: 'so_b2c', name: 'B2C', items: [ { id: 'so3', name: '아마존/쇼피파이 정산서', type: 'system' } ] }
                                 ]
                             },
-                            { id: 'cs', name: 'CS', icon: 'fa-solid fa-headset', items: [ { id: 'cs1', name: '고객 응대 매뉴얼', type: 'download' }, { id: 'cs2', name: 'A/S 접수 시스템', type: 'system' }, { id: 'cs3', name: 'VOC(고객의 소리) 리포트', type: 'document' } ] }
+                            { id: 'cs', name: 'CS', icon: 'fa-solid fa-headset', items: [ { id: 'cs1', name: '고객 응대 표준 매뉴얼', type: 'download' }, { id: 'cs2', name: 'A/S 접수 시스템', type: 'system' }, { id: 'cs3', name: 'VOC(고객의 소리) 리포트', type: 'document' } ] }
                         ]
                     }
-                ];
+                ]);
 
-                const menuGroups = ref([]);
+                // ================= 인증 로직 =================
+                
+                const checkSession = async () => {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        userSession.value = session;
+                        await fetchUserProfile(session.user.id);
+                    } else {
+                        authState.value = 'login';
+                    }
+                };
 
-                // --- Supabase DB Load Logic ---
+                const fetchUserProfile = async (userId) => {
+                    try {
+                        const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+                        
+                        if (error) throw error;
+                        
+                        userProfile.value = data;
+
+                        if (data.status === 'pending') {
+                            authState.value = 'pending';
+                        } else if (data.status === 'rejected') {
+                            showToast('가입이 거절되었습니다. 관리자에게 문의하세요.', 'error');
+                            supabase.auth.signOut();
+                            authState.value = 'login';
+                        } else if (data.status === 'approved') {
+                            authState.value = 'authenticated';
+                            loadData(); // 포털 데이터 로드
+                        }
+                    } catch (e) {
+                        console.error('Profile error:', e);
+                        // 프로필이 없는 경우 (방금 가입 등)
+                        authState.value = 'pending';
+                    }
+                };
+
+                const handleLogin = async () => {
+                    if (!authForm.value.email || !authForm.value.password) return showToast('이메일과 비밀번호를 입력해주세요.', 'error');
+                    isAuthLoading.value = true;
+                    try {
+                        const { data, error } = await supabase.auth.signInWithPassword({
+                            email: authForm.value.email,
+                            password: authForm.value.password
+                        });
+                        
+                        if (error) throw error;
+                        userSession.value = data.session;
+                        await fetchUserProfile(data.user.id);
+                    } catch (error) {
+                        showToast('로그인 실패: ' + (error.message || '이메일 또는 비밀번호를 확인해주세요.'), 'error');
+                    } finally {
+                        isAuthLoading.value = false;
+                    }
+                };
+
+                const handleRegister = async () => {
+                    if (!authForm.value.email || !authForm.value.password || !authForm.value.name) return showToast('모든 정보를 입력해주세요.', 'error');
+                    isAuthLoading.value = true;
+                    try {
+                        const { data, error } = await supabase.auth.signUp({
+                            email: authForm.value.email,
+                            password: authForm.value.password,
+                            options: { data: { full_name: authForm.value.name } }
+                        });
+                        
+                        if (error) throw error;
+                        showToast('가입 신청이 완료되었습니다. 관리자 승인을 기다려주세요.');
+                        authState.value = 'pending';
+                    } catch (error) {
+                        showToast('가입 실패: ' + error.message, 'error');
+                    } finally {
+                        isAuthLoading.value = false;
+                    }
+                };
+
+                const handleLogout = async () => {
+                    await supabase.auth.signOut();
+                    userSession.value = null;
+                    userProfile.value = null;
+                    isAdminMode.value = false;
+                    authForm.value = { email: '', password: '', name: '' };
+                    authState.value = 'login';
+                };
+
+                // ================= 회원 관리 로직 (관리자 전용) =================
+                const openUserManagement = async () => {
+                    if (userProfile.value?.role !== 'admin') return;
+                    showUserModal.value = true;
+                    await fetchUsers();
+                };
+
+                const fetchUsers = async () => {
+                    const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+                    if (!error && data) {
+                        userList.value = data;
+                    } else {
+                        showToast('회원 목록을 불러오지 못했습니다.', 'error');
+                    }
+                };
+
+                const updateUserStatus = async (userId, newStatus) => {
+                    const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', userId);
+                    if (error) {
+                        showToast('상태 변경 실패: ' + error.message, 'error');
+                    } else {
+                        showToast(`사용자 상태가 ${newStatus === 'approved' ? '승인' : (newStatus === 'rejected' ? '거절' : '대기')}로 변경되었습니다.`);
+                        await fetchUsers();
+                    }
+                };
+
+                // ================= 포털 데이터 로직 =================
                 const loadData = async () => {
                     try {
                         const { data: cats, error: catError } = await supabase.from('categories').select('*');
@@ -633,14 +806,11 @@
                             isDbConnected.value = true;
                             buildMenuTree(cats, itms || []);
                         } else {
-                            // DB is empty or unauthorized -> fallback to local
-                            isDbConnected.value = false;
-                            menuGroups.value = JSON.parse(JSON.stringify(defaultMenuGroups));
+                            isDbConnected.value = false; // fallback to local mock data
                             if(!activeCategoryId.value) activeCategoryId.value = 'planning';
                         }
                     } catch (e) {
                         isDbConnected.value = false;
-                        menuGroups.value = JSON.parse(JSON.stringify(defaultMenuGroups));
                         if(!activeCategoryId.value) activeCategoryId.value = 'planning';
                     }
                 };
@@ -658,8 +828,7 @@
                             const deepSubs = cats.filter(c => c.parent_id === cat.id).sort((a,b) => a.sort_order - b.sort_order);
 
                             if (deepSubs.length > 0) {
-                                category.subCategories = [];
-                                category.isOpen = false;
+                                category.subCategories = []; category.isOpen = false;
                                 for (const sub of deepSubs) {
                                     const subCategory = { id: sub.id, name: sub.name, items: [] };
                                     subCategory.items = itms.filter(i => i.category_id === sub.id).map(i => ({ id: i.id, name: i.name, type: i.type, desc: i.description }));
@@ -674,66 +843,29 @@
                     }
                     menuGroups.value = built;
                     
-                    // Set default active category
                     if (!activeCategoryId.value && built.length > 0 && built[0].categories.length > 0) {
                         activeCategoryId.value = built[0].categories[0].subCategories ? built[0].categories[0].subCategories[0].id : built[0].categories[0].id;
                     }
                 };
 
-                onMounted(() => {
-                    loadData();
-                });
-
-                // --- Admin & DB Migration Logic ---
-                const verifyAdminPassword = async () => {
-                    try {
-                        const { data, error } = await supabase.auth.signInWithPassword({
-                            email: 'ceo@hyminternational.com',
-                            password: adminPassword.value
-                        });
-                        
-                        if (error) {
-                            // Supabase Auth Fail -> Fallback to Local auth check
-                            if (adminPassword.value === '245024') {
-                                isAdminMode.value = true;
-                                showAdminAuth.value = false;
-                                showToastMsg('관리자 모드가 활성화되었습니다. (로컬 권한)');
-                            } else {
-                                showToastMsg('비밀번호가 일치하지 않습니다.', 'error');
-                            }
-                        } else {
-                            isAdminMode.value = true;
-                            showAdminAuth.value = false;
-                            showToastMsg('관리자 모드가 활성화되었습니다. (Supabase 연결)');
-                            await loadData(); // Reload data with admin RLS permissions
-                        }
-                    } catch (e) {
-                        showToastMsg('인증 중 오류가 발생했습니다.', 'error');
-                    }
-                };
-
                 const seedDatabase = async () => {
-                    if(!confirm('로컬에 저장된 기본 카테고리와 항목들을 DB로 복사합니다. 진행하시겠습니까?')) return;
-                    showToastMsg('DB 데이터 생성을 시작합니다...', 'success');
+                    if(!confirm('로컬 가상 데이터를 실제 Supabase DB로 복사합니다. 진행하시겠습니까?')) return;
+                    showToast('DB 마이그레이션 시작...');
                     try {
-                        for (let i = 0; i < defaultMenuGroups.length; i++) {
-                            const group = defaultMenuGroups[i];
-                            const { data: sData, error: sErr } = await supabase.from('categories').insert({ name: group.sectorName, sort_order: i }).select();
-                            if(sErr) throw sErr;
+                        for (let i = 0; i < menuGroups.value.length; i++) {
+                            const group = menuGroups.value[i];
+                            const { data: sData } = await supabase.from('categories').insert({ name: group.sectorName, sort_order: i }).select();
                             const sectorId = sData[0].id;
 
                             for (let j = 0; j < group.categories.length; j++) {
                                 const cat = group.categories[j];
-                                const { data: cData, error: cErr } = await supabase.from('categories').insert({ name: cat.name, parent_id: sectorId, icon: cat.icon, sort_order: j }).select();
-                                if(cErr) throw cErr;
+                                const { data: cData } = await supabase.from('categories').insert({ name: cat.name, parent_id: sectorId, icon: cat.icon, sort_order: j }).select();
                                 const catId = cData[0].id;
 
                                 if (cat.subCategories) {
                                     for (let k = 0; k < cat.subCategories.length; k++) {
                                         const sub = cat.subCategories[k];
-                                        const { data: scData, error: scErr } = await supabase.from('categories').insert({ name: sub.name, parent_id: catId, sort_order: k }).select();
-                                        if(scErr) throw scErr;
-                                        
+                                        const { data: scData } = await supabase.from('categories').insert({ name: sub.name, parent_id: catId, sort_order: k }).select();
                                         for (const item of sub.items) {
                                             await supabase.from('items').insert({ category_id: scData[0].id, name: item.name, type: item.type, description: item.desc });
                                         }
@@ -745,15 +877,15 @@
                                 }
                             }
                         }
-                        showToastMsg('DB 데이터 마이그레이션 완료!', 'success');
+                        showToast('DB 데이터 구축 완료!');
                         await loadData();
                     } catch (e) {
                         console.error(e);
-                        showToastMsg('DB 저장 실패 (Supabase RLS/Admin 권한을 확인하세요)', 'error');
+                        showToast('DB 저장 실패 (Supabase RLS 확인 필요)', 'error');
                     }
                 };
 
-                // --- UI & Computed ---
+                // UI & Computed
                 const activeCategoryName = computed(() => {
                     for (const group of menuGroups.value) {
                         for (const cat of group.categories) {
@@ -763,8 +895,7 @@
                                 if (sub) return `${cat.name} > ${sub.name}`;
                             }
                         }
-                    }
-                    return '';
+                    } return '';
                 });
 
                 const filteredItems = computed(() => {
@@ -780,7 +911,6 @@
                         if (activeCat) break;
                     }
                     if (!activeCat || !activeCat.items) return [];
-
                     if (!searchQuery.value) return activeCat.items;
                     const query = searchQuery.value.toLowerCase();
                     return activeCat.items.filter(item => item.name.toLowerCase().includes(query));
@@ -790,21 +920,14 @@
                     const d = new Date(); return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
                 });
 
-                const showToastMsg = (msg, type = 'success') => {
-                    toast.value = { show: true, message: msg, type };
-                    if (toastTimeout) clearTimeout(toastTimeout);
-                    toastTimeout = setTimeout(() => { toast.value.show = false; }, 3000);
-                };
-
-                // --- Navigation ---
+                // Navigation
                 const toggleSidebar = () => { isSidebarOpen.value = !isSidebarOpen.value; };
                 const selectCategory = (category) => {
                     if (category.subCategories) {
                         category.isOpen = !category.isOpen;
                         if (category.isOpen && category.subCategories.length > 0) activeCategoryId.value = category.subCategories[0].id;
                     } else {
-                        activeCategoryId.value = category.id;
-                        searchQuery.value = '';
+                        activeCategoryId.value = category.id; searchQuery.value = '';
                         if (window.innerWidth < 768) isSidebarOpen.value = false;
                     }
                 };
@@ -818,12 +941,7 @@
                     return false;
                 };
 
-                const requestAdminModeToggle = () => {
-                    if (isAdminMode.value) { isAdminMode.value = false; showToastMsg('일반 모드로 전환되었습니다.'); } 
-                    else { adminPassword.value = ''; showAdminAuth.value = true; }
-                };
-
-                // --- CRUD Operations (DB + Local) ---
+                // CRUD
                 const getTargetCategory = () => {
                     for (const group of menuGroups.value) {
                         for (const cat of group.categories) {
@@ -833,8 +951,7 @@
                                 if (sub) return sub;
                             }
                         }
-                    }
-                    return null;
+                    } return null;
                 };
 
                 const openAddModal = () => { isEditing.value = false; modalForm.value = { id: '', name: '', type: 'download', desc: '' }; showItemModal.value = true; };
@@ -842,63 +959,49 @@
                 const closeModal = () => { showItemModal.value = false; };
 
                 const saveItem = async () => {
-                    if (!modalForm.value.name.trim()) return showToastMsg('항목명을 입력해주세요.', 'error');
-                    
+                    if (!modalForm.value.name.trim()) return showToast('항목명을 입력해주세요.', 'error');
                     const targetCategory = getTargetCategory();
                     if (!targetCategory) return;
 
                     if (isDbConnected.value) {
-                        // Supabase DB Update
                         if (isEditing.value) {
-                            const { error } = await supabase.from('items').update({
-                                name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.desc
-                            }).eq('id', modalForm.value.id);
-                            if (error) return showToastMsg('DB 수정 실패: ' + error.message, 'error');
+                            const { error } = await supabase.from('items').update({ name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.desc }).eq('id', modalForm.value.id);
+                            if (error) return showToast('수정 실패: ' + error.message, 'error');
                         } else {
-                            const { error } = await supabase.from('items').insert({
-                                category_id: targetCategory.id, name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.desc
-                            });
-                            if (error) return showToastMsg('DB 추가 실패: ' + error.message, 'error');
+                            const { error } = await supabase.from('items').insert({ category_id: targetCategory.id, name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.desc });
+                            if (error) return showToast('추가 실패: ' + error.message, 'error');
                         }
                         await loadData();
                     } else {
-                        // Local Fallback Update
                         if (isEditing.value) {
                             const index = targetCategory.items.findIndex(i => i.id === modalForm.value.id);
                             if (index !== -1) targetCategory.items[index] = { ...modalForm.value };
-                        } else {
-                            targetCategory.items.push({ ...modalForm.value, id: 'item_' + Date.now() });
-                        }
+                        } else { targetCategory.items.push({ ...modalForm.value, id: 'item_' + Date.now() }); }
                     }
-                    closeModal();
-                    showToastMsg(isEditing.value ? '항목이 수정되었습니다.' : '새 항목이 추가되었습니다.');
+                    closeModal(); showToast(isEditing.value ? '수정되었습니다.' : '추가되었습니다.');
                 };
 
                 const confirmDelete = (item) => { itemToDelete.value = item; showDeleteModal.value = true; };
-
                 const executeDelete = async () => {
                     if (!itemToDelete.value) return;
-                    
                     if (isDbConnected.value) {
-                        const { error } = await supabase.from('items').delete().eq('id', itemToDelete.value.id);
-                        if (error) return showToastMsg('DB 삭제 실패: ' + error.message, 'error');
+                        await supabase.from('items').delete().eq('id', itemToDelete.value.id);
                         await loadData();
                     } else {
                         const targetCategory = getTargetCategory();
-                        if (targetCategory && targetCategory.items) {
-                            targetCategory.items = targetCategory.items.filter(i => i.id !== itemToDelete.value.id);
-                        }
+                        if (targetCategory && targetCategory.items) targetCategory.items = targetCategory.items.filter(i => i.id !== itemToDelete.value.id);
                     }
-                    showToastMsg('항목이 삭제되었습니다.');
-                    showDeleteModal.value = false; itemToDelete.value = null;
+                    showToast('삭제되었습니다.'); showDeleteModal.value = false; itemToDelete.value = null;
                 };
 
-                // --- Action Handlers & Tools ---
+                // Action Handlers
                 const handleAction = (item) => {
                     if (item.type === 'proxy_form' && isAdminMode.value) showProxyForm.value = true;
-                    else showToastMsg(`'${item.name}' ${getActionText(item.type)} 시작`);
+                    else if (item.type === 'proxy_form') showToast(`'${item.name}' 양식 다운로드 시작`);
+                    else showToast(`'${item.name}' ${getActionText(item.type)} 시작`);
                 };
 
+                // Proxy Form Tools
                 const applyTemplate = (type) => {
                     const t = {
                         finance: { purpose: '금융업무 위임의 건', details: '1. 계좌 개설/해지\n2. 예금 입출금\n3. 관련 부수 행위 일체' },
@@ -916,32 +1019,31 @@
 
                 const generatePDF = () => {
                     const element = document.getElementById('print-area');
-                    html2pdf().set({ margin: 0, filename: '위임장.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => showToastMsg('PDF 저장 완료'));
+                    html2pdf().set({ margin: 0, filename: '위임장.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => showToast('PDF 저장 완료'));
                 };
                 const printForm = () => { window.print(); };
+                
                 const downloadCEOID = () => { 
-                    showToastMsg('대표자 신분증 사본을 불러옵니다.', 'success'); 
-                    const url = "https://zpzaiuqcoltshtsrllxx.supabase.co/storage/v1/object/sign/company_assets/Representative's%20ID%20Card.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81ZjA5NThjMi1lOWM5LTQ0NjYtOTZiMC04YWIyMzc1M2ViMzQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJjb21wYW55X2Fzc2V0cy9SZXByZXNlbnRhdGl2ZSdzIElEIENhcmQuanBnIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NjE2NzIzNCwiZXhwIjoyMTAxNTI3MjM0fQ.ZYsgDOTW71Fo3C0tnoJAZcyzH6BQ4rzHl-i4Pmnwivw";
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = '대표자_신분증_사본.jpg';
-                    a.target = '_blank';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                    showToast('대표자 신분증 사본 다운로드 중...', 'success'); 
+                    window.open("https://zpzaiuqcoltshtsrllxx.supabase.co/storage/v1/object/sign/company_assets/Representative's%20ID%20Card.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81ZjA5NThjMi1lOWM5LTQ0NjYtOTZiMC04YWIyMzc1M2ViMzQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJjb21wYW55X2Fzc2V0cy9SZXByZXNlbnRhdGl2ZSdzIElEIENhcmQuanBnIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NjE2NzIzNCwiZXhwIjoyMTAxNTI3MjM0fQ.ZYsgDOTW71Fo3C0tnoJAZcyzH6BQ4rzHl-i4Pmnwivw", '_blank');
                 };
 
                 const getIcon = (t) => ({ download: 'fa-solid fa-file-arrow-down', document: 'fa-solid fa-file-signature', system: 'fa-solid fa-laptop-code', link: 'fa-solid fa-arrow-up-right-from-square', proxy_form: 'fa-solid fa-file-invoice' }[t] || 'fa-solid fa-file');
                 const getIconClass = (t) => ({ download: 'bg-blue-50 text-blue-600', document: 'bg-emerald-50 text-emerald-600', system: 'bg-purple-50 text-purple-600', link: 'bg-amber-50 text-amber-600', proxy_form: 'bg-rose-50 text-rose-600' }[t] || 'bg-gray-50 text-gray-600');
                 const getTypeName = (t) => ({ download: '양식 파일', document: '내부 기안', system: '사내 시스템', link: '외부 링크', proxy_form: '스마트 폼' }[t] || '기타');
-                const getActionText = (t) => ({ download: '다운로드', document: '작성하기', system: '시스템 열기', link: '바로가기', proxy_form: '작성/발급' }[t] || '실행');
-                const getActionIcon = (t) => ({ download: 'fa-solid fa-download', document: 'fa-solid fa-pen', system: 'fa-solid fa-desktop', link: 'fa-solid fa-link', proxy_form: 'fa-solid fa-wand-magic-sparkles' }[t] || 'fa-solid fa-play');
+                const getActionText = (t) => ({ download: '다운로드', document: '작성하기', system: '시스템 열기', link: '바로가기', proxy_form: isAdminMode.value ? '작성/발급' : '다운로드' }[t] || '실행');
+                const getActionIcon = (t) => ({ download: 'fa-solid fa-download', document: 'fa-solid fa-pen', system: 'fa-solid fa-desktop', link: 'fa-solid fa-link', proxy_form: isAdminMode.value ? 'fa-solid fa-wand-magic-sparkles' : 'fa-solid fa-download' }[t] || 'fa-solid fa-play');
+
+                onMounted(() => {
+                    checkSession(); // 페이지 진입 시 세션 확인
+                });
 
                 return {
+                    authState, authForm, isAuthLoading, userProfile, handleLogin, handleRegister, handleLogout, // Auth
+                    showUserModal, userList, openUserManagement, updateUserStatus, // Admin Users
                     isSidebarOpen, searchQuery, activeCategoryId, activeCategoryName, filteredItems, viewMode, menuGroups,
                     toggleSidebar, selectCategory, selectSubCategory, isCategoryActive,
-                    isAdminMode, showAdminAuth, adminPassword, requestAdminModeToggle, verifyAdminPassword,
-                    isDbConnected, seedDatabase, // DB Status and Actions
+                    isAdminMode, isDbConnected, seedDatabase,
                     showItemModal, showDeleteModal, isEditing, modalForm, itemToDelete,
                     openAddModal, openEditModal, closeModal, saveItem, confirmDelete, executeDelete, handleAction,
                     getIcon, getIconClass, getTypeName, getActionText, getActionIcon, downloadCEOID, toast,
