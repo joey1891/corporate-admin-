@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -44,8 +43,6 @@
 </head>
 <body class="text-gray-800 h-screen overflow-hidden">
     <div id="app" class="flex h-full w-full relative">
-        
-        <!-- 로그인/회원가입 화면 -->
         <transition name="fade">
             <div v-if="authState !== 'authenticated'" class="fixed inset-0 z-[100] bg-gray-100 flex items-center justify-center p-4">
                 <div v-if="authState === 'loading'" class="flex flex-col items-center">
@@ -93,7 +90,6 @@
             </div>
         </transition>
 
-        <!-- 메인 포털 화면 -->
         <template v-if="authState === 'authenticated'">
             <div v-if="isSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"></div>
 
@@ -108,9 +104,8 @@
                 </div>
 
                 <div class="overflow-y-auto flex-grow py-4">
-                    <!-- 사이드바 메뉴 트리 -->
                     <div v-for="(group, groupIdx) in visibleMenuGroups" :key="group.sectorId" class="mb-6">
-                        <!-- 부문명 강조 (파란색 테두리 및 굵은 글씨) -->
+                        <!-- 부문명 강조 스타일 -->
                         <div class="bg-gray-100 border-l-4 border-primary px-4 py-2 mb-2 flex items-center justify-between">
                             <h3 class="text-[15px] font-black text-gray-800 tracking-wide">{{ group.sectorName }}</h3>
                             <div v-if="isAdminMode" class="flex gap-1">
@@ -166,12 +161,17 @@
                     <div class="flex items-center flex-1 gap-4">
                         <button @click="toggleSidebar" class="md:hidden text-gray-500"><i class="fa-solid fa-bars text-xl"></i></button>
                         
-                        <!-- 회사 전환 드롭다운 (관리자 전용) -->
-                        <div v-if="userProfile?.role === 'admin'" class="relative flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
-                            <i class="fa-solid fa-building text-gray-400 ml-2"></i>
-                            <select v-model="currentCompanyId" @change="loadData" class="bg-transparent border-none text-sm font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-8 cursor-pointer outline-none">
-                                <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
-                            </select>
+                        <!-- 회사 전환 드롭다운 및 삭제 버튼 (관리자 전용) -->
+                        <div v-if="userProfile?.role === 'admin'" class="flex items-center gap-1">
+                            <div class="relative flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
+                                <i class="fa-solid fa-building text-gray-400 ml-2"></i>
+                                <select v-model="currentCompanyId" @change="loadData" class="bg-transparent border-none text-sm font-bold text-gray-700 focus:ring-0 py-1 pl-2 pr-8 cursor-pointer outline-none">
+                                    <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
+                                </select>
+                            </div>
+                            <button v-if="isAdminMode && companies.length > 0 && currentCompanyId !== companies[0].id" @click="confirmDeleteCompany" class="w-8 h-8 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="현재 자회사 삭제">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
                         </div>
                     </div>
                     
@@ -180,9 +180,7 @@
                             <i class="fa-solid fa-file-zipper mr-1.5"></i> 선택 다운로드 ({{ selectedItems.length }})
                         </button>
 
-                        <!-- 관리자 전용 제어 버튼들 -->
                         <template v-if="userProfile?.role === 'admin'">
-                            <!-- 편집 모드일 때만 자회사 추가 버튼 노출 -->
                             <button v-if="isAdminMode" @click="openAddCompanyModal" class="hidden md:flex items-center px-3 py-1.5 bg-indigo-100 text-indigo-700 border border-indigo-300 rounded text-xs font-bold hover:bg-indigo-200">
                                 <i class="fa-solid fa-sitemap mr-1.5"></i> 자회사 추가
                             </button>
@@ -200,7 +198,6 @@
                     </div>
                 </header>
 
-                <!-- 본문 컨텐츠 (리스트 및 그리드) -->
                 <div class="flex-1 overflow-y-auto p-4 sm:p-8">
                     <div class="mb-6 flex justify-between items-end">
                         <div>
@@ -248,7 +245,6 @@
                                         <button @click.stop="confirmDelete(item)" class="w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 rounded mr-2"><i class="fa-solid fa-trash"></i></button>
                                     </template>
                                     
-                                    <!-- 크기를 동일하게 맞춘 버튼 영역 -->
                                     <div class="flex gap-2">
                                         <button v-if="item.type === 'proxy_form'" class="w-[110px] py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5"><i class="fa-solid fa-id-card text-blue-500"></i> 신분증 사본</button>
                                         <button @click="handleAction(item)" class="w-[110px] py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-primary flex items-center justify-center gap-1.5 shadow-sm transition-colors">
@@ -280,7 +276,7 @@
                             
                             <div class="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
                                 <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">{{ getTypeName(item.type) }}</span>
-                                <button @click="handleAction(item)" class="w-[90px] py-1.5 text-xs font-bold text-primary bg-blue-50 rounded hover:bg-blue-100 flex items-center justify-center gap-1">
+                                <button @click="handleAction(item)" class="w-[110px] py-1.5 text-xs font-bold text-primary bg-blue-50 rounded hover:bg-blue-100 flex items-center justify-center gap-1">
                                     <i :class="getActionIcon(item.type)"></i> {{ getActionText(item.type, item) }}
                                 </button>
                             </div>
@@ -288,17 +284,12 @@
                     </div>
                 </div>
 
-                <!-- 문서 작성 플로팅 버튼 -->
                 <button v-if="isAdminMode" @click="openAddModal" class="absolute bottom-8 right-8 w-14 h-14 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 flex items-center justify-center text-xl z-40 transform hover:scale-105 transition-transform">
                     <i class="fa-solid fa-plus"></i>
                 </button>
             </main>
 
-            <!-- ---------------------------------------------------- -->
-            <!-- 모달 영역 시작 -->
-            <!-- ---------------------------------------------------- -->
-
-            <!-- 항목 추가/수정 모달 (파일 다중 첨부 및 순서 변경 지원) -->
+            <!-- 항목 추가/수정 모달 -->
             <div v-if="showItemModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
                     <div class="flex justify-between items-center mb-5 border-b pb-3">
@@ -324,10 +315,9 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">설명 / 내용</label>
-                            <textarea v-model="modalForm.description" rows="5" placeholder="내용을 입력하세요. (HTML 태그 지원: <h1>, <b>, <a> 등)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none"></textarea>
+                            <textarea v-model="modalForm.description" rows="5" placeholder="내용을 입력하세요. (HTML 서식 지원)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none"></textarea>
                         </div>
                         
-                        <!-- 파일 업로드 영역 -->
                         <div v-if="['download', 'document', 'notice'].includes(modalForm.type)" class="pt-2">
                             <label class="block text-sm font-medium text-gray-700 mb-2">파일 첨부</label>
                             <div @dragover.prevent="dragActive = true" @dragleave.prevent="dragActive = false" @drop.prevent="handleDrop" :class="['border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer', dragActive ? 'border-primary bg-blue-50' : 'border-gray-300 hover:bg-gray-50']" @click="$refs.fileInput.click()">
@@ -343,7 +333,7 @@
                                         <button @click.prevent="moveFile(idx, 1)" class="text-[10px] text-gray-400 hover:text-primary px-1"><i class="fa-solid fa-caret-down"></i></button>
                                     </div>
                                     <i class="fa-solid fa-file text-gray-400"></i>
-                                    <input type="text" v-model="file.name" class="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:border-primary" placeholder="표시될 파일명 수정 가능">
+                                    <input type="text" v-model="file.name" class="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:border-primary" placeholder="표시될 파일명">
                                     <button @click.prevent="removeFile(idx)" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-xmark"></i></button>
                                 </li>
                             </ul>
@@ -368,7 +358,7 @@
             <div v-if="showCompanyModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 relative">
                     <h3 class="text-lg font-bold text-gray-900 mb-2">새 자회사(워크스페이스) 생성</h3>
-                    <p class="text-xs text-gray-500 mb-4">새 회사를 만들면 본사의 전체 메뉴 구조가 자동으로 복사(Clone)되어 기본 세팅됩니다. 단, 내부의 파일과 링크 주소는 빈 상태로 생성되므로 추후 수정이 필요합니다.</p>
+                    <p class="text-xs text-gray-500 mb-4">새 회사를 만들면 본사의 전체 메뉴 구조가 자동으로 복사(Clone)되어 기본 세팅됩니다.</p>
                     <input type="text" v-model="newCompanyName" placeholder="자회사 이름 (예: 주식회사 다윗)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none mb-6">
                     <div class="flex justify-end gap-2">
                         <button @click="showCompanyModal = false" class="px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium">취소</button>
@@ -379,7 +369,7 @@
                 </div>
             </div>
 
-            <!-- 회원 관리 모달 (권한 제어 포함) -->
+            <!-- 회원 및 권한 관리 모달 -->
             <div v-if="showUserModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
                     <div class="flex justify-between items-center p-5 border-b bg-gray-50">
@@ -388,7 +378,6 @@
                     </div>
                     
                     <div class="flex flex-1 overflow-hidden">
-                        <!-- 좌측 회원 리스트 -->
                         <div class="w-1/3 border-r border-gray-200 overflow-y-auto bg-white">
                             <ul class="divide-y divide-gray-100">
                                 <li v-for="user in usersList" :key="user.id" @click="selectUserForEdit(user)" :class="['p-4 cursor-pointer hover:bg-blue-50 transition-colors', editingUser?.id === user.id ? 'bg-blue-50 border-l-4 border-primary' : '']">
@@ -403,7 +392,6 @@
                             </ul>
                         </div>
                         
-                        <!-- 우측 회원 권한 수정 패널 -->
                         <div class="w-2/3 p-6 overflow-y-auto bg-gray-50" v-if="editingUser">
                             <div class="flex justify-between items-center mb-6">
                                 <h4 class="text-lg font-bold text-gray-900">{{ editingUser.full_name }} 님의 권한 설정</h4>
@@ -447,14 +435,11 @@
                                 </div>
                             </div>
                         </div>
-                        <div v-else class="w-2/3 flex items-center justify-center text-gray-400 bg-gray-50">
-                            <p>좌측에서 회원을 선택해 주세요.</p>
-                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 파일 미리보기 및 공지사항 내용 모달 -->
+            <!-- 내용 뷰어(공지사항 렌더링 포함) 모달 -->
             <div v-if="showPreviewModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex flex-col items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-full max-h-[85vh] flex flex-col overflow-hidden relative">
                     <div class="flex justify-between items-center p-5 border-b bg-gray-50">
@@ -490,7 +475,7 @@
                 </div>
             </div>
 
-            <!-- 삭제 확인 / 카테고리 추가 수정 모달 -->
+            <!-- 기본 카테고리/삭제 모달 -->
             <div v-if="showCatModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
                     <h3 class="text-lg font-bold text-gray-900 mb-4">{{ catModalData.title }}</h3>
@@ -514,9 +499,25 @@
                 </div>
             </div>
 
+            <!-- 자회사 삭제 모달 -->
+            <div v-if="showDeleteCompanyModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
+                    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mx-auto mb-4"><i class="fa-solid fa-building-circle-xmark"></i></div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">자회사 삭제 확인</h3>
+                    <p class="text-sm text-gray-500 mb-2">정말로 <span class="font-bold text-red-600">{{ currentCompanyName }}</span>을(를) 삭제하시겠습니까?</p>
+                    <p class="text-[11px] text-red-500 font-bold mb-6">※ 소속된 모든 메뉴와 파일, 항목이 영구 삭제되며 복구할 수 없습니다!</p>
+                    <div class="flex justify-center gap-2">
+                        <button @click="showDeleteCompanyModal = false" class="px-4 py-2 text-sm bg-gray-100 rounded-lg w-full">취소</button>
+                        <button @click="executeDeleteCompany" :disabled="isDeletingCompany" class="px-4 py-2 text-sm text-white bg-red-600 rounded-lg w-full font-bold flex justify-center items-center">
+                            <i v-if="isDeletingCompany" class="fa-solid fa-spinner fa-spin mr-2"></i> {{ isDeletingCompany ? '삭제 중...' : '삭제하기' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </template>
 
-        <!-- 알림 토스트 -->
+        <!-- 토스트 알림창 -->
         <div v-if="toast.show" class="fixed bottom-4 right-4 z-[200] flex items-center p-4 rounded-lg shadow-lg text-white max-w-md transition-opacity" :class="toast.type === 'error' ? 'bg-red-500' : 'bg-gray-800'">
             <i :class="['mr-3', toast.type === 'error' ? 'fa-solid fa-circle-exclamation' : 'fa-solid fa-circle-check']"></i>
             <div class="flex flex-col">
@@ -535,7 +536,6 @@
                 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwemFpdXFjb2x0c2h0c3JsbHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjA4MTcsImV4cCI6MjEwMTczNjgxN30.zWiMJ0RDpSZlWaSBKcO1X3HvF-NBLw2YTqH6sjfRbME';
                 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-                // 핵심 상태 변수
                 const authState = ref('loading');
                 const authForm = ref({ email: '', password: '', name: '' });
                 const userProfile = ref(null);
@@ -549,14 +549,12 @@
                 const menuGroups = ref([]);
                 const activeCategoryId = ref('');
                 
-                // 알림 함수
                 const toast = ref({ show: false, message: '', subMessage: '', type: 'success' });
                 const showToast = (msg, type = 'success', sub = '') => {
                     toast.value = { show: true, message: msg, subMessage: sub, type };
                     setTimeout(() => { toast.value.show = false; }, 4000);
                 };
 
-                // --- 1. 인증 및 세션 로직 ---
                 const checkSession = async () => {
                     const { data: { session } } = await supabase.auth.getSession();
                     if (session) {
@@ -570,13 +568,6 @@
                     try {
                         const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
                         if (error) throw error;
-                        
-                        // 관리자 권한 부여 임시 방어코드 (이메일에 admin이 포함되어 있으면 무조건 최고관리자)
-                        if (data.email.includes('admin')) {
-                            data.role = 'admin';
-                            data.status = 'approved';
-                        }
-                        
                         userProfile.value = data;
                         
                         if (data.status === 'pending') {
@@ -586,7 +577,6 @@
                             await loadCompanies();
                         }
                     } catch (e) {
-                        // 프로필이 없는 최초 생성자 등 예외 시 기본 Admin 세팅
                         userProfile.value = { id: userId, full_name: '관리자', role: 'admin', status: 'approved' };
                         authState.value = 'authenticated';
                         await loadCompanies();
@@ -598,7 +588,7 @@
                         const { data, error } = await supabase.auth.signInWithPassword({ email: authForm.value.email, password: authForm.value.password });
                         if (error) throw error;
                         await fetchUserProfile(data.user.id);
-                    } catch(e) { showToast('로그인 실패: 이메일과 비밀번호를 확인하세요.', 'error', e.message); }
+                    } catch(e) { showToast('로그인 실패', 'error', e.message); }
                 };
 
                 const handleRegister = async () => {
@@ -606,7 +596,6 @@
                         const { data, error } = await supabase.auth.signUp({ email: authForm.value.email, password: authForm.value.password });
                         if (error) throw error;
                         if (data.user) {
-                            // 프로필 테이블에도 회원정보 저장
                             await supabase.from('profiles').upsert({
                                 id: data.user.id, email: authForm.value.email, full_name: authForm.value.name, role: 'user', status: 'pending'
                             });
@@ -615,7 +604,6 @@
                     } catch(e) { showToast('회원가입 실패', 'error', e.message); }
                 };
 
-                // --- 2. 다중 자회사(Workspace) 로직 ---
                 const loadCompanies = async () => {
                     const { data } = await supabase.from('companies').select('*').order('created_at');
                     companies.value = data || [];
@@ -635,11 +623,10 @@
                     return comp ? comp.name : '';
                 });
 
-                // 자회사 복사(Clone) 로직 (파일/링크 비움 처리 포함)
+                // 자회사 생성 (복제 로직)
                 const showCompanyModal = ref(false);
                 const newCompanyName = ref('');
                 const isCloning = ref(false);
-                
                 const openAddCompanyModal = () => { newCompanyName.value = ''; showCompanyModal.value = true; };
                 const executeAddCompany = async () => {
                     if(!newCompanyName.value) return;
@@ -652,9 +639,7 @@
                         const { data: oldCats } = await supabase.from('categories').select('*').eq('company_id', templateId);
                         const { data: oldItems } = await supabase.from('items').select('*');
                         
-                        let idMap = {}; 
-                        
-                        // 부문 및 하위 메뉴 복사
+                        let idMap = {};
                         const sectors = oldCats.filter(c => !c.parent_id);
                         for (let sec of sectors) {
                             const { data: nSec } = await supabase.from('categories').insert({name: sec.name, icon: sec.icon, sort_order: sec.sort_order, company_id: newComp.id}).select().single();
@@ -667,11 +652,9 @@
                             }
                         }
                         
-                        // 아이템 복사 (파일과 링크를 null로 초기화하여 껍데기만 생성)
                         const itemsToClone = oldItems.filter(i => idMap[i.category_id]).map(i => ({
                             category_id: idMap[i.category_id], name: i.name, type: i.type, description: i.description, 
-                            file_path: null, // 링크 및 첨부파일 제거
-                            sort_order: i.sort_order
+                            file_path: null, sort_order: i.sort_order
                         }));
                         if (itemsToClone.length > 0) {
                             await supabase.from('items').insert(itemsToClone);
@@ -685,32 +668,43 @@
                     } finally { isCloning.value = false; }
                 };
 
-                // --- 3. 데이터 로딩 및 권한 기반 필터링 ---
+                // 자회사 삭제 로직
+                const showDeleteCompanyModal = ref(false);
+                const isDeletingCompany = ref(false);
+                const confirmDeleteCompany = () => { showDeleteCompanyModal.value = true; };
+                const executeDeleteCompany = async () => {
+                    isDeletingCompany.value = true;
+                    try {
+                        await supabase.from('profiles').update({ company_id: null }).eq('company_id', currentCompanyId.value);
+                        const { error } = await supabase.from('companies').delete().eq('id', currentCompanyId.value);
+                        if (error) throw error;
+                        showToast(`자회사가 성공적으로 삭제되었습니다.`);
+                        showDeleteCompanyModal.value = false;
+                        currentCompanyId.value = companies.value[0].id;
+                        await loadCompanies(); 
+                    } catch(e) { showToast('자회사 삭제 실패', 'error', e.message); } 
+                    finally { isDeletingCompany.value = false; }
+                };
+
+                // 메인 데이터 로드 (순서 및 권한 필터링 적용)
                 const loadData = async () => {
                     try {
-                        let cats = [];
-                        let itms = [];
+                        const { data: cats } = await supabase.from('categories').select('*').eq('company_id', currentCompanyId.value).order('sort_order', {ascending: true});
+                        const { data: itms, error: itmError } = await supabase.from('items').select('*').order('sort_order', {ascending: true});
                         
-                        // sort_order 컬럼 미존재 시 에러 방지 폴백 로직
-                        const { data: sortedCats, error: catErr } = await supabase.from('categories').select('*').eq('company_id', currentCompanyId.value).order('sort_order', {ascending: true}).order('created_at', {ascending: true});
-                        if (catErr) {
-                            const { data: fallbackCats } = await supabase.from('categories').select('*').eq('company_id', currentCompanyId.value).order('created_at', {ascending: true});
-                            cats = fallbackCats || [];
-                        } else cats = sortedCats;
+                        let safeItms = itms || [];
+                        if (itmError) {
+                            const { data: fb } = await supabase.from('items').select('*').order('created_at', {ascending: true});
+                            safeItms = fb || [];
+                        }
 
-                        const { data: sortedItms, error: itmErr } = await supabase.from('items').select('*').order('sort_order', {ascending: true}).order('created_at', {ascending: true});
-                        if (itmErr) {
-                            const { data: fallbackItms } = await supabase.from('items').select('*').order('created_at', {ascending: true});
-                            itms = fallbackItms || [];
-                        } else itms = sortedItms;
-                        
                         const built = [];
-                        const sectors = cats.filter(c => !c.parent_id).sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+                        const sectors = (cats||[]).filter(c => !c.parent_id).sort((a,b) => a.sort_order - b.sort_order);
                         for (const sector of sectors) {
                             const group = { sectorName: sector.name, sectorId: sector.id, categories: [] };
-                            const subCats = cats.filter(c => c.parent_id === sector.id).sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+                            const subCats = cats.filter(c => c.parent_id === sector.id).sort((a,b) => a.sort_order - b.sort_order);
                             for (const cat of subCats) {
-                                group.categories.push({ id: cat.id, name: cat.name, icon: cat.icon, items: itms.filter(i => i.category_id === cat.id) });
+                                group.categories.push({ id: cat.id, name: cat.name, icon: cat.icon, items: safeItms.filter(i => i.category_id === cat.id) });
                             }
                             built.push(group);
                         }
@@ -729,7 +723,7 @@
                     return menuGroups.value.filter(group => allowed.includes(group.sectorId));
                 });
 
-                // --- 4. 회원 권한 관리 패널 (Admin 전용) ---
+                // 회원 관리
                 const showUserModal = ref(false);
                 const usersList = ref([]);
                 const editingUser = ref(null);
@@ -744,37 +738,24 @@
                 const selectUserForEdit = async (user) => {
                     editingUser.value = JSON.parse(JSON.stringify(user));
                     if (!editingUser.value.allowed_menus) editingUser.value.allowed_menus = [];
-                    
                     let targetCompId = editingUser.value.company_id || companies.value[0].id;
                     const { data: cats } = await supabase.from('categories').select('id, name, sort_order').eq('company_id', targetCompId).is('parent_id', null).order('sort_order');
                     menuGroupsForEditingUser.value = (cats||[]).map(c => ({ sectorId: c.id, sectorName: c.name }));
                 };
 
                 const updateUserStatus = async (status) => {
-                    try {
-                        await supabase.from('profiles').update({ status }).eq('id', editingUser.value.id);
-                        showToast(`상태가 ${status === 'approved' ? '승인' : '거절'} 되었습니다.`);
-                        openUserManagement(); 
-                        editingUser.value.status = status;
-                    } catch(e) { showToast('상태 변경 실패', 'error', e.message); }
+                    await supabase.from('profiles').update({ status }).eq('id', editingUser.value.id);
+                    openUserManagement(); 
                 };
 
                 const saveUserPermissions = async () => {
-                    try {
-                        const payload = {
-                            role: editingUser.value.role,
-                            company_id: editingUser.value.company_id,
-                            allowed_menus: editingUser.value.allowed_menus
-                        };
-                        await supabase.from('profiles').update(payload).eq('id', editingUser.value.id);
-                        showToast(`${editingUser.value.full_name} 님의 권한이 저장되었습니다.`);
-                        openUserManagement();
-                    } catch(e) { showToast('저장 실패', 'error', e.message); }
+                    const payload = { role: editingUser.value.role, company_id: editingUser.value.company_id, allowed_menus: editingUser.value.allowed_menus };
+                    await supabase.from('profiles').update(payload).eq('id', editingUser.value.id);
+                    showToast('권한 저장됨');
+                    openUserManagement();
                 };
 
-                const getCompanyName = (id) => { const c = companies.value.find(x => x.id === id); return c ? c.name : ''; };
-
-                // --- 5. 기존 파일 업로드, 아이템 CRUD 등 ---
+                // 파일 및 항목 관리
                 const selectedItems = ref([]);
                 const filteredItems = computed(() => {
                     let activeCat = null;
@@ -794,7 +775,6 @@
                     } return '';
                 });
 
-                // 파일 업로드 관련
                 const showItemModal = ref(false);
                 const isEditing = ref(false);
                 const isUploading = ref(false);
@@ -804,18 +784,13 @@
                 const handleFileSelect = (e) => {
                     const files = e.target.files;
                     if(!files) return;
-                    for(let i=0; i<files.length; i++) {
-                        modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true });
-                    }
-                    dragActive.value = false;
+                    for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true });
                 };
                 const handleDrop = (e) => {
                     dragActive.value = false;
                     const files = e.dataTransfer.files;
                     if(!files) return;
-                    for(let i=0; i<files.length; i++) {
-                        modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true });
-                    }
+                    for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true });
                 };
                 const removeFile = (idx) => { modalForm.value.files.splice(idx, 1); };
                 const moveFile = (idx, direction) => {
@@ -832,7 +807,6 @@
                         if (['download', 'document', 'notice'].includes(modalForm.value.type)) {
                             for (let fData of modalForm.value.files) {
                                 if (fData.isNew) {
-                                    // 한글 깨짐 방지용 스토리지 안전 파일명 생성
                                     const extMatch = fData.fileObj.name.match(/\.[^.]+$/);
                                     const ext = extMatch ? extMatch[0] : '';
                                     const safeName = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}${ext}`;
@@ -840,7 +814,6 @@
                                     const { error } = await supabase.storage.from('documents').upload(safeName, fData.fileObj);
                                     if (error) throw error;
                                     const { data: urlData } = supabase.storage.from('documents').getPublicUrl(safeName);
-                                    // DB에는 사용자가 입력한 한글 이름(name)을 함께 매핑하여 JSON으로 저장
                                     finalFiles.push({ name: fData.name, url: urlData.publicUrl });
                                 } else {
                                     finalFiles.push(fData);
@@ -865,23 +838,22 @@
                     finally { isUploading.value = false; }
                 };
 
-                // 순서 변경 (Update 방식)
                 const moveItem = async (item, direction) => {
                     try {
                         const items = filteredItems.value;
                         const idx = items.findIndex(i => i.id === item.id);
                         if (idx < 0 || (direction === -1 && idx === 0) || (direction === 1 && idx === items.length - 1)) return;
-                        
                         const swapTarget = items[idx + direction];
-                        await Promise.all([
+                        
+                        const { error } = await Promise.all([
                             supabase.from('items').update({sort_order: swapTarget.sort_order||0}).eq('id', item.id),
                             supabase.from('items').update({sort_order: item.sort_order||0}).eq('id', swapTarget.id)
                         ]);
+                        if(error) throw error;
                         await loadData();
-                    } catch(e) { showToast('순서 저장 실패: DB 컬럼이 없거나 권한이 부족합니다.', 'error', e.message); }
+                    } catch(e) { showToast('순서 변경 실패', 'error', e.message); }
                 };
 
-                // 부문 및 카테고리 순서 변경
                 const moveCategory = async (id, direction) => {
                     try {
                         const { data: cats } = await supabase.from('categories').select('*').eq('company_id', currentCompanyId.value).order('sort_order');
@@ -900,6 +872,64 @@
                     } catch(e) { showToast('순서 변경 실패', 'error', e.message); }
                 };
 
+                // 카테고리(메뉴) 추가 삭제 로직
+                const showCatModal = ref(false);
+                const catModalData = ref({});
+                const openCatModal = (id, type, currentName = '', currentIcon = '', parentId = null) => {
+                    catModalData.value = { id, type, name: currentName, icon: currentIcon, parentId };
+                    if (type === 'add_sector') catModalData.value.title = '새 부문 추가';
+                    else if (type === 'add') catModalData.value.title = '하위 메뉴 추가';
+                    else catModalData.value.title = '메뉴명 수정';
+                    showCatModal.value = true;
+                };
+                
+                const saveCategory = async () => {
+                    if (!catModalData.value.name) return;
+                    try {
+                        if (catModalData.value.type === 'edit') {
+                            await supabase.from('categories').update({ name: catModalData.value.name }).eq('id', catModalData.value.id);
+                        } else {
+                            await supabase.from('categories').insert({
+                                name: catModalData.value.name,
+                                parent_id: catModalData.value.parentId || null,
+                                company_id: currentCompanyId.value,
+                                icon: catModalData.value.parentId ? 'fa-solid fa-folder' : null,
+                                sort_order: 99
+                            });
+                        }
+                        showCatModal.value = false;
+                        await loadData();
+                    } catch(e) { showToast('저장 실패', 'error', e.message); }
+                };
+
+                const showDeleteModal = ref(false);
+                const itemToDelete = ref(null);
+                const categoryToDelete = ref(null);
+                
+                const confirmDeleteCategory = (id, name) => {
+                    categoryToDelete.value = { id, name };
+                    showDeleteModal.value = true;
+                };
+                
+                const confirmDelete = (item) => {
+                    itemToDelete.value = item;
+                    showDeleteModal.value = true;
+                };
+                
+                const executeDelete = async () => {
+                    try {
+                        if (categoryToDelete.value) {
+                            await supabase.from('categories').delete().eq('id', categoryToDelete.value.id);
+                        } else if (itemToDelete.value) {
+                            await supabase.from('items').delete().eq('id', itemToDelete.value.id);
+                        }
+                        showDeleteModal.value = false;
+                        itemToDelete.value = null;
+                        categoryToDelete.value = null;
+                        await loadData();
+                    } catch(e) { showToast('삭제 실패', 'error', e.message); }
+                };
+
                 const showPreviewModal = ref(false);
                 const previewItem = ref(null);
                 const previewFiles = ref([]);
@@ -913,8 +943,7 @@
                     } else if (item.file_path) {
                         window.open(item.file_path, '_blank');
                     } else {
-                        // 자회사 복제 등으로 빈 링크일 경우 에러 처리
-                        showToast('연결된 주소(링크)가 없습니다. 편집 모드에서 등록해주세요.', 'error');
+                        showToast('연결된 URL 주소가 비어있습니다. 편집 모드에서 주소를 등록해주세요.', 'error');
                     }
                 };
                 
@@ -944,20 +973,21 @@
                     authState, authForm, userProfile, handleLogin, handleRegister, handleLogout: async () => { await supabase.auth.signOut(); location.reload(); },
                     companies, currentCompanyId, currentCompanyName, loadCompanies, loadData,
                     showCompanyModal, newCompanyName, isCloning, openAddCompanyModal, executeAddCompany,
-                    showUserModal, usersList, editingUser, menuGroupsForEditingUser, openUserManagement, selectUserForEdit, updateUserStatus, saveUserPermissions, getCompanyName,
+                    showDeleteCompanyModal, isDeletingCompany, confirmDeleteCompany, executeDeleteCompany,
+                    showUserModal, usersList, editingUser, menuGroupsForEditingUser, openUserManagement, selectUserForEdit, updateUserStatus, saveUserPermissions, getCompanyName: (id) => { const c = companies.value.find(x => x.id === id); return c ? c.name : ''; },
                     isAdminMode, toggleAdminMode: () => isAdminMode.value = !isAdminMode.value, isSidebarOpen, toggleSidebar: () => isSidebarOpen.value = !isSidebarOpen.value,
                     viewMode, menuGroups, visibleMenuGroups, activeCategoryId, activeCategoryName, filteredItems, selectCategory: (c) => { activeCategoryId.value = c.id; selectedItems.value = []; },
-                    showCatModal: ref(false), catModalData: ref({}), openCatModal: () => {}, saveCategory: () => {}, moveCategory, showDeleteModal: ref(false), confirmDeleteCategory: () => {}, confirmDelete: () => {}, executeDelete: () => {},
+                    showCatModal, catModalData, openCatModal, saveCategory, moveCategory, showDeleteModal, confirmDeleteCategory, confirmDelete, executeDelete,
                     showItemModal, isEditing, isUploading, dragActive, modalForm, openAddModal: () => { isEditing.value=false; modalForm.value={type:'download', files:[]}; showItemModal.value=true; },
                     openEditModal: (i) => { isEditing.value=true; modalForm.value={...i, files: hasFiles(i) ? JSON.parse(i.file_path) : []}; showItemModal.value=true; },
                     closeModal: () => showItemModal.value=false, saveItem, moveItem, handleFileSelect, handleDrop, removeFile, moveFile,
                     showPreviewModal, previewItem, previewFiles, handleAction, downloadActualFile, hasFiles, selectedItems, downloadSelectedZip,
-                    toast, getIcon: (t) => ({notice:'fa-solid fa-bullhorn', download:'fa-solid fa-file-arrow-down', document:'fa-solid fa-file-signature', system:'fa-solid fa-laptop-code', link:'fa-solid fa-link', proxy_form:'fa-solid fa-file-contract'}[t]||'fa-solid fa-file'),
-                    getIconClass: (t) => ({notice:'bg-red-50 text-red-600', download:'bg-blue-50 text-blue-600', proxy_form:'bg-rose-50 text-rose-600'}[t]||'bg-gray-50 text-gray-600'),
-                    getTypeBorderClass: (t) => ({notice:'border-red-100', download:'border-blue-100', proxy_form:'border-rose-100'}[t]||'border-gray-200'),
-                    getTypeName: (t) => ({notice:'공지사항', download:'일반파일', document:'사내기안', system:'시스템', link:'외부링크', proxy_form:'스마트 폼'}[t]||'기타'),
-                    getActionText: (t,i) => hasFiles(i) ? '열람/다운로드' : ({notice:'내용확인', download:'다운로드', link:'바로가기', proxy_form:'작성/발급'}[t]||'실행'),
-                    getActionIcon: (t) => ({notice:'fa-solid fa-book-open', link:'fa-solid fa-arrow-up-right-from-square', proxy_form:'fa-solid fa-wand-magic-sparkles'}[t]||'fa-solid fa-folder-open')
+                    toast, getIcon: (t) => ({notice:'fa-solid fa-bullhorn', download:'fa-solid fa-file-arrow-down', document:'fa-solid fa-file-signature', system:'fa-solid fa-laptop-code', link:'fa-solid fa-link'}[t]||'fa-solid fa-file'),
+                    getIconClass: (t) => ({notice:'bg-red-50 text-red-600', download:'bg-blue-50 text-blue-600'}[t]||'bg-gray-50 text-gray-600'),
+                    getTypeBorderClass: (t) => ({notice:'border-red-100', download:'border-blue-100'}[t]||'border-gray-200'),
+                    getTypeName: (t) => ({notice:'공지사항', download:'일반파일', document:'사내기안', system:'시스템', link:'외부링크'}[t]||'기타'),
+                    getActionText: (t,i) => hasFiles(i) ? '열람/다운로드' : ({notice:'내용확인', download:'다운로드', link:'바로가기'}[t]||'실행'),
+                    getActionIcon: (t) => ({notice:'fa-solid fa-book-open', link:'fa-solid fa-arrow-up-right-from-square'}[t]||'fa-solid fa-download')
                 };
             }
         }).mount('#app');
