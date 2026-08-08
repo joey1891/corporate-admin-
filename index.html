@@ -204,10 +204,10 @@
                                 <button v-if="currentCompanyId !== (companies.length > 0 ? companies[0].id : '')" @click="openDeleteCompanyModal" class="hidden md:flex items-center px-3 py-1.5 bg-red-100 text-red-700 border border-red-300 rounded text-xs font-bold hover:bg-red-200">
                                     <i class="fa-solid fa-trash-can mr-1.5"></i> 현재 자회사 삭제
                                 </button>
+                                <button @click="openUserManagement" class="hidden md:flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 border border-purple-300 rounded text-xs font-bold hover:bg-purple-200">
+                                    <i class="fa-solid fa-users-gear mr-1.5"></i> 회원 관리
+                                </button>
                             </template>
-                            <button @click="openUserManagement" class="hidden md:flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 border border-purple-300 rounded text-xs font-bold hover:bg-purple-200">
-                                <i class="fa-solid fa-users-gear mr-1.5"></i> 회원 관리
-                            </button>
 
                             <div class="flex items-center gap-2 border-l pl-3 border-gray-200 ml-1">
                                 <span class="text-xs font-bold text-gray-600">편집 모드</span>
@@ -459,22 +459,33 @@
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-gray-600 mb-1">소속 회사 (Workspace)</label>
-                                        <select v-model="editingUser.company_id" class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50">
+                                        <select v-model="editingUser.company_id" @change="reloadPermissionsTree" class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50">
                                             <option value="">-- 회사 선택 --</option>
                                             <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
                                         </select>
                                     </div>
                                 </div>
                                 
-                                <div v-if="editingUser.role !== 'admin' && editingUser.company_id" class="pt-4 border-t border-gray-100 mt-4">
-                                    <label class="block text-sm font-bold text-gray-800 mb-3"><i class="fa-solid fa-lock text-gray-400 mr-1"></i> 부문별 접근 권한 (미체크 시 접근 불가)</label>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <label v-for="group in menuGroupsForEditingUser" :key="group.sectorId" class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                            <input type="checkbox" v-model="editingUser.allowed_menus" :value="group.sectorId" class="w-4 h-4 text-primary rounded border-gray-300 mr-3">
-                                            <span class="text-sm font-bold text-gray-700">{{ group.sectorName }}</span>
-                                        </label>
+                                <div v-if="editingUser.company_id" class="pt-4 border-t border-gray-100 mt-4 relative">
+                                    <div v-if="editingUser.role === 'admin'" class="absolute inset-0 bg-white/70 z-10 flex items-center justify-center">
+                                        <span class="bg-gray-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm">최고 관리자는 모든 권한을 가집니다</span>
                                     </div>
-                                    <p class="text-[10px] text-gray-400 mt-2">* 해당 부문(메뉴)의 체크를 해제하면 사용자의 좌측 사이드바에서 완전히 숨겨집니다.</p>
+                                    <label class="block text-sm font-bold text-gray-800 mb-3"><i class="fa-solid fa-lock text-gray-400 mr-1"></i> 부문 및 하위 메뉴 접근 권한 (미체크 시 숨김)</label>
+                                    <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                                        <div v-for="group in menuGroupsForEditingUser" :key="group.id" class="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                                            <label class="flex items-center p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-200">
+                                                <input type="checkbox" v-model="editingUser.allowed_menus" :value="group.id" class="w-4 h-4 text-primary rounded border-gray-300 mr-3">
+                                                <span class="text-sm font-black text-gray-800">{{ group.name }} <span class="text-[10px] text-gray-500 font-normal ml-1">(최상위 부문)</span></span>
+                                            </label>
+                                            <div class="p-3 bg-white grid grid-cols-2 gap-3" v-if="group.children && group.children.length > 0">
+                                                <label v-for="child in group.children" :key="child.id" class="flex items-center cursor-pointer hover:bg-blue-50 p-1.5 rounded">
+                                                    <input type="checkbox" v-model="editingUser.allowed_menus" :value="child.id" class="w-3.5 h-3.5 text-secondary rounded border-gray-300 mr-2">
+                                                    <span class="text-xs font-bold text-gray-700">{{ child.name }}</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 mt-2">* 체크를 해제하면 사용자의 사이드바에서 해당 부문이나 메뉴가 완전히 사라집니다.</p>
                                 </div>
                                 
                                 <div class="flex justify-end pt-4">
@@ -835,7 +846,24 @@
                     const allowed = userProfile.value?.allowed_menus || [];
                     if (allowed.length === 0) return menuGroups.value; 
                     
-                    return menuGroups.value.filter(group => allowed.includes(group.sectorId));
+                    // 1. 부문(Sector) 필터링
+                    const filteredGroups = menuGroups.value.filter(group => allowed.includes(group.sectorId));
+                    
+                    // 2. 하위 메뉴(Category) 필터링 (선택적)
+                    return filteredGroups.map(group => {
+                        const sectorCatIds = group.categories.map(c => c.id);
+                        const hasCategoryLevelPerms = allowed.some(id => sectorCatIds.includes(id));
+                        
+                        if (hasCategoryLevelPerms) {
+                            return {
+                                ...group,
+                                categories: group.categories.filter(cat => allowed.includes(cat.id))
+                            };
+                        } else {
+                            // 하위 메뉴를 하나도 체크하지 않고 부문만 체크한 경우 전체 하위 메뉴 허용 (하위 호환성 유지)
+                            return group;
+                        }
+                    }).filter(group => group.categories.length > 0);
                 });
 
 
@@ -851,13 +879,30 @@
                     showUserModal.value = true;
                 };
 
+                const reloadPermissionsTree = async () => {
+                    if (!editingUser.value || !editingUser.value.company_id) {
+                        menuGroupsForEditingUser.value = [];
+                        return;
+                    }
+                    const { data: cats } = await supabase.from('categories').select('*').eq('company_id', editingUser.value.company_id).order('sort_order');
+                    
+                    const built = [];
+                    const sectors = (cats||[]).filter(c => !c.parent_id).sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+                    for (const sector of sectors) {
+                        const group = { id: sector.id, name: sector.name, children: [] };
+                        const subCats = cats.filter(c => c.parent_id === sector.id).sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+                        for (const cat of subCats) {
+                            group.children.push({ id: cat.id, name: cat.name });
+                        }
+                        built.push(group);
+                    }
+                    menuGroupsForEditingUser.value = built;
+                };
+
                 const selectUserForEdit = async (user) => {
                     editingUser.value = JSON.parse(JSON.stringify(user));
                     if (!editingUser.value.allowed_menus) editingUser.value.allowed_menus = [];
-                    
-                    let targetCompId = editingUser.value.company_id || companies.value[0].id;
-                    const { data: cats } = await supabase.from('categories').select('id, name, sort_order').eq('company_id', targetCompId).is('parent_id', null).order('sort_order');
-                    menuGroupsForEditingUser.value = (cats||[]).map(c => ({ sectorId: c.id, sectorName: c.name }));
+                    await reloadPermissionsTree();
                 };
 
                 const updateUserStatus = async (status) => {
@@ -1139,7 +1184,7 @@
                     companies, currentCompanyId, currentCompanyName, loadCompanies, loadData,
                     showCompanyModal, newCompanyName, isCloning, openAddCompanyModal, executeAddCompany,
                     showDeleteCompanyModal, isDeletingCompany, openDeleteCompanyModal, executeDeleteCompany,
-                    showUserModal, usersList, editingUser, menuGroupsForEditingUser, openUserManagement, selectUserForEdit, updateUserStatus, saveUserPermissions, getCompanyName,
+                    showUserModal, usersList, editingUser, menuGroupsForEditingUser, openUserManagement, selectUserForEdit, updateUserStatus, saveUserPermissions, getCompanyName, reloadPermissionsTree,
                     isAdminMode, toggleAdminMode: () => isAdminMode.value = !isAdminMode.value, isSidebarOpen, toggleSidebar: () => isSidebarOpen.value = !isSidebarOpen.value,
                     viewMode, menuGroups, visibleMenuGroups, activeCategoryId, activeCategoryName, filteredItems, selectCategory: (c) => { activeCategoryId.value = c.id; selectedItems.value = []; },
                     showCatModal, catModalData, openCatModal, saveCategory, moveCategory, showDeleteModal, confirmDeleteCategory, confirmDelete, executeDelete,
