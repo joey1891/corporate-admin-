@@ -33,7 +33,11 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .a4-preview { width: 210mm; height: 297mm; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 0 auto; padding: 20mm; position: relative; transform-origin: top center; }
-        @media print { body * { visibility: hidden; } #print-area, #print-area * { visibility: visible; } #print-area { position: absolute; left: 0; top: 0; width: 210mm; height: 297mm; padding: 20mm; box-shadow: none; margin: 0; } }
+        @media print { 
+            body * { visibility: hidden; } 
+            .print-target, .print-target * { visibility: visible; } 
+            .print-target { position: absolute; left: 0; top: 0; width: 210mm; min-height: 297mm; padding: 20mm; box-shadow: none !important; margin: 0 !important; transform: none !important; } 
+        }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
     </style>
@@ -62,7 +66,6 @@
                     </div>
                     
                     <div class="p-8">
-                        <!-- 탭 -->
                         <div class="flex bg-gray-100 p-1 rounded-lg mb-6">
                             <button @click="authState = 'login'" :class="['flex-1 py-2 text-sm font-bold rounded-md transition-colors', authState === 'login' ? 'bg-white shadow text-primary' : 'text-gray-500']">로그인</button>
                             <button @click="authState = 'register'" :class="['flex-1 py-2 text-sm font-bold rounded-md transition-colors', authState === 'register' ? 'bg-white shadow text-primary' : 'text-gray-500']">회원가입</button>
@@ -119,15 +122,12 @@
             </div>
         </transition>
 
-
         <!-- ================= 메인 앱 콘텐츠 (인증 및 승인 완료 시 표시) ================= -->
         <template v-if="authState === 'authenticated'">
-            <!-- 모바일 사이드바 배경 -->
             <div v-if="isSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"></div>
 
             <!-- 사이드바 -->
             <aside :class="['fixed md:static inset-y-0 left-0 z-30 w-64 bg-surface border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col', isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
-                <!-- 로고 -->
                 <div class="h-16 flex items-center px-6 border-b border-gray-100 flex-shrink-0">
                     <i class="fa-solid fa-building text-primary text-xl mr-3"></i>
                     <span class="text-lg font-bold text-gray-900 tracking-tight">업무 지원 포털</span>
@@ -145,7 +145,6 @@
                                     <i v-if="category.subCategories" :class="['ml-auto fa-solid transition-transform duration-200 text-xs', category.isOpen ? 'fa-chevron-down' : 'fa-chevron-right']"></i>
                                     <span v-else-if="category.items && category.items.length > 0" class="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">{{ category.items.length }}</span>
                                 </button>
-                                <!-- 서브 카테고리 -->
                                 <ul v-if="category.subCategories" v-show="category.isOpen" class="mt-1 space-y-1 pl-9">
                                     <li v-for="sub in category.subCategories" :key="sub.id">
                                         <button @click="selectSubCategory(sub.id)" :class="['w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200', activeCategoryId === sub.id ? 'bg-blue-50 text-primary' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900']">
@@ -160,7 +159,6 @@
                     </div>
                 </div>
                 
-                <!-- 하단 상태 표시 및 프로필 -->
                 <div class="p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
                     <div class="mb-3 px-1 flex items-center justify-between">
                         <span class="text-xs font-medium text-gray-500">DB 연결 상태</span>
@@ -182,15 +180,12 @@
                 </div>
             </aside>
 
-            <!-- 메인 콘텐츠 -->
             <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
-                <!-- 헤더 -->
                 <header class="h-16 bg-surface border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 z-10 flex-shrink-0">
                     <div class="flex items-center flex-1">
                         <button @click="toggleSidebar" class="md:hidden mr-4 text-gray-500 hover:text-gray-700">
                             <i class="fa-solid fa-bars text-xl"></i>
                         </button>
-                        <!-- 검색 -->
                         <div class="relative w-full max-w-md hidden sm:block">
                             <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                             <input type="text" v-model="searchQuery" placeholder="필요한 서류나 시스템을 검색해보세요" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-gray-50 focus:bg-white">
@@ -198,23 +193,19 @@
                     </div>
                     
                     <div class="flex items-center gap-3">
-                        <!-- DB 초기 데이터 삽입 버튼 (최고 관리자용) -->
                         <button v-if="isAdminMode && !isDbConnected" @click="seedDatabase" class="hidden lg:flex items-center px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300 rounded text-xs font-bold transition-colors shadow-sm">
                             <i class="fa-solid fa-database mr-1.5"></i> DB에 기본 데이터 세팅
                         </button>
                         
-                        <!-- 회원 관리 버튼 (관리자 전용) -->
                         <button v-if="userProfile?.role === 'admin'" @click="openUserManagement" class="flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300 rounded text-xs font-bold transition-colors shadow-sm">
                             <i class="fa-solid fa-users-gear mr-1.5"></i> 회원 관리
                         </button>
 
-                        <!-- 뷰어 모드 토글 -->
                         <div class="flex bg-gray-100 rounded-lg p-1 ml-2">
                             <button @click="viewMode = 'list'" :class="['px-3 py-1.5 rounded text-sm font-medium transition-colors', viewMode === 'list' ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700']"><i class="fa-solid fa-list mr-1"></i></button>
                             <button @click="viewMode = 'grid'" :class="['px-3 py-1.5 rounded text-sm font-medium transition-colors', viewMode === 'grid' ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700']"><i class="fa-solid fa-border-all mr-1"></i></button>
                         </div>
 
-                        <!-- 관리자(수정/편집) 모드 토글 -->
                         <div v-if="userProfile?.role === 'admin'" class="flex items-center gap-2 border-l pl-4 border-gray-200 ml-2">
                             <span class="text-xs font-bold text-gray-600">편집 모드</span>
                             <button @click="isAdminMode = !isAdminMode" :class="['relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none', isAdminMode ? 'bg-red-500' : 'bg-gray-200']">
@@ -224,9 +215,7 @@
                     </div>
                 </header>
 
-                <!-- 내부 콘텐츠 영역 -->
                 <div class="flex-1 overflow-y-auto p-4 sm:p-8">
-                    <!-- 카테고리 헤더 -->
                     <div class="mb-6 flex justify-between items-end">
                         <div>
                             <h1 class="text-2xl font-bold text-gray-900 mb-1">{{ activeCategoryName }}</h1>
@@ -234,14 +223,12 @@
                         </div>
                     </div>
 
-                    <!-- 내용물이 없을 때 -->
                     <div v-if="filteredItems.length === 0" class="flex flex-col items-center justify-center py-20 bg-surface rounded-xl border border-gray-200 border-dashed">
                         <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-400 text-2xl"><i class="fa-solid fa-folder-open"></i></div>
                         <h3 class="text-lg font-medium text-gray-900 mb-1">항목이 없습니다</h3>
                         <p class="text-sm text-gray-500">현재 카테고리에 등록된 문서나 시스템이 없습니다.</p>
                     </div>
 
-                    <!-- 리스트 뷰 (기본값) -->
                     <div v-else-if="viewMode === 'list'" class="bg-surface rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                         <ul class="divide-y divide-gray-200">
                             <li v-for="item in filteredItems" :key="item.id" class="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between gap-4 group">
@@ -264,7 +251,7 @@
                                         <button @click.stop="confirmDelete(item)" class="p-2 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
                                     </template>
                                     <div class="flex items-center gap-2">
-                                        <button v-if="item.id === 'm10' || item.name.includes('위임장')" @click="downloadCEOID" class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 flex items-center gap-1.5" title="대표자 신분증 사본">
+                                        <button v-if="item.type === 'proxy_form'" @click="downloadCEOID" class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 flex items-center gap-1.5" title="대표자 신분증 사본 다운로드">
                                             <i class="fa-solid fa-id-card text-blue-500"></i><span class="hidden md:inline">신분증 사본</span>
                                         </button>
                                         <button @click="handleAction(item)" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-primary flex items-center gap-2 shadow-sm">
@@ -276,7 +263,6 @@
                         </ul>
                     </div>
 
-                    <!-- 그리드 뷰 -->
                     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         <div v-for="item in filteredItems" :key="item.id" class="bg-surface border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow relative group">
                             <div v-if="isAdminMode" class="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -292,7 +278,7 @@
                             <div class="flex items-center justify-between mt-auto">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">{{ getTypeName(item.type) }}</span>
                                 <div class="flex items-center gap-1.5">
-                                    <button v-if="item.id === 'm10' || item.name.includes('위임장')" @click="downloadCEOID" class="text-sm font-medium text-gray-600 hover:text-blue-700 bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-100"><i class="fa-solid fa-id-card"></i></button>
+                                    <button v-if="item.type === 'proxy_form'" @click="downloadCEOID" class="text-sm font-medium text-gray-600 hover:text-blue-700 bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-100"><i class="fa-solid fa-id-card"></i></button>
                                     <button @click="handleAction(item)" class="text-sm font-medium text-primary hover:text-blue-800 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 shadow-sm">
                                         <i :class="getActionIcon(item.type)"></i> {{ getActionText(item.type) }}
                                     </button>
@@ -302,7 +288,6 @@
                     </div>
                 </div>
 
-                <!-- 항목 추가 버튼 (편집 모드 시) -->
                 <button v-if="isAdminMode" @click="openAddModal" class="absolute bottom-8 right-8 w-14 h-14 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 flex items-center justify-center text-xl focus:outline-none z-40 transform hover:scale-105 transition-transform">
                     <i class="fa-solid fa-plus"></i>
                 </button>
@@ -310,7 +295,6 @@
 
             <!-- ================= 모달 창 영역 ================= -->
             
-            <!-- 1. 회원 관리 모달 (관리자용) -->
             <div v-if="showUserModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
                     <div class="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50">
@@ -323,7 +307,6 @@
                                 <tr>
                                     <th class="px-4 py-3">이름</th>
                                     <th class="px-4 py-3">이메일</th>
-                                    <th class="px-4 py-3">가입일시</th>
                                     <th class="px-4 py-3 text-center">상태</th>
                                     <th class="px-4 py-3 text-right">관리</th>
                                 </tr>
@@ -332,7 +315,6 @@
                                 <tr v-for="user in userList" :key="user.id" class="border-b border-gray-100 hover:bg-gray-50">
                                     <td class="px-4 py-3 font-medium text-gray-900">{{ user.full_name }}</td>
                                     <td class="px-4 py-3">{{ user.email }}</td>
-                                    <td class="px-4 py-3 text-xs">{{ new Date(user.created_at).toLocaleDateString() }}</td>
                                     <td class="px-4 py-3 text-center">
                                         <span v-if="user.status === 'approved'" class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">승인됨</span>
                                         <span v-else-if="user.status === 'pending'" class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold">대기중</span>
@@ -341,12 +323,11 @@
                                     <td class="px-4 py-3 text-right">
                                         <button v-if="user.status === 'pending'" @click="updateUserStatus(user.id, 'approved')" class="bg-primary text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-800 mr-2 shadow-sm">승인</button>
                                         <button v-if="user.status === 'pending'" @click="updateUserStatus(user.id, 'rejected')" class="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs font-medium hover:bg-gray-300 shadow-sm">거절</button>
-                                        
                                         <button v-if="user.status === 'approved' && user.role !== 'admin'" @click="updateUserStatus(user.id, 'pending')" class="border border-gray-300 text-gray-600 px-3 py-1.5 rounded text-xs font-medium hover:bg-gray-50">권한 회수</button>
                                     </td>
                                 </tr>
                                 <tr v-if="userList.length === 0">
-                                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">가입한 사용자가 없습니다.</td>
+                                    <td colspan="4" class="px-4 py-8 text-center text-gray-500">가입한 사용자가 없습니다.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -354,7 +335,6 @@
                 </div>
             </div>
 
-            <!-- 2. 항목 추가/수정 모달 -->
             <div v-if="showItemModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
                     <div class="flex justify-between items-center mb-5">
@@ -388,7 +368,6 @@
                 </div>
             </div>
 
-            <!-- 3. 삭제 확인 모달 -->
             <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
                     <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mx-auto mb-4"><i class="fa-solid fa-triangle-exclamation"></i></div>
@@ -401,7 +380,6 @@
                 </div>
             </div>
 
-            <!-- 4. 스마트 위임장 모달 -->
             <div v-if="showProxyForm" class="fixed inset-0 bg-gray-900 bg-opacity-70 z-50 flex flex-col md:flex-row overflow-hidden">
                 <button @click="showProxyForm = false" class="absolute top-4 right-4 z-50 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-100"><i class="fa-solid fa-xmark text-xl"></i></button>
                 <div class="w-full md:w-1/3 h-1/2 md:h-full bg-white overflow-y-auto border-r border-gray-200 p-6 shadow-xl z-10 flex flex-col">
@@ -413,9 +391,9 @@
                             <div class="space-y-3">
                                 <div class="flex gap-2">
                                     <input type="text" v-model="proxyData.delegatee.name" placeholder="성명" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                                    <input type="text" v-model="proxyData.delegatee.dept_pos" placeholder="소속 및 직위" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                                    <input type="text" v-model="proxyData.delegatee.id" placeholder="주민등록번호" class="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm outline-none">
                                 </div>
-                                <input type="text" v-model="proxyData.delegatee.id" placeholder="주민등록번호" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
+                                <input type="text" v-model="proxyData.delegatee.dept_pos" placeholder="소속 및 직위" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
                                 <input type="text" v-model="proxyData.delegatee.phone" placeholder="연락처" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
                                 <input type="text" v-model="proxyData.delegatee.address" placeholder="주소" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
                             </div>
@@ -432,10 +410,7 @@
                             <div class="space-y-3">
                                 <input type="text" v-model="proxyData.mandate.purpose" placeholder="위임 업무의 목적" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
                                 <textarea v-model="proxyData.mandate.details" rows="3" placeholder="대리권의 세부 범위" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none resize-none"></textarea>
-                                <div class="space-y-2">
-                                    <label class="block text-xs font-medium text-gray-600">유효 기간</label>
-                                    <input type="text" v-model="proxyData.period.condition" placeholder="예: 2026.08.08 ~ 09.08" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
-                                </div>
+                                <input type="text" v-model="proxyData.period.condition" placeholder="유효 기간" class="w-full px-3 py-2 border border-gray-300 rounded text-sm outline-none">
                             </div>
                         </div>
 
@@ -454,11 +429,6 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                            <h3 class="text-sm font-bold text-gray-700 mb-3">법인인감(직인) 업로드 (선택)</h3>
-                            <input type="file" accept="image/png, image/jpeg" @change="handleStampUpload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-primary">
-                        </div>
                     </div>
 
                     <div class="mt-6 flex gap-2">
@@ -467,14 +437,65 @@
                     </div>
                 </div>
 
-                <!-- 미리보기 영역 -->
                 <div class="w-full md:w-2/3 h-1/2 md:h-full bg-gray-200 overflow-y-auto p-4 md:p-8 flex items-start justify-center">
-                    <div id="print-area" class="a4-preview bg-white flex flex-col" style="transform: scale(min(1, calc(100vw / 850))); transform-origin: top center; margin-bottom: 50px;">
+                    <div id="print-area" class="print-target a4-preview bg-white flex flex-col" style="transform: scale(min(1, calc(100vw / 850))); transform-origin: top center; margin-bottom: 50px;">
                         <h1 class="text-4xl font-black text-center mt-12 mb-12 tracking-widest text-black">위 임 장</h1>
                         
-                        <div class="flex-1 flex flex-col gap-8 px-10">
-                            <!-- 위임자 (본인) -->
+                        <div class="flex-1 flex flex-col gap-6 px-10">
+                            <!-- 수임자 (대리인) -->
                             <table class="w-full border-collapse border border-black text-black text-sm">
+                                <tbody>
+                                    <tr>
+                                        <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">수 임 자<br>(대리인)</th>
+                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">성 명</th>
+                                        <td class="border border-black p-2 w-[22.5%] text-center">{{ proxyData.delegatee.name }}</td>
+                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">주민등록번호</th>
+                                        <td class="border border-black p-2 w-[22.5%] text-center">{{ proxyData.delegatee.id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">소속 및 직위</th>
+                                        <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.dept_pos }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">연 락 처</th>
+                                        <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.phone }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">주 소</th>
+                                        <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.address }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- 위임사항 -->
+                            <table class="w-full border-collapse border border-black text-black text-sm mb-4">
+                                <tbody>
+                                    <tr>
+                                        <th rowspan="3" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">위임사항</th>
+                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">위임 목적</th>
+                                        <td class="border border-black p-2 font-bold">{{ proxyData.mandate.purpose }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium align-top pt-4">세부 범위</th>
+                                        <td class="border border-black p-4 align-top min-h-[140px] whitespace-pre-wrap leading-relaxed">{{ proxyData.mandate.details }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">위임 기간</th>
+                                        <td class="border border-black p-2">{{ proxyData.period.condition }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="text-base text-black leading-relaxed mt-2 text-justify px-2">
+                                본인(위임자)은 위 사람(수임자)을 대리인으로 정하고 상기 위임사항에 관한 일체의 권한을 포괄적으로 위임하며, 대리인이 행한 일체의 행위에 대하여 본인이 민·형사상의 모든 책임을 질 것을 확약합니다.
+                            </div>
+
+                            <div class="text-center mt-10 mb-8 text-xl font-bold text-black">
+                                {{ formattedDate }}
+                            </div>
+
+                            <!-- 위임자 (본인) -->
+                            <table class="w-full border-collapse border border-black text-black text-sm mt-auto">
                                 <tbody>
                                     <tr>
                                         <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">위 임 자<br>(본 인)</th>
@@ -503,65 +524,73 @@
                                     </tr>
                                 </tbody>
                             </table>
-
-                            <!-- 수임자 (대리인) -->
-                            <table class="w-full border-collapse border border-black text-black text-sm">
-                                <tbody>
-                                    <tr>
-                                        <th rowspan="4" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">수 임 자<br>(대리인)</th>
-                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">성 명</th>
-                                        <td class="border border-black p-2 w-[22.5%] text-center">{{ proxyData.delegatee.name }}</td>
-                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">주민등록번호</th>
-                                        <td class="border border-black p-2 w-[22.5%] text-center">{{ proxyData.delegatee.id }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">소속 및 직위</th>
-                                        <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.dept_pos }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">연 락 처</th>
-                                        <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.phone }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">주 소</th>
-                                        <td colspan="3" class="border border-black p-2">{{ proxyData.delegatee.address }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-
-                            <!-- 위임사항 -->
-                            <table class="w-full border-collapse border border-black text-black text-sm mb-auto">
-                                <tbody>
-                                    <tr>
-                                        <th rowspan="3" class="border border-black bg-gray-100 p-2 w-[15%] text-center font-bold text-base">위임사항</th>
-                                        <th class="border border-black bg-gray-50 p-2 w-[20%] text-center font-medium">위임 목적</th>
-                                        <td class="border border-black p-2 font-bold">{{ proxyData.mandate.purpose }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium align-top pt-4">세부 범위</th>
-                                        <td class="border border-black p-4 align-top min-h-[140px] whitespace-pre-wrap leading-relaxed">{{ proxyData.mandate.details }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th class="border border-black bg-gray-50 p-2 text-center font-medium">위임 기간</th>
-                                        <td class="border border-black p-2">{{ proxyData.period.condition }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-
-                            <div class="text-base text-black leading-relaxed mt-4 text-justify px-2">
-                                본인(위임자)은 위 사람(수임자)을 대리인으로 정하고 상기 위임사항에 관한 일체의 권한을 포괄적으로 위임하며, 대리인이 행한 일체의 행위에 대하여 본인이 민·형사상의 모든 책임을 질 것을 확약합니다.
-                            </div>
-
-                            <div class="text-center mt-12 mb-12 text-xl font-bold text-black">
-                                {{ formattedDate }}
-                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </template> <!-- /authState === 'authenticated' -->
 
-        <!-- 알림 메시지 (Toast) -->
+            <div v-if="showPreviewModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex flex-col items-center justify-center p-4 md:p-8">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-full max-h-[90vh] flex flex-col overflow-hidden relative">
+                    <div class="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                        <div class="flex items-center gap-3">
+                            <div :class="['w-10 h-10 rounded-lg flex items-center justify-center text-lg', getIconClass(previewItem?.type)]">
+                                <i :class="getIcon(previewItem?.type)"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">{{ previewItem?.name }} 미리보기</h3>
+                                <p class="text-xs text-gray-500">{{ getTypeName(previewItem?.type) }}</p>
+                            </div>
+                        </div>
+                        <button @click="closePreviewModal" class="text-gray-400 hover:text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto bg-gray-200 p-4 md:p-8 flex justify-center">
+                        <div id="preview-content" class="print-target bg-white shadow-md mx-auto relative flex flex-col" style="width: 210mm; min-height: 297mm; padding: 20mm; transform: scale(min(1, calc(100vw / 850))); transform-origin: top center; margin-bottom: 50px;">
+                            <div class="border-b-2 border-gray-900 pb-4 mb-8">
+                                <h1 class="text-3xl font-black text-gray-900 text-center mb-2">{{ previewItem?.name }}</h1>
+                                <p class="text-center text-gray-500 text-sm">주식회사 힘 - 사내 업무 지원 포털 제공 양식</p>
+                            </div>
+                            
+                            <div class="flex-1 text-gray-800 text-base leading-relaxed space-y-6">
+                                <table class="w-full border-collapse border border-gray-400 mb-6 text-sm">
+                                    <tbody>
+                                        <tr>
+                                            <th class="border border-gray-400 bg-gray-100 p-3 w-[20%] text-center font-bold text-gray-700">문서명</th>
+                                            <td class="border border-gray-400 p-3 font-semibold">{{ previewItem?.name }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="border border-gray-400 bg-gray-100 p-3 text-center font-bold text-gray-700">문서 분류</th>
+                                            <td class="border border-gray-400 p-3">{{ getTypeName(previewItem?.type) }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="border border-gray-400 bg-gray-100 p-3 text-center font-bold text-gray-700">문서 설명</th>
+                                            <td class="border border-gray-400 p-3">{{ previewItem?.desc || '설명이 등록되지 않은 문서입니다.' }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                
+                                <div class="bg-gray-50 p-6 border border-gray-200 rounded-lg flex flex-col items-center justify-center min-h-[300px]">
+                                    <i class="fa-solid fa-file-lines text-6xl text-gray-300 mb-6"></i>
+                                    <p class="text-center text-gray-600 font-medium">본 문서는 <strong>[{{ previewItem?.name }}]</strong>의 표준 양식입니다.</p>
+                                    <p class="text-center text-gray-500 text-sm mt-2">하단의 버튼을 통해 PDF로 다운로드하거나 직접 인쇄하실 수 있습니다.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-12 text-center text-gray-500 text-sm border-t border-gray-200 pt-4">
+                                - 본 문서 및 양식은 대외비로 취급될 수 있으므로 사외 유출에 주의 바랍니다 -
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 border-t border-gray-200 bg-white flex justify-end gap-3 flex-shrink-0">
+                        <button @click="closePreviewModal" class="px-5 py-2.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors">닫기</button>
+                        <button @click="printPreview" class="px-5 py-2.5 text-sm font-medium bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm"><i class="fa-solid fa-print"></i> 인쇄하기</button>
+                        <button @click="downloadPreviewPDF" class="px-5 py-2.5 text-sm font-bold bg-primary hover:bg-blue-800 text-white rounded-lg transition-colors shadow-md flex items-center gap-2"><i class="fa-solid fa-file-pdf"></i> 다운로드 (PDF)</button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
         <div v-if="toast.show" class="fixed bottom-4 right-4 z-[150] flex items-center p-4 rounded-lg shadow-lg text-white transition-opacity duration-300" :class="toast.type === 'error' ? 'bg-red-500' : 'bg-gray-800'">
             <i :class="['mr-3', toast.type === 'error' ? 'fa-solid fa-circle-exclamation' : 'fa-solid fa-circle-check']"></i>
             <span class="text-sm font-medium">{{ toast.message }}</span>
@@ -574,36 +603,28 @@
 
         createApp({
             setup() {
-                // Supabase Connection Settings
                 const supabaseUrl = 'https://zpzaiuqcoltshtsrllxx.supabase.co';
                 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwemFpdXFjb2x0c2h0c3JsbHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjA4MTcsImV4cCI6MjEwMTczNjgxN30.zWiMJ0RDpSZlWaSBKcO1X3HvF-NBLw2YTqH6sjfRbME';
                 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-                // ================= 인증(Auth) 상태 관리 =================
-                const authState = ref('loading'); // 'loading', 'login', 'register', 'pending', 'authenticated'
+                const authState = ref('loading');
                 const authForm = ref({ email: '', password: '', name: '' });
                 const isAuthLoading = ref(false);
                 const userSession = ref(null);
                 const userProfile = ref(null);
-                
-                // 로그인 옵션 (ID 기억, 로그인 유지)
                 const rememberId = ref(false);
                 const keepLoggedIn = ref(false);
 
-                // ================= 앱 상태 관리 =================
                 const isDbConnected = ref(false);
-                const isAdminMode = ref(false); // UI 편집 모드 (관리자만 토글 가능)
-                
+                const isAdminMode = ref(false);
                 const isSidebarOpen = ref(false);
                 const searchQuery = ref('');
                 const activeCategoryId = ref('');
                 const viewMode = ref('list');
                 
-                // 관리자용 회원관리 모달
                 const showUserModal = ref(false);
                 const userList = ref([]);
 
-                // 모달 및 토스트
                 const showItemModal = ref(false);
                 const showDeleteModal = ref(false);
                 const isEditing = ref(false);
@@ -618,7 +639,6 @@
                     toastTimeout = setTimeout(() => { toast.value.show = false; }, 3000);
                 };
 
-                // Proxy Form States
                 const showProxyForm = ref(false);
                 const stampImage = ref("https://zpzaiuqcoltshtsrllxx.supabase.co/storage/v1/object/sign/company_assets/Registered%20Corporate%20Seal.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81ZjA5NThjMi1lOWM5LTQ0NjYtOTZiMC04YWIyMzc1M2ViMzQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJjb21wYW55X2Fzc2V0cy9SZWdpc3RlcmVkIENvcnBvcmF0ZSBTZWFsLmpwZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODYxNjcyNzUsImV4cCI6MTc4NzAzMTI3NX0.pEQVTrUhTaOrrJD8APePljI0ZTYjRAstSZN2UHEtbSI");
                 const proxyData = ref({
@@ -633,12 +653,13 @@
                     period: { condition: '해당 업무 종료 시까지' }
                 });
 
-                // --- Default Mock Data (DB 연동 안될때 기본값) ---
+                const showPreviewModal = ref(false);
+                const previewItem = ref(null);
+
                 const menuGroups = ref([
                     {
                         sectorName: '경영관리부문',
                         categories: [
-                            { id: 'planning', name: '기획', icon: 'fa-solid fa-lightbulb', items: [ { id: 'pl1', name: '2026년 사업계획서 양식', type: 'download' }, { id: 'pl2', name: '신규 사업 제안서', type: 'document' }, { id: 'pl3', name: 'KPI 및 OKR 실시간 모니터링', type: 'system' } ] },
                             { id: 'management', name: '경영관리', icon: 'fa-solid fa-briefcase', items: [ { id: 'm1', name: '정관', type: 'download' }, { id: 'm2', name: '법인등기부등본', type: 'download' }, { id: 'm3', name: '사업자등록증', type: 'download' }, { id: 'm4', name: '통장사본', type: 'download' }, { id: 'm5', name: '영업신고증', type: 'download' }, { id: 'm6', name: '주주총회 서류', type: 'document' }, { id: 'm7', name: '인감도장', type: 'download' }, { id: 'm8', name: '사용인감계', type: 'document' }, { id: 'm9', name: '계약서 날인 서명', type: 'download' }, { id: 'm10', name: '대리인 위임장', type: 'proxy_form', desc: '스마트 입력 및 PDF 발급' }, { id: 'm11', name: '위임전결규정', type: 'download' } ] },
                             { id: 'finance', name: '재무', icon: 'fa-solid fa-money-bill-wave', items: [ { id: 'f1', name: '입출금확인 (법인계좌)', type: 'system' }, { id: 'f2', name: '자금수지 현황표', type: 'document' } ] },
                             { id: 'tax_accounting', name: '세무/회계', icon: 'fa-solid fa-calculator', items: [ { id: 'ta1', name: '세금계산서 발행 시스템', type: 'system' }, { id: 'ta2', name: '부가세 신고 자료 모음', type: 'document' }, { id: 'ta3', name: '법인세 신고서', type: 'document' }, { id: 'ta4', name: '경비 청구 가이드라인', type: 'download' } ] },
@@ -701,15 +722,11 @@
                     }
                 ]);
 
-                // ================= 인증 로직 =================
-                
                 const checkSession = async () => {
-                    // 로그인 유지 해제 상태로 브라우저를 껐다 킨 경우 세션을 강제 제거
                     if (localStorage.getItem('keepLoggedIn') === 'false') {
                         await supabase.auth.signOut();
                         localStorage.removeItem('keepLoggedIn');
                     }
-
                     const { data: { session } } = await supabase.auth.getSession();
                     if (session) {
                         userSession.value = session;
@@ -722,24 +739,12 @@
                 const fetchUserProfile = async (userId) => {
                     try {
                         const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-                        
                         if (error) throw error;
-                        
                         userProfile.value = data;
-
-                        if (data.status === 'pending') {
-                            authState.value = 'pending';
-                        } else if (data.status === 'rejected') {
-                            showToast('가입이 거절되었습니다. 관리자에게 문의하세요.', 'error');
-                            supabase.auth.signOut();
-                            authState.value = 'login';
-                        } else if (data.status === 'approved') {
-                            authState.value = 'authenticated';
-                            loadData(); // 포털 데이터 로드
-                        }
+                        if (data.status === 'pending') authState.value = 'pending';
+                        else if (data.status === 'rejected') { showToast('가입이 거절되었습니다.', 'error'); supabase.auth.signOut(); authState.value = 'login'; }
+                        else if (data.status === 'approved') { authState.value = 'authenticated'; loadData(); }
                     } catch (e) {
-                        console.error('Profile error:', e);
-                        // 프로필이 없는 경우 (방금 가입 등)
                         authState.value = 'pending';
                     }
                 };
@@ -748,39 +753,15 @@
                     if (!authForm.value.email || !authForm.value.password) return showToast('이메일과 비밀번호를 입력해주세요.', 'error');
                     isAuthLoading.value = true;
                     try {
-                        const { data, error } = await supabase.auth.signInWithPassword({
-                            email: authForm.value.email,
-                            password: authForm.value.password
-                        });
-                        
+                        const { data, error } = await supabase.auth.signInWithPassword({ email: authForm.value.email, password: authForm.value.password });
                         if (error) throw error;
-                        
-                        // ID 기억하기 처리
-                        if (rememberId.value) {
-                            localStorage.setItem('savedEmail', authForm.value.email);
-                        } else {
-                            localStorage.removeItem('savedEmail');
-                        }
-                        
-                        // 로그인 유지 처리
-                        if (keepLoggedIn.value) {
-                            localStorage.setItem('keepLoggedIn', 'true');
-                        } else {
-                            localStorage.setItem('keepLoggedIn', 'false');
-                        }
-
+                        if (rememberId.value) localStorage.setItem('savedEmail', authForm.value.email);
+                        else localStorage.removeItem('savedEmail');
+                        localStorage.setItem('keepLoggedIn', keepLoggedIn.value ? 'true' : 'false');
                         userSession.value = data.session;
                         await fetchUserProfile(data.user.id);
                     } catch (error) {
-                        let errorMsg = '이메일 또는 비밀번호를 확인해주세요.';
-                        if (error.message.includes('Invalid login credentials')) {
-                            errorMsg = '등록되지 않은 이메일이거나 비밀번호가 틀렸습니다. (신규 사용자는 회원가입을 먼저 진행해주세요)';
-                        } else if (error.message.includes('Email not confirmed')) {
-                            errorMsg = '이메일 인증이 필요합니다. 관리자에게 문의하세요.';
-                        } else {
-                            errorMsg = error.message;
-                        }
-                        showToast('로그인 실패: ' + errorMsg, 'error');
+                        showToast('로그인 실패: 이메일 또는 비밀번호를 다시 확인해주세요.', 'error');
                     } finally {
                         isAuthLoading.value = false;
                     }
@@ -790,14 +771,9 @@
                     if (!authForm.value.email || !authForm.value.password || !authForm.value.name) return showToast('모든 정보를 입력해주세요.', 'error');
                     isAuthLoading.value = true;
                     try {
-                        const { data, error } = await supabase.auth.signUp({
-                            email: authForm.value.email,
-                            password: authForm.value.password,
-                            options: { data: { full_name: authForm.value.name } }
-                        });
-                        
+                        const { data, error } = await supabase.auth.signUp({ email: authForm.value.email, password: authForm.value.password, options: { data: { full_name: authForm.value.name } } });
                         if (error) throw error;
-                        showToast('가입 신청이 완료되었습니다. 관리자 승인을 기다려주세요.');
+                        showToast('가입이 성공적으로 완료되었습니다.');
                         authState.value = 'pending';
                     } catch (error) {
                         showToast('가입 실패: ' + error.message, 'error');
@@ -808,78 +784,52 @@
 
                 const handleLogout = async () => {
                     await supabase.auth.signOut();
-                    userSession.value = null;
-                    userProfile.value = null;
-                    isAdminMode.value = false;
-                    
-                    // 로그아웃 시 로그인 유지 해제 및 폼 초기화
-                    localStorage.removeItem('keepLoggedIn'); 
+                    userSession.value = null; userProfile.value = null; isAdminMode.value = false;
+                    localStorage.removeItem('keepLoggedIn');
                     authForm.value.password = '';
-                    if (!rememberId.value) {
-                        authForm.value.email = ''; 
-                    }
-                    
+                    if (!rememberId.value) authForm.value.email = '';
                     authState.value = 'login';
                     showToast('안전하게 로그아웃 되었습니다.');
                 };
 
-                // ================= 회원 관리 로직 (관리자 전용) =================
                 const openUserManagement = async () => {
                     if (userProfile.value?.role !== 'admin') return;
                     showUserModal.value = true;
-                    await fetchUsers();
-                };
-
-                const fetchUsers = async () => {
                     const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-                    if (!error && data) {
-                        userList.value = data;
-                    } else {
-                        showToast('회원 목록을 불러오지 못했습니다.', 'error');
-                    }
+                    if (!error && data) userList.value = data;
                 };
 
                 const updateUserStatus = async (userId, newStatus) => {
                     const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', userId);
-                    if (error) {
-                        showToast('상태 변경 실패: ' + error.message, 'error');
-                    } else {
-                        showToast(`사용자 상태가 ${newStatus === 'approved' ? '승인' : (newStatus === 'rejected' ? '거절' : '대기')}로 변경되었습니다.`);
-                        await fetchUsers();
-                    }
+                    if (!error) { showToast(`상태가 변경되었습니다.`); openUserManagement(); }
                 };
 
-                // ================= 포털 데이터 로직 =================
                 const loadData = async () => {
                     try {
                         const { data: cats, error: catError } = await supabase.from('categories').select('*');
                         const { data: itms, error: itmError } = await supabase.from('items').select('*');
-
                         if (!catError && cats && cats.length > 0) {
                             isDbConnected.value = true;
                             buildMenuTree(cats, itms || []);
                         } else {
-                            isDbConnected.value = false; // fallback to local mock data
-                            if(!activeCategoryId.value) activeCategoryId.value = 'planning';
+                            isDbConnected.value = false;
+                            if(!activeCategoryId.value) activeCategoryId.value = 'management';
                         }
                     } catch (e) {
                         isDbConnected.value = false;
-                        if(!activeCategoryId.value) activeCategoryId.value = 'planning';
+                        if(!activeCategoryId.value) activeCategoryId.value = 'management';
                     }
                 };
 
                 const buildMenuTree = (cats, itms) => {
                     const built = [];
                     const sectors = cats.filter(c => !c.parent_id).sort((a,b) => a.sort_order - b.sort_order);
-
                     for (const sector of sectors) {
                         const group = { sectorName: sector.name, sectorId: sector.id, categories: [] };
                         const subCats = cats.filter(c => c.parent_id === sector.id).sort((a,b) => a.sort_order - b.sort_order);
-
                         for (const cat of subCats) {
                             const category = { id: cat.id, name: cat.name, icon: cat.icon, items: [] };
                             const deepSubs = cats.filter(c => c.parent_id === cat.id).sort((a,b) => a.sort_order - b.sort_order);
-
                             if (deepSubs.length > 0) {
                                 category.subCategories = []; category.isOpen = false;
                                 for (const sub of deepSubs) {
@@ -895,26 +845,22 @@
                         built.push(group);
                     }
                     menuGroups.value = built;
-                    
                     if (!activeCategoryId.value && built.length > 0 && built[0].categories.length > 0) {
                         activeCategoryId.value = built[0].categories[0].subCategories ? built[0].categories[0].subCategories[0].id : built[0].categories[0].id;
                     }
                 };
 
                 const seedDatabase = async () => {
-                    if(!confirm('로컬 가상 데이터를 실제 Supabase DB로 복사합니다. 진행하시겠습니까?')) return;
-                    showToast('DB 마이그레이션 시작...');
+                    showToast('DB 데이터 이관을 시작합니다. 잠시만 기다려주세요...', 'success');
                     try {
                         for (let i = 0; i < menuGroups.value.length; i++) {
                             const group = menuGroups.value[i];
                             const { data: sData } = await supabase.from('categories').insert({ name: group.sectorName, sort_order: i }).select();
                             const sectorId = sData[0].id;
-
                             for (let j = 0; j < group.categories.length; j++) {
                                 const cat = group.categories[j];
                                 const { data: cData } = await supabase.from('categories').insert({ name: cat.name, parent_id: sectorId, icon: cat.icon, sort_order: j }).select();
                                 const catId = cData[0].id;
-
                                 if (cat.subCategories) {
                                     for (let k = 0; k < cat.subCategories.length; k++) {
                                         const sub = cat.subCategories[k];
@@ -930,15 +876,13 @@
                                 }
                             }
                         }
-                        showToast('DB 데이터 구축 완료!');
+                        showToast('DB 데이터 구축이 성공적으로 완료되었습니다!');
                         await loadData();
                     } catch (e) {
-                        console.error(e);
-                        showToast('DB 저장 실패 (Supabase RLS 확인 필요)', 'error');
+                        showToast('DB 저장 실패: 권한 문제일 수 있습니다.', 'error');
                     }
                 };
 
-                // UI & Computed
                 const activeCategoryName = computed(() => {
                     for (const group of menuGroups.value) {
                         for (const cat of group.categories) {
@@ -973,7 +917,6 @@
                     const d = new Date(); return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
                 });
 
-                // Navigation
                 const toggleSidebar = () => { isSidebarOpen.value = !isSidebarOpen.value; };
                 const selectCategory = (category) => {
                     if (category.subCategories) {
@@ -994,7 +937,6 @@
                     return false;
                 };
 
-                // CRUD
                 const getTargetCategory = () => {
                     for (const group of menuGroups.value) {
                         for (const cat of group.categories) {
@@ -1015,15 +957,9 @@
                     if (!modalForm.value.name.trim()) return showToast('항목명을 입력해주세요.', 'error');
                     const targetCategory = getTargetCategory();
                     if (!targetCategory) return;
-
                     if (isDbConnected.value) {
-                        if (isEditing.value) {
-                            const { error } = await supabase.from('items').update({ name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.desc }).eq('id', modalForm.value.id);
-                            if (error) return showToast('수정 실패: ' + error.message, 'error');
-                        } else {
-                            const { error } = await supabase.from('items').insert({ category_id: targetCategory.id, name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.desc });
-                            if (error) return showToast('추가 실패: ' + error.message, 'error');
-                        }
+                        if (isEditing.value) await supabase.from('items').update({ name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.desc }).eq('id', modalForm.value.id);
+                        else await supabase.from('items').insert({ category_id: targetCategory.id, name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.desc });
                         await loadData();
                     } else {
                         if (isEditing.value) {
@@ -1047,14 +983,24 @@
                     showToast('삭제되었습니다.'); showDeleteModal.value = false; itemToDelete.value = null;
                 };
 
-                // Action Handlers
                 const handleAction = (item) => {
-                    if (item.type === 'proxy_form' && isAdminMode.value) showProxyForm.value = true;
-                    else if (item.type === 'proxy_form') showToast(`'${item.name}' 양식 다운로드 시작`);
-                    else showToast(`'${item.name}' ${getActionText(item.type)} 시작`);
+                    if (item.type === 'proxy_form' && isAdminMode.value) {
+                        showProxyForm.value = true;
+                    } else if (['download', 'document', 'proxy_form'].includes(item.type)) {
+                        previewItem.value = item;
+                        showPreviewModal.value = true;
+                    } else {
+                        showToast(`'${item.name}' ${getActionText(item.type)} 작동`);
+                    }
                 };
 
-                // Proxy Form Tools
+                const closePreviewModal = () => { showPreviewModal.value = false; previewItem.value = null; };
+                const printPreview = () => { window.print(); };
+                const downloadPreviewPDF = () => {
+                    const element = document.getElementById('preview-content');
+                    html2pdf().set({ margin: 10, filename: `${previewItem.value.name}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => showToast('PDF 다운로드 완료'));
+                };
+
                 const applyTemplate = (type) => {
                     const t = {
                         finance: { purpose: '금융업무 위임의 건', details: '1. 계좌 개설/해지\n2. 예금 입출금\n3. 관련 부수 행위 일체' },
@@ -1065,11 +1011,6 @@
                     if (t[type]) { proxyData.value.mandate.purpose = t[type].purpose; proxyData.value.mandate.details = t[type].details; }
                 };
 
-                const handleStampUpload = (e) => {
-                    const file = e.target.files[0];
-                    if (file) { const reader = new FileReader(); reader.onload = (e) => { stampImage.value = e.target.result; }; reader.readAsDataURL(file); }
-                };
-
                 const generatePDF = () => {
                     const element = document.getElementById('print-area');
                     html2pdf().set({ margin: 0, filename: '위임장.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save().then(() => showToast('PDF 저장 완료'));
@@ -1077,7 +1018,7 @@
                 const printForm = () => { window.print(); };
                 
                 const downloadCEOID = () => { 
-                    showToast('대표자 신분증 사본 다운로드 중...', 'success'); 
+                    showToast('대표자 신분증 사본 연결 중...', 'success'); 
                     window.open("https://zpzaiuqcoltshtsrllxx.supabase.co/storage/v1/object/sign/company_assets/Representative's%20ID%20Card.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81ZjA5NThjMi1lOWM5LTQ0NjYtOTZiMC04YWIyMzc1M2ViMzQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJjb21wYW55X2Fzc2V0cy9SZXByZXNlbnRhdGl2ZSdzIElEIENhcmQuanBnIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NjE2NzIzNCwiZXhwIjoyMTAxNTI3MjM0fQ.ZYsgDOTW71Fo3C0tnoJAZcyzH6BQ4rzHl-i4Pmnwivw", '_blank');
                 };
 
@@ -1088,27 +1029,23 @@
                 const getActionIcon = (t) => ({ download: 'fa-solid fa-download', document: 'fa-solid fa-pen', system: 'fa-solid fa-desktop', link: 'fa-solid fa-link', proxy_form: isAdminMode.value ? 'fa-solid fa-wand-magic-sparkles' : 'fa-solid fa-download' }[t] || 'fa-solid fa-play');
 
                 onMounted(() => {
-                    // 저장된 이메일 불러오기
                     const savedEmail = localStorage.getItem('savedEmail');
-                    if (savedEmail) {
-                        authForm.value.email = savedEmail;
-                        rememberId.value = true;
-                    }
-                    
-                    checkSession(); // 페이지 진입 시 세션 확인
+                    if (savedEmail) { authForm.value.email = savedEmail; rememberId.value = true; }
+                    checkSession();
                 });
 
                 return {
-                    authState, authForm, isAuthLoading, userProfile, handleLogin, handleRegister, handleLogout, // Auth
+                    authState, authForm, isAuthLoading, userProfile, handleLogin, handleRegister, handleLogout,
                     rememberId, keepLoggedIn,
-                    showUserModal, userList, openUserManagement, updateUserStatus, // Admin Users
+                    showUserModal, userList, openUserManagement, updateUserStatus,
                     isSidebarOpen, searchQuery, activeCategoryId, activeCategoryName, filteredItems, viewMode, menuGroups,
                     toggleSidebar, selectCategory, selectSubCategory, isCategoryActive,
                     isAdminMode, isDbConnected, seedDatabase,
                     showItemModal, showDeleteModal, isEditing, modalForm, itemToDelete,
                     openAddModal, openEditModal, closeModal, saveItem, confirmDelete, executeDelete, handleAction,
                     getIcon, getIconClass, getTypeName, getActionText, getActionIcon, downloadCEOID, toast,
-                    showProxyForm, proxyData, formattedDate, stampImage, applyTemplate, handleStampUpload, generatePDF, printForm
+                    showProxyForm, proxyData, formattedDate, stampImage, applyTemplate, generatePDF, printForm,
+                    showPreviewModal, previewItem, closePreviewModal, printPreview, downloadPreviewPDF
                 };
             }
         }).mount('#app');
