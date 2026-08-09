@@ -9,7 +9,6 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Lucide Icons (Browser Script) -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
@@ -18,6 +17,7 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -26,7 +26,6 @@
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
 
-        // Custom Icon Component to bridge with generic lucide script
         const Icon = ({ name, className }) => {
             const iconRef = React.useRef(null);
             React.useEffect(() => {
@@ -66,7 +65,6 @@
         const formatCurrency = (amount) => new Intl.NumberFormat('ko-KR').format(amount) + '원';
         const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
 
-        // 2026년 법정 공휴일 (대체공휴일 포함)
         const HOLIDAYS = {
             '01-01': '신정',
             '02-16': '설날 연휴', '02-17': '설날', '02-18': '설날 연휴',
@@ -130,9 +128,22 @@
             isRecurring: false, recurType: 'month', recurUntil: `${currentYear}-12-31`
           });
           const [fundingForm, setFundingForm] = useState({ date: '', source: '', type: '', amount: '', status: '계획' });
+          
+          // Using objects to track edit state to allow canceling
+          const [editingAccId, setEditingAccId] = useState(null);
+          const [editAccForm, setEditAccForm] = useState({ name: '', startDate: '', initialCapital: '' });
+          
+          const [editingClientIndex, setEditingClientIndex] = useState(null);
+          const [editClientValue, setEditClientValue] = useState('');
+
+          const [editingCatInIndex, setEditingCatInIndex] = useState(null);
+          const [editCatInValue, setEditCatInValue] = useState('');
+          
+          const [editingCatOutIndex, setEditingCatOutIndex] = useState(null);
+          const [editCatOutValue, setEditCatOutValue] = useState('');
+
           const [expandedMonths, setExpandedMonths] = useState({});
 
-          // Component Mount Re-render Icons
           useEffect(() => { if(window.lucide) window.lucide.createIcons(); }, [activeTab, activeMonth, selectedDate, role]);
 
           const toggleMonth = (month) => setExpandedMonths(prev => ({ ...prev, [month]: !prev[month] }));
@@ -304,91 +315,84 @@
                   const isExpanded = expandedMonths[month];
 
                   return (
-                    <div key={month} className={`bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all ${isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3 xl:col-span-4' : ''}`}>
-                      <div className="flex justify-between items-center border-b pb-2 mb-3">
-                        <h3 className="text-lg font-bold text-indigo-900">{month}월</h3>
-                        <button onClick={() => toggleMonth(month)} className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-indigo-600 bg-gray-50 px-2 py-1 rounded transition-colors">
-                          {isExpanded ? <><Icon name="chevron-up" className="w-3.5 h-3.5"/> 접기</> : <><Icon name="chevron-down" className="w-3.5 h-3.5"/> 펼치기 (일자별)</>}
-                        </button>
-                      </div>
-                      <div className="space-y-2 text-sm max-w-sm">
-                        <div className="flex justify-between text-gray-500"><span>월초 자금</span><span className="font-medium text-gray-800">{formatCurrency(startBal)}</span></div>
-                        <div className="flex justify-between text-blue-600"><span>월 총수입</span><span className="font-semibold">+{formatCurrency(monthIn)}</span></div>
-                        <div className="flex justify-between text-red-600"><span>월 총지출</span><span className="font-semibold">-{formatCurrency(monthOut)}</span></div>
-                        <div className="pt-2 border-t mt-2 flex justify-between items-center"><span className="font-medium text-gray-600">월말 자금</span><span className="text-base font-bold text-indigo-700">{formatCurrency(endBal)}</span></div>
-                      </div>
-                      
-                      {isExpanded && (
-                        <div className="mt-4 pt-3 border-t border-gray-100">
-                          <table className="w-full text-left text-[11px] border-collapse">
-                            <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
-                              <tr>
-                                <th className="py-2 px-3 font-medium w-16">일자</th>
-                                <th className="py-2 px-3 font-medium">수입</th>
-                                <th className="py-2 px-3 font-medium">지출</th>
-                                <th className="py-2 px-3 font-medium text-right">잔액</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {days.map(dStr => {
-                                const dData = dailyBalances[dStr];
-                                const dayNum = parseInt(dStr.split('-')[2], 10);
-                                const dayOfWeek = new Date(dStr).getDay();
-                                const isHol = HOLIDAYS[dStr.substring(5)];
-                                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6 || isHol;
-                                
-                                return (
-                                  <React.Fragment key={dStr}>
-                                      <tr className={`border-b border-gray-50 hover:bg-indigo-50/30 cursor-pointer ${isWeekend ? 'bg-gray-50/50' : ''}`} onClick={() => setSelectedDate(selectedDate === dStr ? null : dStr)}>
-                                        <td className="py-2 px-3 font-medium">
-                                            <span className={`${dayOfWeek === 0 || isHol ? 'text-red-500' : (dayOfWeek === 6 ? 'text-blue-500' : 'text-gray-700')}`}>{dayNum}일</span>
-                                            {isHol && <span className="text-[9px] text-red-400 block -mt-0.5">{isHol}</span>}
-                                        </td>
-                                        <td className="py-2 px-3 text-blue-600 font-semibold">{dData.in > 0 ? formatCurrency(dData.in).replace('원','') : '-'}</td>
-                                        <td className="py-2 px-3 text-red-600 font-semibold">{dData.out > 0 ? formatCurrency(dData.out).replace('원','') : '-'}</td>
-                                        <td className="py-2 px-3 text-right font-bold text-gray-800">{formatCurrency(dData.end).replace('원','')}</td>
-                                      </tr>
-                                      
-                                      {/* 클릭 시 펼쳐지는 상세 내역 행 */}
-                                      {selectedDate === dStr && txByDate[dStr] && txByDate[dStr].list.length > 0 && (
-                                          <tr className="bg-gray-100/50 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
-                                              <td colSpan="4" className="px-5 py-3">
-                                                  <div className="grid grid-cols-2 gap-4">
-                                                      <div>
-                                                          <p className="text-[10px] font-bold text-blue-600 mb-1 border-b border-blue-100 pb-1">수입 내역</p>
-                                                          <ul className="space-y-1">
-                                                              {txByDate[dStr].list.filter(t => t.type === 'IN').map(tx => (
-                                                                  <li key={tx.id} className="flex justify-between items-center text-[10px]">
-                                                                      <span className="truncate w-1/2" title={tx.client}>{tx.client}</span>
-                                                                      <span className="text-gray-500 w-1/4 truncate">{tx.category}</span>
-                                                                      <span className="font-semibold text-gray-800 text-right w-1/4">{formatCurrency(tx.amount)}</span>
-                                                                  </li>
-                                                              ))}
-                                                          </ul>
-                                                      </div>
-                                                      <div>
-                                                          <p className="text-[10px] font-bold text-red-600 mb-1 border-b border-red-100 pb-1">지출 내역</p>
-                                                          <ul className="space-y-1">
-                                                              {txByDate[dStr].list.filter(t => t.type === 'OUT').map(tx => (
-                                                                  <li key={tx.id} className="flex justify-between items-center text-[10px]">
-                                                                      <span className="truncate w-1/2" title={tx.client}>{tx.client}</span>
-                                                                      <span className="text-gray-500 w-1/4 truncate">{tx.category}</span>
-                                                                      <span className="font-semibold text-gray-800 text-right w-1/4">{formatCurrency(tx.amount)}</span>
-                                                                  </li>
-                                                              ))}
-                                                          </ul>
-                                                      </div>
-                                                  </div>
-                                              </td>
-                                          </tr>
-                                      )}
-                                  </React.Fragment>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                    <div key={month} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-2 mb-3">
+                            <h3 className="text-lg font-bold text-indigo-900">{month}월</h3>
+                            <button onClick={() => toggleMonth(month)} className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-indigo-600 bg-gray-50 px-2 py-1 rounded transition-colors">
+                                {isExpanded ? <><Icon name="chevron-up" className="w-3.5 h-3.5"/> 접기</> : <><Icon name="chevron-down" className="w-3.5 h-3.5"/> 펼치기</>}
+                            </button>
                         </div>
-                      )}
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-between text-gray-500"><span>월초 자금</span><span className="font-medium text-gray-800">{formatCurrency(startBal)}</span></div>
+                            <div className="flex justify-between text-blue-600"><span>월 총수입</span><span className="font-semibold">+{formatCurrency(monthIn)}</span></div>
+                            <div className="flex justify-between text-red-600"><span>월 총지출</span><span className="font-semibold">-{formatCurrency(monthOut)}</span></div>
+                            <div className="pt-2 border-t mt-2 flex justify-between items-center"><span className="font-medium text-gray-600">월말 자금</span><span className="text-base font-bold text-indigo-700">{formatCurrency(endBal)}</span></div>
+                        </div>
+                        
+                        {isExpanded && (
+                            <div className="mt-4 pt-3 border-t border-gray-100 overflow-visible">
+                                <table className="w-full text-left text-[11px] border-collapse">
+                                    <thead>
+                                        <tr className="text-gray-500 border-b border-gray-100">
+                                            <th className="py-1.5 font-medium">일자</th>
+                                            <th className="py-1.5 font-medium text-right">수입</th>
+                                            <th className="py-1.5 font-medium text-right">지출</th>
+                                            <th className="py-1.5 font-medium text-right">잔액</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {days.map(dStr => {
+                                            const dData = dailyBalances[dStr];
+                                            const dayNum = parseInt(dStr.split('-')[2], 10);
+                                            const txList = txByDate[dStr]?.list || [];
+                                            const [isTxOpen, setIsTxOpen] = useState(false);
+                                            
+                                            // 요일 및 공휴일 확인
+                                            const monthDayStr = dStr.substring(5);
+                                            const holidayName = HOLIDAYS[monthDayStr];
+                                            const dayOfWeek = new Date(dStr).getDay();
+                                            let dayColorClass = 'text-gray-700';
+                                            if (dayOfWeek === 0 || holidayName) dayColorClass = 'text-red-500 font-bold';
+                                            else if (dayOfWeek === 6) dayColorClass = 'text-blue-500 font-bold';
+
+                                            return (
+                                                <React.Fragment key={dStr}>
+                                                    <tr className="border-b border-gray-50 hover:bg-indigo-50/30 cursor-pointer" onClick={() => setIsTxOpen(!isTxOpen)}>
+                                                        <td className={`py-2 font-medium flex flex-col ${dayColorClass}`}>
+                                                            <span>{dayNum}일</span>
+                                                            {holidayName && <span className="text-[8px] leading-tight text-red-400 font-normal">{holidayName}</span>}
+                                                        </td>
+                                                        <td className="py-2 text-right text-blue-600 font-medium">{dData.in > 0 ? formatCurrency(dData.in).replace('원','') : '-'}</td>
+                                                        <td className="py-2 text-right text-red-600 font-medium">{dData.out > 0 ? formatCurrency(dData.out).replace('원','') : '-'}</td>
+                                                        <td className="py-2 text-right font-bold text-gray-800">{formatCurrency(dData.end).replace('원','')}</td>
+                                                    </tr>
+                                                    {isTxOpen && txList.length > 0 && (
+                                                        <tr>
+                                                            <td colSpan="4" className="p-0 border-b border-gray-100">
+                                                                <div className="bg-gray-50 p-2 text-[10px] space-y-1 rounded-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
+                                                                    {txList.map(tx => (
+                                                                        <div key={tx.id} className="flex justify-between items-center py-0.5 border-b border-gray-100 last:border-0">
+                                                                            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                                                                <span className={`px-1 rounded text-[9px] font-bold ${tx.type === 'IN' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>{tx.type === 'IN' ? '수입' : '지출'}</span>
+                                                                                <span className="text-gray-500 truncate w-16" title={tx.category}>{tx.category}</span>
+                                                                                <span className="font-medium text-gray-800 truncate">{tx.client}</span>
+                                                                            </div>
+                                                                            <span className={`font-bold shrink-0 ml-2 ${tx.type === 'IN' ? 'text-blue-600' : 'text-red-600'}`}>
+                                                                                {tx.type === 'IN' ? '+' : '-'}{formatCurrency(tx.amount)}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                   );
                 })}
@@ -407,19 +411,23 @@
                     <p className="text-gray-500 mt-1">계좌별로 수령한 지원금 및 대출금 내역을 모아봅니다.</p>
                   </div>
                   <div className="text-right bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
-                    <p className="text-xs text-gray-500 font-medium">총 수령 누계액</p>
-                    <p className="text-xl font-bold text-blue-600">{formatCurrency(totalGrants)}</p>
+                    <p className="text-xs text-gray-500 font-medium">총 수령 누계액</p><p className="text-xl font-bold text-blue-600">{formatCurrency(totalGrants)}</p>
                   </div>
                 </div>
+                
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                   <table className="w-full text-left border-collapse">
-                    <thead className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600"><tr><th className="p-4 font-semibold">날짜</th><th className="p-4 font-semibold">입금 계좌</th><th className="p-4 font-semibold">지원 기관(거래처)</th><th className="p-4 font-semibold">항목/메모</th><th className="p-4 font-semibold text-right">금액</th></tr></thead>
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600"><th className="p-4 font-semibold">날짜</th><th className="p-4 font-semibold">입금 계좌</th><th className="p-4 font-semibold">지원 기관(거래처)</th><th className="p-4 font-semibold">항목/메모</th><th className="p-4 font-semibold text-right">금액</th></tr>
+                    </thead>
                     <tbody>
-                      {grantTxs.length === 0 ? (<tr><td colSpan="5" className="p-8 text-center text-gray-400">내역이 없습니다.</td></tr>) : (grantTxs.sort((a,b) => new Date(b.date) - new Date(a.date)).map(tx => (
+                      {grantTxs.length === 0 ? (<tr><td colSpan="5" className="p-8 text-center text-gray-400">내역이 없습니다.</td></tr>) : (
+                        grantTxs.sort((a,b) => new Date(b.date) - new Date(a.date)).map(tx => (
                           <tr key={tx.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="p-4 text-sm">{tx.date}</td><td className="p-4 text-sm">{accounts.find(a => a.id === tx.accountId)?.name}</td><td className="p-4 text-sm font-medium">{tx.client}</td><td className="p-4 text-sm text-gray-600">{tx.category} {tx.note && <span className="text-xs text-gray-400 block">{tx.note}</span>}</td><td className="p-4 text-sm font-bold text-blue-600 text-right">{formatCurrency(tx.amount)}</td>
                           </tr>
-                      )))}
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -431,8 +439,9 @@
             <div className="p-6 bg-gray-50 flex-1 overflow-y-auto flex flex-col gap-6">
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><Icon name="piggy-bank" className="w-6 h-6 text-indigo-600" />자금 조달 계획</h2>
-                <p className="text-gray-500 mt-1">향후 발생할 대출, 투자유치, 지원금 등의 일정을 미리 등록하면 캘린더에 조달 뱃지가 표시됩니다.</p>
+                <p className="text-gray-500 mt-1">향후 발생할 대출, 투자유치, 지원금 등의 일정을 미리 등록하여 자금 경색을 방지하세요.</p>
               </div>
+
               {role === 'ADMIN' && (
                 <form onSubmit={handleAddFunding} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 grid grid-cols-5 gap-3 items-end">
                   <div className="flex flex-col gap-1"><label className="text-xs font-semibold text-gray-600">예정일</label><input type="date" required value={fundingForm.date} onChange={e => setFundingForm({...fundingForm, date: e.target.value})} className="border p-2 rounded text-sm"/></div>
@@ -442,16 +451,20 @@
                   <button type="submit" className="bg-indigo-600 text-white p-2 rounded text-sm font-bold hover:bg-indigo-700 h-[38px]">계획 등록</button>
                 </form>
               )}
+
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600"><tr><th className="p-4 font-semibold">예정일</th><th className="p-4 font-semibold">조달처</th><th className="p-4 font-semibold">유형</th><th className="p-4 font-semibold text-right">예상 조달금액</th><th className="p-4 font-semibold text-center">상태</th>{role === 'ADMIN' && <th className="p-4 font-semibold text-center">관리</th>}</tr></thead>
+                  <thead><tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600"><th className="p-4 font-semibold">예정일</th><th className="p-4 font-semibold">조달처</th><th className="p-4 font-semibold">유형</th><th className="p-4 font-semibold text-right">예상 조달금액</th><th className="p-4 font-semibold text-center">상태</th>{role === 'ADMIN' && <th className="p-4 font-semibold text-center">관리</th>}</tr></thead>
                   <tbody>
-                    {fundingPlans.length === 0 ? (<tr><td colSpan={role==='ADMIN'?6:5} className="p-8 text-center text-gray-400">등록된 조달 계획이 없습니다.</td></tr>) : (fundingPlans.sort((a,b) => new Date(a.date) - new Date(b.date)).map(plan => (
+                    {fundingPlans.length === 0 ? (<tr><td colSpan={role==='ADMIN'?6:5} className="p-8 text-center text-gray-400">등록된 조달 계획이 없습니다.</td></tr>) : (
+                      fundingPlans.sort((a,b) => new Date(a.date) - new Date(b.date)).map(plan => (
                         <tr key={plan.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-4 text-sm">{plan.date}</td><td className="p-4 text-sm font-medium">{plan.source}</td><td className="p-4 text-sm text-gray-600">{plan.type}</td><td className="p-4 text-sm font-bold text-indigo-600 text-right">{formatCurrency(plan.amount)}</td><td className="p-4 text-sm text-center"><span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-semibold">{plan.status}</span></td>
+                          <td className="p-4 text-sm">{plan.date}</td><td className="p-4 text-sm font-medium">{plan.source}</td><td className="p-4 text-sm text-gray-600">{plan.type}</td><td className="p-4 text-sm font-bold text-indigo-600 text-right">{formatCurrency(plan.amount)}</td>
+                          <td className="p-4 text-sm text-center"><span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-semibold">{plan.status}</span></td>
                           {role === 'ADMIN' && (<td className="p-4 text-center"><button onClick={() => handleDelete(plan.id, 'FUNDING')} className="text-gray-400 hover:text-red-500"><Icon name="trash-2" className="w-4 h-4 mx-auto"/></button></td>)}
                         </tr>
-                    )))}
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -462,66 +475,203 @@
             const [newCatIn, setNewCatIn] = useState('');
             const [newCatOut, setNewCatOut] = useState('');
             const [newAccName, setNewAccName] = useState('');
+            const [newAccDate, setNewAccDate] = useState(`${currentYear}-01-01`);
             const [newAccCap, setNewAccCap] = useState('');
-            const [newAccDate, setNewAccDate] = useState(todayStr);
             const [newClient, setNewClient] = useState('');
             
             if (!isSettingsOpen) return null;
 
             const handleAddAccount = () => {
               if (!newAccName || !newAccCap || !newAccDate) return;
-              const newAcc = { id: `acc_${Date.now()}`, name: newAccName, initialCapital: Number(newAccCap.replace(/[^0-9]/g, '')), startDate: newAccDate };
-              setAccounts([...accounts, newAcc]); setNewAccName(''); setNewAccCap(''); setNewAccDate(todayStr);
+              const newAcc = { id: `acc_${Date.now()}`, name: newAccName, startDate: newAccDate, initialCapital: Number(newAccCap.replace(/[^0-9]/g, '')) };
+              setAccounts([...accounts, newAcc]);
+              setNewAccName(''); setNewAccCap('');
+            };
+
+            const startEditAccount = (acc) => { setEditingAccId(acc.id); setEditAccForm({ name: acc.name, startDate: acc.startDate, initialCapital: new Intl.NumberFormat('ko-KR').format(acc.initialCapital) }); };
+            const saveEditAccount = () => {
+                setAccounts(accounts.map(acc => acc.id === editingAccId ? { ...acc, name: editAccForm.name, startDate: editAccForm.startDate, initialCapital: Number(editAccForm.initialCapital.replace(/[^0-9]/g, '')) } : acc));
+                setEditingAccId(null);
+            };
+
+            const saveEditClient = (oldClient, index) => {
+                if(!editClientValue) return;
+                const updatedClients = [...clients];
+                updatedClients[index] = editClientValue;
+                setClients(updatedClients);
+                // Also update existing transactions
+                setTransactions(transactions.map(t => t.client === oldClient ? { ...t, client: editClientValue } : t));
+                setEditingClientIndex(null);
+            };
+
+            const saveEditCategory = (oldCat, index, type) => {
+                if(type === 'IN') {
+                    if(!editCatInValue) return;
+                    const updated = [...inCategories]; updated[index] = editCatInValue; setInCategories(updated);
+                    setTransactions(transactions.map(t => (t.type === 'IN' && t.category === oldCat) ? { ...t, category: editCatInValue } : t));
+                    setEditingCatInIndex(null);
+                } else {
+                    if(!editCatOutValue) return;
+                    const updated = [...outCategories]; updated[index] = editCatOutValue; setOutCategories(updated);
+                    setTransactions(transactions.map(t => (t.type === 'OUT' && t.category === oldCat) ? { ...t, category: editCatOutValue } : t));
+                    setEditingCatOutIndex(null);
+                }
             };
             
             return (
-              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <div className="p-5 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
-                    <h3 className="text-lg font-bold flex items-center gap-2"><Icon name="settings" className="w-5 h-5"/> 관리자 환경 설정</h3>
-                    <button onClick={() => setIsSettingsOpen(false)}><Icon name="x" className="w-5 h-5 text-gray-500 hover:text-gray-800"/></button>
+              <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+                  <div className="p-5 border-b border-gray-200 flex justify-between items-center bg-white shrink-0">
+                    <h3 className="text-xl font-bold flex items-center gap-2 text-gray-800"><Icon name="settings" className="w-5 h-5 text-indigo-600"/> 관리자 환경 설정</h3>
+                    <button onClick={() => setIsSettingsOpen(false)} className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-red-50 text-gray-600 hover:text-red-600 hover:border-red-200 rounded-lg transition-colors font-bold text-sm bg-gray-50 border border-gray-200 shadow-sm">
+                      <Icon name="x" className="w-4 h-4"/> 설정 닫기
+                    </button>
                   </div>
-                  <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto flex-1 bg-gray-50/50">
                     <div className="space-y-8">
-                      <div>
-                        <h4 className="font-bold text-gray-800 mb-3 border-b border-gray-200 pb-2 flex items-center gap-2"><Icon name="wallet" className="w-4 h-4 text-indigo-600"/> 통장(계좌) 관리</h4>
-                        <div className="flex flex-col gap-2 mb-3 bg-gray-50 p-2 rounded border border-gray-200">
-                          <input type="text" value={newAccName} onChange={e=>setNewAccName(e.target.value)} placeholder="은행/통장명" className="border p-1.5 rounded w-full text-sm outline-none focus:border-indigo-500"/>
+                      {/* 통장 관리 */}
+                      <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <h4 className="font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2 flex items-center gap-2"><Icon name="wallet" className="w-4 h-4 text-indigo-600"/> 통장(계좌) 관리</h4>
+                        <div className="flex flex-col gap-2 mb-4 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
+                          <input type="text" value={newAccName} onChange={e=>setNewAccName(e.target.value)} placeholder="은행/통장명 (예: 국민은행 주거래)" className="border border-gray-300 p-2 rounded w-full text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"/>
                           <div className="flex gap-2">
-                              <input type="date" value={newAccDate} onChange={e=>setNewAccDate(e.target.value)} className="border p-1.5 rounded flex-1 text-sm outline-none focus:border-indigo-500"/>
-                              <input type="text" value={newAccCap} onChange={e=>{ const val = e.target.value.replace(/[^0-9]/g, ''); setNewAccCap(val ? new Intl.NumberFormat('ko-KR').format(val) : ''); }} placeholder="기초자금" className="border p-1.5 rounded flex-1 text-sm text-right outline-none focus:border-indigo-500"/>
-                              <button onClick={handleAddAccount} className="bg-indigo-600 text-white px-3 rounded text-sm font-medium hover:bg-indigo-700 transition-colors">추가</button>
-                          </div>
-                          <p className="text-[10px] text-gray-500 mt-1">※ 지정한 날짜부터 기초자금이 캘린더에 합산됩니다.</p>
-                        </div>
-                        <ul className="space-y-1.5 max-h-40 overflow-y-auto pr-2">
-                          {accounts.map(acc => (
-                            <li key={acc.id} className="flex justify-between items-center bg-gray-50 p-2 rounded text-sm border border-gray-100">
-                              <div className="flex flex-col">
-                                  <span className="font-medium">{acc.name}</span>
-                                  <span className="text-[10px] text-gray-400">시작일: {acc.startDate}</span>
+                              <div className="flex-1 flex flex-col gap-1">
+                                  <label className="text-[10px] font-bold text-gray-500">기초자금 시작일</label>
+                                  <input type="date" value={newAccDate} onChange={e=>setNewAccDate(e.target.value)} className="border border-gray-300 p-2 rounded text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full"/>
                               </div>
-                              <div className="flex items-center gap-3"><span className="text-gray-600 text-xs font-semibold">{formatCurrency(acc.initialCapital)}</span><button onClick={() => setAccounts(accounts.filter(a => a.id !== acc.id))} className="text-gray-400 hover:text-red-500"><Icon name="trash-2" className="w-4 h-4"/></button></div>
+                              <div className="flex-1 flex flex-col gap-1">
+                                  <label className="text-[10px] font-bold text-gray-500">시작 잔액</label>
+                                  <input type="text" value={newAccCap} onChange={e=>{ const val = e.target.value.replace(/[^0-9]/g, ''); setNewAccCap(val ? new Intl.NumberFormat('ko-KR').format(val) : ''); }} placeholder="0" className="border border-gray-300 p-2 rounded text-sm text-right outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full"/>
+                              </div>
+                              <div className="flex flex-col justify-end gap-1">
+                                  <button onClick={handleAddAccount} className="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-indigo-700 transition-colors h-[38px] shadow-sm">추가</button>
+                              </div>
+                          </div>
+                        </div>
+                        <ul className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                          {accounts.map(acc => (
+                            <li key={acc.id} className="bg-white p-3 rounded-lg text-sm border border-gray-200 shadow-sm hover:border-indigo-300 transition-colors">
+                              {editingAccId === acc.id ? (
+                                  <div className="flex flex-col gap-2">
+                                      <input type="text" value={editAccForm.name} onChange={e=>setEditAccForm({...editAccForm, name: e.target.value})} className="border border-indigo-300 p-1.5 rounded text-sm w-full focus:ring-1 focus:ring-indigo-500 outline-none" />
+                                      <div className="flex gap-2 items-center">
+                                          <input type="date" value={editAccForm.startDate} onChange={e=>setEditAccForm({...editAccForm, startDate: e.target.value})} className="border border-indigo-300 p-1.5 rounded text-xs flex-1 outline-none" />
+                                          <input type="text" value={editAccForm.initialCapital} onChange={e=>{ const val = e.target.value.replace(/[^0-9]/g, ''); setEditAccForm({...editAccForm, initialCapital: val ? new Intl.NumberFormat('ko-KR').format(val) : ''}); }} className="border border-indigo-300 p-1.5 rounded text-xs flex-1 text-right outline-none" />
+                                          <div className="flex gap-1">
+                                            <button onClick={saveEditAccount} className="px-3 py-1.5 bg-emerald-500 text-white font-bold rounded text-xs hover:bg-emerald-600 shadow-sm">저장</button>
+                                            <button onClick={() => setEditingAccId(null)} className="px-3 py-1.5 bg-gray-200 text-gray-700 font-bold rounded text-xs hover:bg-gray-300 shadow-sm">취소</button>
+                                          </div>
+                                      </div>
+                                  </div>
+                              ) : (
+                                  <div className="flex justify-between items-center">
+                                      <div className="flex flex-col flex-1 min-w-0 pr-2">
+                                          <span className="font-bold text-gray-800 truncate">{acc.name}</span>
+                                          <span className="text-[11px] text-gray-500 font-medium">시작일: {acc.startDate} <span className="mx-1">|</span> {formatCurrency(acc.initialCapital)}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1 shrink-0">
+                                          <button onClick={() => startEditAccount(acc)} className="px-2 py-1 bg-gray-50 border border-gray-200 text-blue-600 font-bold rounded text-xs hover:bg-blue-50 shadow-sm">수정</button>
+                                          <button onClick={() => setAccounts(accounts.filter(a => a.id !== acc.id))} className="px-2 py-1 bg-gray-50 border border-gray-200 text-red-600 font-bold rounded text-xs hover:bg-red-50 shadow-sm">삭제</button>
+                                      </div>
+                                  </div>
+                              )}
                             </li>
                           ))}
                         </ul>
                       </div>
-                      <div>
-                        <h4 className="font-bold text-gray-800 mb-3 border-b border-gray-200 pb-2 flex items-center gap-2"><Icon name="building-2" className="w-4 h-4 text-indigo-600"/> 거래처 관리</h4>
-                        <div className="flex gap-2 mb-3"><input type="text" value={newClient} onChange={e=>setNewClient(e.target.value)} placeholder="새 거래처명" className="border p-1.5 rounded flex-1 text-sm outline-none focus:border-indigo-500"/><button onClick={() => { if(newClient) { setClients([...clients, newClient]); setNewClient('');} }} className="bg-indigo-600 text-white px-3 rounded text-sm font-medium hover:bg-indigo-700 transition-colors">추가</button></div>
-                        <ul className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-2">{clients.map((c, i) => (<li key={i} className="flex justify-between items-center bg-gray-50 p-1.5 rounded text-sm border border-gray-100"><span className="truncate w-full pr-2 text-xs">{c}</span><button onClick={() => setClients(clients.filter(client => client !== c))} className="text-gray-400 hover:text-red-500 shrink-0"><Icon name="trash-2" className="w-3.5 h-3.5"/></button></li>))}</ul>
+                      
+                      {/* 거래처 관리 */}
+                      <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <h4 className="font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2 flex items-center gap-2"><Icon name="building-2" className="w-4 h-4 text-indigo-600"/> 거래처 관리</h4>
+                        <div className="flex gap-2 mb-4">
+                            <input type="text" value={newClient} onChange={e=>setNewClient(e.target.value)} placeholder="새 거래처명" className="border border-gray-300 p-2 rounded flex-1 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"/>
+                            <button onClick={() => { if(newClient) { setClients([...clients, newClient]); setNewClient('');} }} className="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm">추가</button>
+                        </div>
+                        <ul className="grid grid-cols-1 gap-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                            {clients.map((c, i) => (
+                                <li key={i} className="bg-gray-50 p-2.5 rounded-lg text-sm border border-gray-200 hover:bg-white hover:border-indigo-200 transition-colors flex items-center justify-between">
+                                    {editingClientIndex === i ? (
+                                        <div className="flex w-full items-center gap-2">
+                                            <input type="text" value={editClientValue} onChange={e => setEditClientValue(e.target.value)} className="flex-1 text-sm p-1.5 border border-indigo-300 rounded outline-none focus:ring-1 focus:ring-indigo-500" autoFocus />
+                                            <button onClick={() => saveEditClient(c, i)} className="px-2 py-1.5 bg-emerald-500 text-white font-bold rounded hover:bg-emerald-600 text-xs shadow-sm">저장</button>
+                                            <button onClick={() => setEditingClientIndex(null)} className="px-2 py-1.5 bg-gray-200 text-gray-700 font-bold rounded hover:bg-gray-300 text-xs shadow-sm">취소</button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="truncate flex-1 text-sm font-bold text-gray-700 mr-2">{c}</span>
+                                            <div className="flex gap-1 shrink-0">
+                                                <button onClick={() => {setEditingClientIndex(i); setEditClientValue(c);}} className="px-2 py-1 bg-white border border-gray-200 text-blue-600 font-bold rounded text-[11px] hover:bg-blue-50 shadow-sm">수정</button>
+                                                <button onClick={() => setClients(clients.filter((_, idx) => idx !== i))} className="px-2 py-1 bg-white border border-gray-200 text-red-600 font-bold rounded text-[11px] hover:bg-red-50 shadow-sm">삭제</button>
+                                            </div>
+                                        </>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
                       </div>
                     </div>
+
                     <div className="space-y-8">
-                      <div>
-                        <h4 className="font-bold text-blue-700 mb-3 border-b border-blue-200 pb-2">수입 유형 (카테고리) 관리</h4>
-                        <div className="flex gap-2 mb-3"><input type="text" value={newCatIn} onChange={e=>setNewCatIn(e.target.value)} placeholder="새 수입항목" className="border p-1.5 rounded flex-1 text-sm focus:border-blue-500 outline-none"/><button onClick={() => { if(newCatIn) { setInCategories([...inCategories, newCatIn]); setNewCatIn('');} }} className="bg-blue-600 text-white px-3 rounded text-sm font-medium hover:bg-blue-700 transition-colors">추가</button></div>
-                        <ul className="max-h-40 overflow-y-auto border border-gray-200 rounded p-1.5 text-sm space-y-1 bg-gray-50/50">{inCategories.map((c, i) => (<li key={i} className="flex justify-between items-center hover:bg-white p-1.5 rounded border border-transparent hover:border-gray-200 transition-colors"><span className="text-gray-700">{c}</span><button onClick={() => setInCategories(inCategories.filter(cat => cat !== c))} className="text-gray-400 hover:text-red-500"><Icon name="trash-2" className="w-4 h-4"/></button></li>))}</ul>
+                      {/* 수입 카테고리 관리 */}
+                      <div className="bg-white p-5 rounded-xl border border-blue-200 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
+                        <h4 className="font-bold text-blue-700 mb-4 border-b border-gray-100 pb-2">수입 유형 (카테고리) 관리</h4>
+                        <div className="flex gap-2 mb-4">
+                            <input type="text" value={newCatIn} onChange={e=>setNewCatIn(e.target.value)} placeholder="새 수입항목" className="border border-gray-300 p-2 rounded flex-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"/>
+                            <button onClick={() => { if(newCatIn) { setInCategories([...inCategories, newCatIn]); setNewCatIn('');} }} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm">추가</button>
+                        </div>
+                        <ul className="max-h-[250px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                            {inCategories.map((c, i) => (
+                                <li key={i} className="flex justify-between items-center bg-gray-50 hover:bg-blue-50/50 p-3 rounded-lg border border-gray-200 hover:border-blue-200 transition-colors">
+                                    {editingCatInIndex === i ? (
+                                        <div className="flex w-full items-center gap-2">
+                                            <input type="text" value={editCatInValue} onChange={e => setEditCatInValue(e.target.value)} className="flex-1 text-sm p-1.5 border border-blue-300 rounded outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
+                                            <button onClick={() => saveEditCategory(c, i, 'IN')} className="px-2 py-1.5 bg-emerald-500 text-white font-bold rounded hover:bg-emerald-600 text-xs shadow-sm">저장</button>
+                                            <button onClick={() => setEditingCatInIndex(null)} className="px-2 py-1.5 bg-gray-200 text-gray-700 font-bold rounded hover:bg-gray-300 text-xs shadow-sm">취소</button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="text-gray-700 font-bold text-sm truncate flex-1 mr-2">{c}</span>
+                                            <div className="flex gap-1 shrink-0">
+                                                <button onClick={() => {setEditingCatInIndex(i); setEditCatInValue(c);}} className="px-2 py-1 bg-white border border-gray-200 text-blue-600 font-bold rounded text-[11px] hover:bg-blue-50 shadow-sm">수정</button>
+                                                <button onClick={() => setInCategories(inCategories.filter((_, idx) => idx !== i))} className="px-2 py-1 bg-white border border-gray-200 text-red-600 font-bold rounded text-[11px] hover:bg-red-50 shadow-sm">삭제</button>
+                                            </div>
+                                        </>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
                       </div>
-                      <div>
-                        <h4 className="font-bold text-red-700 mb-3 border-b border-red-200 pb-2">지출 유형 (카테고리) 관리</h4>
-                        <div className="flex gap-2 mb-3"><input type="text" value={newCatOut} onChange={e=>setNewCatOut(e.target.value)} placeholder="새 지출항목" className="border p-1.5 rounded flex-1 text-sm focus:border-red-500 outline-none"/><button onClick={() => { if(newCatOut) { setOutCategories([...outCategories, newCatOut]); setNewCatOut('');} }} className="bg-red-600 text-white px-3 rounded text-sm font-medium hover:bg-red-700 transition-colors">추가</button></div>
-                        <ul className="max-h-40 overflow-y-auto border border-gray-200 rounded p-1.5 text-sm space-y-1 bg-gray-50/50">{outCategories.map((c, i) => (<li key={i} className="flex justify-between items-center hover:bg-white p-1.5 rounded border border-transparent hover:border-gray-200 transition-colors"><span className="text-gray-700">{c}</span><button onClick={() => setOutCategories(outCategories.filter(cat => cat !== c))} className="text-gray-400 hover:text-red-500"><Icon name="trash-2" className="w-4 h-4"/></button></li>))}</ul>
+                      
+                      {/* 지출 카테고리 관리 */}
+                      <div className="bg-white p-5 rounded-xl border border-red-200 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
+                        <h4 className="font-bold text-red-700 mb-4 border-b border-gray-100 pb-2">지출 유형 (카테고리) 관리</h4>
+                        <div className="flex gap-2 mb-4">
+                            <input type="text" value={newCatOut} onChange={e=>setNewCatOut(e.target.value)} placeholder="새 지출항목" className="border border-gray-300 p-2 rounded flex-1 text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none"/>
+                            <button onClick={() => { if(newCatOut) { setOutCategories([...outCategories, newCatOut]); setNewCatOut('');} }} className="bg-red-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-red-700 transition-colors shadow-sm">추가</button>
+                        </div>
+                        <ul className="max-h-[250px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                            {outCategories.map((c, i) => (
+                                <li key={i} className="flex justify-between items-center bg-gray-50 hover:bg-red-50/50 p-3 rounded-lg border border-gray-200 hover:border-red-200 transition-colors">
+                                     {editingCatOutIndex === i ? (
+                                        <div className="flex w-full items-center gap-2">
+                                            <input type="text" value={editCatOutValue} onChange={e => setEditCatOutValue(e.target.value)} className="flex-1 text-sm p-1.5 border border-red-300 rounded outline-none focus:ring-1 focus:ring-red-500" autoFocus />
+                                            <button onClick={() => saveEditCategory(c, i, 'OUT')} className="px-2 py-1.5 bg-emerald-500 text-white font-bold rounded hover:bg-emerald-600 text-xs shadow-sm">저장</button>
+                                            <button onClick={() => setEditingCatOutIndex(null)} className="px-2 py-1.5 bg-gray-200 text-gray-700 font-bold rounded hover:bg-gray-300 text-xs shadow-sm">취소</button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="text-gray-700 font-bold text-sm truncate flex-1 mr-2">{c}</span>
+                                            <div className="flex gap-1 shrink-0">
+                                                <button onClick={() => {setEditingCatOutIndex(i); setEditCatOutValue(c);}} className="px-2 py-1 bg-white border border-gray-200 text-blue-600 font-bold rounded text-[11px] hover:bg-blue-50 shadow-sm">수정</button>
+                                                <button onClick={() => setOutCategories(outCategories.filter((_, idx) => idx !== i))} className="px-2 py-1 bg-white border border-gray-200 text-red-600 font-bold rounded text-[11px] hover:bg-red-50 shadow-sm">삭제</button>
+                                            </div>
+                                        </>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
                       </div>
                     </div>
                   </div>
@@ -538,10 +688,18 @@
             <div className="min-h-screen bg-gray-100 text-gray-800 font-sans flex flex-col h-screen overflow-hidden">
               <header className="bg-indigo-900 text-white px-6 py-3 flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-3">
+                  <a href="index.html" title="사내 업무 포털로 돌아가기" className="flex items-center gap-1.5 p-2 bg-indigo-800 hover:bg-indigo-700 text-indigo-100 hover:text-white rounded-lg transition-colors mr-2 border border-indigo-700 shadow-sm">
+                    <Icon name="home" className="w-5 h-5" />
+                  </a>
+                  
                   <Icon name="wallet" className="w-6 h-6 text-indigo-300" />
                   <h1 className="text-xl font-bold tracking-tight">Enterprise 스마트 자금 관리</h1>
-                  <div className="ml-8 flex gap-1 bg-indigo-800/50 p-1 rounded-lg">
-                    {[ { id: 'CALENDAR', icon: 'calendar', label: '월별상세' }, { id: 'YEARLY', icon: 'line-chart', label: '전체보기(연간)' }, { id: 'GRANTS', icon: 'landmark', label: '정부지원금' }, { id: 'FUNDING', icon: 'piggy-bank', label: '조달계획' }
+                  <div className="ml-8 flex gap-1 bg-indigo-800/50 p-1 rounded-lg hidden lg:flex">
+                    {[
+                      { id: 'CALENDAR', icon: 'calendar', label: '월별상세' },
+                      { id: 'YEARLY', icon: 'line-chart', label: '전체보기(연간)' },
+                      { id: 'GRANTS', icon: 'landmark', label: '정부지원금' },
+                      { id: 'FUNDING', icon: 'piggy-bank', label: '조달계획' }
                     ].map(tab => (
                       <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeTab === tab.id ? 'bg-white text-indigo-900 shadow-sm' : 'text-indigo-200 hover:text-white hover:bg-indigo-700/50'}`}>
                         <Icon name={tab.icon} className="w-4 h-4" />{tab.label}
