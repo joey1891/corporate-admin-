@@ -17,18 +17,9 @@
             content: '↓'; position: absolute; left: 50%; bottom: -1.5rem; transform: translateX(-50%);
             color: #cbd5e1; font-weight: bold;
         }
-        .approval-stamp {
-            border: 3px solid #10b981; color: #10b981; padding: 4px 8px;
-            font-weight: 800; border-radius: 8px; transform: rotate(-15deg);
-            display: inline-block; font-size: 0.75rem; text-transform: uppercase;
-        }
-        .reject-stamp {
-            border: 3px solid #ef4444; color: #ef4444; padding: 4px 8px;
-            font-weight: 800; border-radius: 8px; transform: rotate(-15deg);
-            display: inline-block; font-size: 0.75rem; text-transform: uppercase;
-        }
-
-        /* --- 계층형 조직도 차트 CSS --- */
+        
+        /* 조직도 트리 디자인 CSS */
+        .tree-container { display: flex; justify-content: center; padding: 20px; overflow-x: auto; }
         .tree ul { padding-top: 20px; position: relative; transition: all 0.5s; display: flex; justify-content: center; }
         .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; transition: all 0.5s; }
         .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #cbd5e1; width: 50%; height: 20px; }
@@ -39,128 +30,119 @@
         .tree li:last-child::before { border-right: 2px solid #cbd5e1; border-radius: 0 5px 0 0; }
         .tree li:first-child::after { border-radius: 5px 0 0 0; }
         .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #cbd5e1; width: 0; height: 20px; }
+        .tree li a { border: 1px solid #e2e8f0; padding: 10px 15px; text-decoration: none; color: #334155; font-family: arial, verdana, tahoma; font-size: 11px; display: inline-block; border-radius: 12px; transition: all 0.5s; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); min-w-[120px]; }
+        .tree li a:hover, .tree li a:hover+ul li a { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
         
-        .org-node-box { display: inline-block; padding: 12px 24px; border-radius: 12px; border: 1px solid #e2e8f0; background: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); min-width: 140px; transition: all 0.2s; }
-        .org-node-box:hover { border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-        .node-dept { font-size: 0.65rem; color: #64748b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-        .node-name { font-size: 0.875rem; font-weight: bold; color: #0f172a; }
-        .node-rank { font-size: 0.75rem; color: #3b82f6; font-weight: 600; margin-left: 4px; }
-
-        /* --- 스마트 에디터 내부 표 스타일 CSS --- */
-        #draft-content-editor table { width: 100%; border-collapse: collapse; margin-top: 1rem; margin-bottom: 1rem; }
-        #draft-content-editor th, #draft-content-editor td { border: 1px solid #cbd5e1; padding: 0.75rem; text-align: center; font-size: 0.875rem; }
-        #draft-content-editor th { background-color: #f8fafc; font-weight: bold; color: #475569; }
-        #draft-content-editor p { margin-bottom: 0.5rem; }
+        /* 에디터 내부 테이블 스타일 */
+        #draft-content-editor table, #detail-content-editor table { border-collapse: collapse; width: 100%; margin-top: 10px; margin-bottom: 10px; }
+        #draft-content-editor th, #detail-content-editor th, #draft-content-editor td, #detail-content-editor td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
+        #draft-content-editor th, #detail-content-editor th { background-color: #f1f5f9; font-weight: bold; }
+        
+        /* 다크모드 미니 트리 및 Drag & Drop 용 CSS */
+        .dark-tree li::before, .dark-tree li::after { border-color: #475569; }
+        .dark-tree li:last-child::before { border-color: #475569; }
+        .dark-tree ul ul::before { border-color: #475569; }
+        .drop-zone-active { box-shadow: inset 0 0 0 2px #3b82f6; background-color: rgba(30, 41, 59, 0.7); }
     </style>
 </head>
 <body class="text-slate-800">
 
     <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col shrink-0">
+        <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col shrink-0 z-40">
             <div class="p-8">
                 <div class="flex items-center space-x-3 text-white">
-                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold shadow-lg shadow-blue-500/30">S</div>
-                    <span class="font-bold text-xl tracking-tight">Smart-E <span class="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded ml-1 align-middle">ADMIN</span></span>
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold">S</div>
+                    <span class="font-bold text-xl">Smart-E <span class="text-xs text-blue-400">ADMIN</span></span>
                 </div>
             </div>
 
             <nav class="flex-1 px-4 space-y-1">
-                <p class="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2">Main Console</p>
+                <p class="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Main Console</p>
                 <button onclick="changeTab('dashboard')" id="tab-dashboard" class="w-full flex items-center space-x-3 p-3 rounded-xl tab-active transition">
-                    <span>📊</span> <span class="font-medium text-sm">통합 대시보드</span>
+                    <span>📊</span> <span>통합 대시보드</span>
                 </button>
                 <button onclick="changeTab('global-list')" id="tab-global-list" class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-900 transition">
-                    <span>📂</span> <span class="font-medium text-sm">전사 문서 관리</span>
+                    <span>📂</span> <span>전사 문서 관리</span>
                 </button>
                 
-                <p class="px-4 py-2 mt-8 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Master Data</p>
+                <p class="px-4 py-2 mt-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Master Data</p>
                 <button onclick="changeTab('org-config')" id="tab-org-config" class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-900 transition">
-                    <span>🏢</span> <span class="font-medium text-sm">조직도 및 인사 관리</span>
+                    <span>🏢</span> <span>조직도 및 인사 관리</span>
                 </button>
                 <button onclick="changeTab('rule-config')" id="tab-rule-config" class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-900 transition">
-                    <span>📜</span> <span class="font-medium text-sm">위임전결규정 설정</span>
+                    <span>📜</span> <span>위임전결규정 설정</span>
                 </button>
             </nav>
 
             <div class="p-6 border-t border-slate-900">
-                <div class="bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-2 flex items-center justify-between">
-                        System Status
-                        <span class="relative flex h-2 w-2">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                    </p>
+                <div class="bg-slate-900 p-4 rounded-2xl">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">System Status</p>
                     <div class="flex items-center justify-between">
                         <span class="text-xs text-emerald-400 font-medium">● Connected</span>
-                        <span class="text-[10px] font-mono text-slate-600">v3.0.0</span>
+                        <span class="text-[10px] font-mono">v3.5.0</span>
                     </div>
                 </div>
             </div>
         </aside>
 
-        <!-- Main Body -->
         <div class="flex-1 flex flex-col overflow-hidden relative">
-            <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 z-30">
+            <!-- Top Header with Role Switcher -->
+            <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 z-30 shadow-sm">
                 <div>
                     <h2 id="current-tab-title" class="text-xl font-bold text-slate-900">통합 대시보드</h2>
-                    <p id="current-tab-desc" class="text-xs text-slate-500 mt-0.5">전사 결재 현황을 실시간으로 모니터링합니다.</p>
+                    <p id="current-tab-desc" class="text-xs text-slate-500">전사 결재 현황을 실시간으로 모니터링합니다.</p>
                 </div>
                 
                 <div class="flex items-center space-x-6">
-                    <div class="flex items-center bg-slate-50 rounded-2xl p-1.5 border border-slate-200 shadow-sm">
-                        <span class="text-[10px] font-bold text-slate-400 px-4 uppercase tracking-wider">Identity Switch</span>
-                        <select onchange="switchIdentity(this.value)" id="identity-selector" class="bg-white border border-slate-200 rounded-xl text-sm font-bold text-blue-700 px-4 py-1.5 focus:ring-2 focus:ring-blue-200 cursor-pointer shadow-sm outline-none">
+                    <div class="flex items-center bg-slate-100 rounded-2xl p-1.5 border border-slate-200">
+                        <span class="text-xs font-bold text-slate-400 px-3 uppercase tracking-tighter">Identity Switch</span>
+                        <select onchange="switchIdentity(this.value)" id="identity-selector" class="bg-white border-none rounded-xl text-sm font-bold text-blue-700 px-4 py-1.5 focus:ring-2 focus:ring-blue-200 cursor-pointer outline-none">
                             <!-- Injected from JS -->
                         </select>
                     </div>
                     <div class="text-right">
                         <p id="active-user-name" class="text-sm font-bold text-slate-900">최고관리자</p>
-                        <p id="active-user-role" class="text-[10px] text-slate-500 font-medium mt-0.5">시스템 총괄 / IT본부</p>
+                        <p id="active-user-role" class="text-[10px] text-slate-500 font-medium">시스템 총괄 / IT본부</p>
                     </div>
                 </div>
             </header>
 
             <!-- Scrollable Workspace -->
-            <div id="main-scroll" class="flex-1 overflow-y-auto p-8 scroll-hide">
+            <div id="main-scroll" class="flex-1 overflow-y-auto p-8 scroll-hide bg-slate-50">
                 
                 <div id="view-dashboard" class="space-y-8 animate-in fade-in duration-500">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div class="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm relative overflow-hidden group">
-                            <div class="absolute top-0 right-0 p-6 text-slate-100 group-hover:scale-110 transition duration-300">
-                                <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>
-                            </div>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2 relative z-10">총 기안 문서</p>
-                            <h3 id="stat-total" class="text-4xl font-black text-slate-800 relative z-10">0</h3>
+                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">총 기안 문서</p>
+                            <h3 id="stat-total" class="text-3xl font-bold text-slate-900">0</h3>
                         </div>
-                        <div class="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm relative overflow-hidden group">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2 relative z-10">결재 대기</p>
-                            <h3 id="stat-pending" class="text-4xl font-black text-blue-600 relative z-10">0</h3>
+                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">결재 대기</p>
+                            <h3 id="stat-pending" class="text-3xl font-bold text-blue-600">0</h3>
                         </div>
-                        <div class="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm relative overflow-hidden group">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2 relative z-10">최종 승인 (완료)</p>
-                            <h3 id="stat-completed" class="text-4xl font-black text-emerald-500 relative z-10">0</h3>
+                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">최종 승인</p>
+                            <h3 id="stat-completed" class="text-3xl font-bold text-emerald-600">0</h3>
                         </div>
-                        <div class="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm relative overflow-hidden group">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2 relative z-10">반려 처리</p>
-                            <h3 id="stat-rejected" class="text-4xl font-black text-rose-500 relative z-10">0</h3>
+                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">반려 처리</p>
+                            <h3 id="stat-rejected" class="text-3xl font-bold text-rose-500">0</h3>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                        <div class="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm">
-                            <h4 class="font-bold mb-6 flex justify-between items-center text-slate-800">
-                                <span>조직 단위별 결재 효율 (Lead Time)</span>
-                                <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded font-medium">Real-time Data</span>
+                        <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm">
+                            <h4 class="font-bold mb-6 flex justify-between items-center">
+                                <span>부서별 결재 효율</span>
+                                <span class="text-[10px] text-slate-400 font-normal italic">Update: Just now</span>
                             </h4>
                             <div class="chart-container">
                                 <canvas id="deptEfficiencyChart"></canvas>
                             </div>
                         </div>
-                        <div class="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                            <h4 class="font-bold mb-6 text-slate-800">전사 최신 결재 로그</h4>
-                            <div id="recent-logs" class="space-y-3 flex-1 overflow-y-auto pr-2">
+                        <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm overflow-hidden">
+                            <h4 class="font-bold mb-6">최신 결재 로그 (전사)</h4>
+                            <div id="recent-logs" class="space-y-4 max-h-[300px] overflow-y-auto pr-2">
                                 <!-- Logs Injected -->
                             </div>
                         </div>
@@ -168,73 +150,66 @@
                 </div>
 
                 <div id="view-global-list" class="hidden space-y-6 animate-in fade-in duration-500">
-                    <div class="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                             <div class="flex items-center space-x-4">
-                                <button onclick="openDraftModal()" class="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-md hover:shadow-lg flex items-center space-x-2">
-                                    <span>+</span> <span>새 문서 기안</span>
-                                </button>
-                                <span class="text-slate-300">|</span>
-                                <p class="text-sm font-bold text-slate-600">전체 목록 (<span id="global-count" class="text-blue-600">0</span>)</p>
+                                <button onclick="openDraftModal()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-md">새 문서 기안하기</button>
+                                <span class="text-xs text-slate-400">|</span>
+                                <p class="text-sm font-bold text-slate-600">전사 모든 문서 (<span id="global-count">0</span>)</p>
                             </div>
-                            <div class="flex space-x-3">
-                                <input type="text" placeholder="검색어 입력..." class="text-sm border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-100 bg-white shadow-sm w-64">
+                            <div class="flex space-x-2">
+                                <input type="text" placeholder="제목, 기안자 검색..." class="text-sm border border-slate-200 rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-blue-200">
                             </div>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="bg-white border-b border-slate-100 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                                    <tr>
-                                        <th class="px-8 py-4">기안자/소속</th>
-                                        <th class="px-8 py-4">문서 유형</th>
-                                        <th class="px-8 py-4">문서 제목</th>
-                                        <th class="px-8 py-4 text-right">기안 금액 (₩)</th>
-                                        <th class="px-8 py-4 text-center">진행 상태</th>
-                                        <th class="px-8 py-4 text-center">액션</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="global-doc-tbody" class="text-sm font-medium">
-                                    <!-- Records Injected -->
-                                </tbody>
-                            </table>
-                        </div>
+                        <table class="w-full text-left bg-white">
+                            <thead class="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="px-8 py-4">기안자/부서</th>
+                                    <th class="px-8 py-4">분류 / 문서 유형</th>
+                                    <th class="px-8 py-4">문서 제목</th>
+                                    <th class="px-8 py-4 text-right">기안 금액</th>
+                                    <th class="px-8 py-4 text-center">진행 상태</th>
+                                    <th class="px-8 py-4 text-center">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody id="global-doc-tbody" class="text-sm font-medium">
+                                <!-- Records Injected -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
                 <div id="view-org-config" class="hidden space-y-8 animate-in fade-in duration-500">
-                    <!-- 계층형 차트 뷰 추가 -->
-                    <div class="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm overflow-x-auto">
-                        <div class="flex justify-between items-center mb-6">
-                            <div>
-                                <h4 class="text-lg font-bold text-slate-800 flex items-center space-x-2"><span>🏢</span> <span>조직 구조 시각화 (Hierarchy Chart)</span></h4>
-                                <p class="text-xs text-slate-500 mt-1">부문 > 본부 > 팀 체계로 이뤄진 전사 구조입니다.</p>
-                            </div>
-                        </div>
-                        
-                        <div class="tree-container p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                            <div class="tree" id="org-tree-render">
-                                <!-- Tree rendered via JS -->
-                            </div>
+                    <!-- Tree View -->
+                    <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm">
+                        <h4 class="text-lg font-bold mb-2">전사 조직도 시각화 차트</h4>
+                        <p class="text-xs text-slate-500 mb-6">부문, 본부, 팀으로 구성된 전사 계층도를 확인합니다.</p>
+                        <div class="tree-container bg-slate-50 rounded-3xl border border-slate-100 overflow-x-auto p-8" id="org-tree-chart">
+                            <!-- Tree Injected via JS -->
                         </div>
                     </div>
 
-                    <div class="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm">
-                        <div class="flex justify-between items-center mb-6">
-                            <h4 class="text-lg font-bold text-slate-800">임직원 목록 (상세 리스트)</h4>
-                            <button class="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-800 transition shadow-sm">+ 신규 인원 등록</button>
+                    <!-- Table View -->
+                    <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-8">
+                            <div>
+                                <h4 class="text-lg font-bold">임직원 리스트 관리</h4>
+                                <p class="text-xs text-slate-500">조직 구성원 및 상위 결재권자를 정의합니다.</p>
+                            </div>
+                            <button class="bg-slate-900 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-slate-800 transition">+ 신규 인원 등록</button>
                         </div>
                         <div class="overflow-hidden rounded-2xl border border-slate-200">
                             <table class="w-full text-left">
-                                <thead class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase border-b border-slate-200">
+                                <thead class="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase">
                                     <tr>
                                         <th class="px-6 py-4">이름</th>
                                         <th class="px-6 py-4">직급</th>
-                                        <th class="px-6 py-4">소속(부문/본부/팀)</th>
+                                        <th class="px-6 py-4">부서(팀)</th>
+                                        <th class="px-6 py-4">소속 본부/부문</th>
                                         <th class="px-6 py-4">직계 상급자</th>
-                                        <th class="px-6 py-4 text-center">계정 ID</th>
                                     </tr>
                                 </thead>
-                                <tbody id="org-list-tbody" class="divide-y divide-slate-100">
+                                <tbody id="org-list-tbody" class="text-sm">
                                     <!-- Org Data Injected -->
                                 </tbody>
                             </table>
@@ -244,25 +219,19 @@
 
                 <div id="view-rule-config" class="hidden space-y-8 animate-in fade-in duration-500">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div class="lg:col-span-2 bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <h4 class="text-lg font-bold text-slate-800">문서 유형 및 부서별 위임전결 매트릭스</h4>
-                                    <p class="text-xs text-slate-500 mt-1">부서별 문서 유형에 따라 결재 한도와 최종 전결권자를 정의합니다.</p>
-                                </div>
-                                <button class="text-xs font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl hover:bg-blue-100 transition border border-blue-100">+ 규칙 신규 등록</button>
-                            </div>
+                        <div class="lg:col-span-2 bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm">
+                            <h4 class="text-lg font-bold mb-6">위임전결규정 매트릭스</h4>
                             <div id="rules-container" class="space-y-4">
                                 <!-- Rules Injected -->
                             </div>
                         </div>
-                        <div class="bg-gradient-to-br from-blue-700 to-indigo-800 text-white p-8 rounded-[32px] shadow-xl shadow-blue-900/20 h-fit">
-                            <h4 class="text-lg font-bold mb-4 flex items-center"><span class="mr-2 text-xl">💡</span> 스마트 라우팅 가이드</h4>
-                            <p class="text-sm text-blue-100 leading-relaxed mb-6 font-light">설정된 조건(유형, 금액)과 기안자의 소속 정보가 일치할 경우, 시스템이 지정된 결재선을 <span class="font-bold text-white">자동(Zero-Click)으로 매핑</span>합니다.</p>
+                        <div class="bg-blue-700 text-white p-8 rounded-[40px] shadow-xl shadow-blue-200 h-fit">
+                            <h4 class="text-lg font-bold mb-4">스마트 규정 가이드</h4>
+                            <p class="text-sm text-blue-100 leading-relaxed mb-6">문서 카테고리(전사공통, 재무, HR 등)와 금액 구간에 따라 결재선이 매핑됩니다.</p>
                             <div class="space-y-4">
-                                <div class="bg-white/10 p-5 rounded-2xl border border-white/20 backdrop-blur-sm">
-                                    <p class="text-[10px] font-bold text-blue-200 uppercase mb-2 tracking-wider">Configuration Tip</p>
-                                    <p class="text-xs leading-relaxed font-light">한도 금액이 없는 경우(무한대) '999,999,999'로 설정하세요. 경로 상 <strong class="font-bold text-white">(전결)</strong> 표시가 포함된 단계에서 문서는 '최종 승인' 처리됩니다.</p>
+                                <div class="bg-blue-600/50 p-4 rounded-2xl border border-blue-500/30">
+                                    <p class="text-[10px] font-bold text-blue-200 uppercase mb-1">Tip</p>
+                                    <p class="text-xs">전결자란에 (전결) 표시가 포함되면 해당 단계에서 결재가 최종 완료됩니다.</p>
                                 </div>
                             </div>
                         </div>
@@ -271,46 +240,39 @@
 
             </div>
 
-            <div id="draft-canvas" class="fixed inset-y-0 right-0 w-full max-w-3xl bg-white shadow-[0_0_40px_rgba(0,0,0,0.1)] z-50 transform translate-x-full transition-transform duration-500 ease-in-out border-l border-slate-200 flex flex-col">
-                <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white z-10 relative shadow-sm">
-                    <div>
-                        <span class="text-[10px] font-bold text-blue-600 uppercase bg-blue-50 border border-blue-100 px-2 py-1 rounded-md mb-2 inline-block tracking-wider">Drafting Mode</span>
-                        <h3 class="text-2xl font-bold text-slate-800 tracking-tight">신규 전자결재 기안</h3>
-                    </div>
-                    <button onclick="closeDraftModal()" class="text-slate-400 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 w-10 h-10 flex items-center justify-center rounded-full transition text-xl">&times;</button>
+            <div id="draft-canvas" class="fixed inset-y-0 right-0 w-[800px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-500 ease-in-out border-l border-slate-200 flex flex-col">
+                <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 class="text-xl font-bold flex items-center"><span class="mr-2">📝</span> 신규 전자결재 기안</h3>
+                    <button onclick="closeDraftModal()" class="text-slate-400 hover:text-slate-900 text-3xl leading-none">&times;</button>
                 </div>
                 
-                <div class="flex-1 overflow-y-auto p-8 lg:p-10 space-y-8 scroll-hide bg-slate-50/30">
-                    <!-- 기본 정보 -->
-                    <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                <div class="flex-1 overflow-y-auto p-10 space-y-8 scroll-hide">
+                    <div>
+                        <input type="text" id="draft-title" placeholder="결재 문서 제목을 입력하세요" class="w-full text-2xl font-bold border-b-2 border-slate-200 py-3 outline-none focus:border-blue-600 transition text-slate-800 placeholder-slate-300">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-100">
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2 tracking-wider">문서 제목</label>
-                            <input type="text" id="draft-title" placeholder="결재 제목을 입력하세요" class="w-full text-xl font-bold border-b-2 border-slate-200 py-2 outline-none focus:border-blue-600 transition bg-transparent placeholder:text-slate-300">
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wider">문서 분류 및 유형</label>
+                            <select id="draft-type" onchange="previewApprovalLine()" class="w-full border border-slate-200 rounded-xl px-4 py-3 bg-white text-sm font-medium outline-none focus:ring-2 focus:ring-blue-100">
+                                <optgroup label="[전사 공통]">
+                                    <option value="common_general">일반 품의서</option>
+                                    <option value="common_expense">지출 결의서</option>
+                                    <option value="common_leave">휴가/근태 신청서</option>
+                                </optgroup>
+                                <optgroup label="[사업 부문]">
+                                    <option value="biz_contract">신규 계약 품의</option>
+                                    <option value="biz_sales">영업 활동 보고서</option>
+                                </optgroup>
+                                <optgroup label="[IT 본부]">
+                                    <option value="it_server">서버 인프라 증설</option>
+                                    <option value="it_auth">시스템 접근 권한 신청</option>
+                                </optgroup>
+                            </select>
                         </div>
-                        <div class="grid grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2 tracking-wider">분류 / 문서 유형</label>
-                                <!-- 분류를 그룹화하여 표현 -->
-                                <select id="draft-type" onchange="previewApprovalLine()" class="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50 text-sm outline-none focus:border-blue-400 font-medium text-slate-700">
-                                    <optgroup label="[전사 공통]">
-                                        <option value="common_expense">지출결의서</option>
-                                        <option value="common_leave">휴가/근태 신청서</option>
-                                        <option value="common_general">일반품의서</option>
-                                    </optgroup>
-                                    <optgroup label="[사업부문]">
-                                        <option value="biz_contract">신규 계약 품의</option>
-                                        <option value="biz_sales">영업 활동 보고</option>
-                                    </optgroup>
-                                    <optgroup label="[IT본부]">
-                                        <option value="it_server">서버/인프라 증설 기안</option>
-                                        <option value="it_auth">시스템 접근 권한 신청</option>
-                                    </optgroup>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2 tracking-wider">기안 금액 (₩)</label>
-                                <input type="number" id="draft-amount" value="0" oninput="previewApprovalLine()" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono font-bold text-blue-700 outline-none focus:border-blue-400 bg-slate-50">
-                            </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wider">기안 금액 (₩)</label>
+                            <input type="number" id="draft-amount" value="0" oninput="previewApprovalLine()" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono font-bold text-blue-700 outline-none focus:ring-2 focus:ring-blue-100">
                         </div>
                     </div>
 
@@ -318,156 +280,195 @@
                     <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-3 tracking-wider flex justify-between items-center">
                             <span>상세 내용 (스마트 에디터)</span>
-                            <span class="text-[9px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded">WYSIWYG</span>
+                            <span class="text-[9px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded">WYSIWYG & HTML</span>
                         </label>
                         
                         <div class="border border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition">
                             <!-- 에디터 툴바 -->
-                            <div class="bg-slate-50 border-b border-slate-200 p-2 flex space-x-1 overflow-x-auto">
-                                <button onclick="formatDoc('bold')" class="p-2 hover:bg-slate-200 rounded text-slate-700 font-serif font-bold text-sm w-8 h-8 flex items-center justify-center tooltip" title="Bold">B</button>
-                                <button onclick="formatDoc('italic')" class="p-2 hover:bg-slate-200 rounded text-slate-700 font-serif italic text-sm w-8 h-8 flex items-center justify-center tooltip" title="Italic">I</button>
-                                <button onclick="formatDoc('underline')" class="p-2 hover:bg-slate-200 rounded text-slate-700 font-serif underline text-sm w-8 h-8 flex items-center justify-center tooltip" title="Underline">U</button>
-                                <div class="w-px h-5 bg-slate-300 my-auto mx-2"></div>
-                                <button onclick="formatDoc('justifyLeft')" class="p-2 hover:bg-slate-200 rounded text-slate-600 text-xs flex items-center">좌측정렬</button>
-                                <button onclick="formatDoc('justifyCenter')" class="p-2 hover:bg-slate-200 rounded text-slate-600 text-xs flex items-center">가운데</button>
-                                <div class="w-px h-5 bg-slate-300 my-auto mx-2"></div>
-                                <button onclick="insertTableTemplate()" class="p-2 hover:bg-blue-100 rounded text-blue-600 text-xs font-bold flex items-center bg-blue-50 border border-blue-100">
-                                    <span class="mr-1">▦</span> 표 만들기
+                            <div class="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap items-center gap-1">
+                                <button type="button" onclick="formatDoc('bold')" class="p-1.5 hover:bg-slate-200 rounded text-slate-700 font-serif font-bold text-sm w-7 h-7 flex items-center justify-center tooltip" title="Bold">B</button>
+                                <button type="button" onclick="formatDoc('italic')" class="p-1.5 hover:bg-slate-200 rounded text-slate-700 font-serif italic text-sm w-7 h-7 flex items-center justify-center tooltip" title="Italic">I</button>
+                                <button type="button" onclick="formatDoc('underline')" class="p-1.5 hover:bg-slate-200 rounded text-slate-700 font-serif underline text-sm w-7 h-7 flex items-center justify-center tooltip" title="Underline">U</button>
+                                <button type="button" onclick="formatDoc('strikeThrough')" class="p-1.5 hover:bg-slate-200 rounded text-slate-700 font-serif line-through text-sm w-7 h-7 flex items-center justify-center tooltip" title="취소선">S</button>
+                                
+                                <button type="button" onclick="formatDoc('backColor', 'yellow')" class="p-1.5 hover:bg-slate-200 rounded text-slate-700 text-sm w-7 h-7 flex items-center justify-center tooltip ml-1" title="형광펜">🖍️</button>
+                                
+                                <div class="w-px h-4 bg-slate-300 mx-1"></div>
+                                <select onchange="if(this.value) { formatDoc('fontSize', this.value); this.value=''; }" class="text-xs border border-slate-300 rounded px-1 py-1 outline-none bg-white text-slate-600 cursor-pointer focus:ring-1 focus:ring-slate-400 h-7" title="글꼴 크기">
+                                    <option value="">크기</option>
+                                    <option value="1">가장 작게</option>
+                                    <option value="2">작게</option>
+                                    <option value="3">보통</option>
+                                    <option value="4">크게</option>
+                                    <option value="5">매우 크게</option>
+                                    <option value="6">가장 크게</option>
+                                </select>
+
+                                <select onchange="if(this.value) { formatDoc('insertHTML', this.value); this.value=''; }" class="text-xs border border-slate-300 rounded px-1 py-1 outline-none bg-white text-slate-600 cursor-pointer focus:ring-1 focus:ring-slate-400 h-7 ml-1" title="특수 기호">
+                                    <option value="">기호</option>
+                                    <option value="★">★ (별)</option>
+                                    <option value="☆">☆ (빈별)</option>
+                                    <option value="※">※ (참고)</option>
+                                    <option value="○">○ (동그라미)</option>
+                                    <option value="●">● (검은원)</option>
+                                    <option value="□">□ (네모)</option>
+                                    <option value="■">■ (검은네모)</option>
+                                    <option value="✓">✓ (체크)</option>
+                                    <option value="→">→ (우화살표)</option>
+                                    <option value="㈜">㈜ (주식회사)</option>
+                                </select>
+
+                                <div class="w-px h-4 bg-slate-300 mx-1"></div>
+                                <button type="button" onclick="formatDoc('justifyLeft')" class="p-1.5 hover:bg-slate-200 rounded text-slate-600 text-xs flex items-center">좌측</button>
+                                <button type="button" onclick="formatDoc('justifyCenter')" class="p-1.5 hover:bg-slate-200 rounded text-slate-600 text-xs flex items-center">가운데</button>
+                                <button type="button" onclick="formatDoc('justifyRight')" class="p-1.5 hover:bg-slate-200 rounded text-slate-600 text-xs flex items-center">우측</button>
+                                
+                                <div class="w-px h-4 bg-slate-300 mx-1"></div>
+                                <button type="button" onclick="formatDoc('insertUnorderedList')" class="p-1.5 hover:bg-slate-200 rounded text-slate-600 text-xs flex items-center">• 목록</button>
+                                <button type="button" onclick="formatDoc('insertOrderedList')" class="p-1.5 hover:bg-slate-200 rounded text-slate-600 text-xs flex items-center">1. 목록</button>
+                                
+                                <div class="w-px h-4 bg-slate-300 mx-1"></div>
+                                <select onchange="if(this.value) { insertSmartForm(this.value); this.value=''; }" class="text-xs border border-slate-300 rounded px-2 py-1 outline-none bg-white text-blue-600 font-bold w-24 cursor-pointer focus:ring-1 focus:ring-blue-400">
+                                    <option value="">+ 양식 추가</option>
+                                    <option value="meeting">회의록</option>
+                                    <option value="trip">출장보고서</option>
+                                    <option value="expense">지출결의서</option>
+                                </select>
+                                <button type="button" onclick="insertTableTemplate()" class="p-1.5 hover:bg-blue-100 rounded text-blue-600 text-xs font-bold flex items-center bg-blue-50 border border-blue-100 ml-1">
+                                    ▦ 표 추가
+                                </button>
+                                
+                                <select onchange="if(this.value) { handleTableAction(this.value); this.value=''; }" class="text-xs border border-slate-300 rounded px-2 py-1 outline-none bg-white text-slate-600 w-28 cursor-pointer focus:ring-1 focus:ring-slate-400 ml-1">
+                                    <option value="">표 편집(도구)</option>
+                                    <optgroup label="[행/열 추가삭제]">
+                                        <option value="addRowAbove">위에 행 추가</option>
+                                        <option value="addRowBelow">아래에 행 추가</option>
+                                        <option value="addColLeft">좌측에 열 추가</option>
+                                        <option value="addColRight">우측에 열 추가</option>
+                                        <option value="deleteRow">현재 행 삭제</option>
+                                        <option value="deleteCol">현재 열 삭제</option>
+                                        <option value="deleteTable">표 전체 삭제</option>
+                                    </optgroup>
+                                    <optgroup label="[표 간격/크기 조절]">
+                                        <option value="equalizeCols">열 너비 동일하게</option>
+                                        <option value="tableFull">표 너비 100% 꽉차게</option>
+                                        <option value="tableAuto">표 너비 내용에 맞게</option>
+                                    </optgroup>
+                                </select>
+
+                                <div class="flex-1"></div>
+                                <button type="button" onclick="toggleHTMLMode()" id="btn-html-toggle" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-[10px] font-bold px-3 transition shadow-sm">
+                                    &lt;HTML&gt; 편집
                                 </button>
                             </div>
                             <!-- 에디터 본문 -->
-                            <div id="draft-content-editor" contenteditable="true" class="p-6 min-h-[250px] outline-none text-sm text-slate-700 leading-relaxed bg-white">
+                            <div id="draft-content-editor" contenteditable="true" class="p-6 min-h-[300px] outline-none text-sm text-slate-700 leading-relaxed bg-white overflow-y-auto">
                                 <p>여기에 결재 상세 내용을 작성해 주세요.</p>
                             </div>
+                            <textarea id="draft-html-editor" class="hidden p-6 w-full min-h-[300px] outline-none text-sm font-mono text-slate-300 bg-slate-900 resize-y leading-relaxed" spellcheck="false"></textarea>
                         </div>
                     </div>
 
-                    <!-- 실시간 결재선 뷰어 -->
+                    <!-- 실시간 결재선 뷰어 및 커스텀 (조직도 연동) -->
                     <div class="bg-slate-800 p-8 rounded-3xl shadow-lg relative overflow-hidden">
                         <!-- BG Decoration -->
                         <div class="absolute top-[-50%] right-[-10%] w-64 h-64 bg-slate-700 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
                         
-                        <h4 class="text-xs font-bold text-slate-300 uppercase mb-6 flex justify-between items-center relative z-10">
-                            <span>조직도 기반 자동 매핑 결재선</span>
-                            <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded text-[10px] flex items-center font-bold tracking-wider">
-                                <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-1.5 animate-pulse"></span> AI Mapped
-                            </span>
-                        </h4>
-                        <div id="approval-preview-list" class="space-y-8 relative z-10">
-                            <!-- Preview Injected -->
+                        <div class="flex justify-between items-center mb-6 relative z-10">
+                            <h4 class="text-xs font-bold text-slate-300 uppercase flex items-center">
+                                <span>조직도 기반 결재선 및 합의/참조 지정</span>
+                            </h4>
+                            <button onclick="toggleMiniOrg()" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] px-4 py-2 rounded-xl flex items-center transition border border-blue-500 font-bold shadow-md">
+                                <span class="mr-2">🏢</span> 조직도 차트 열기
+                            </button>
+                        </div>
+
+                        <!-- Mini Org Picker (Drag & Drop Tree) -->
+                        <div id="mini-org-picker" class="hidden bg-slate-900 border border-slate-700 rounded-2xl p-8 mb-8 relative z-10 shadow-inner overflow-x-auto">
+                            <p class="text-xs text-blue-400 mb-6 font-bold flex items-center justify-center bg-blue-900/30 py-2 rounded-lg border border-blue-800/50">
+                                <span class="mr-2 animate-bounce">👇</span> 임직원 박스를 아래 결재/합의/참조 영역으로 마우스로 끌어다 놓으세요. (Drag & Drop)
+                            </p>
+                            <div class="tree dark-tree flex justify-center min-w-[500px]" id="picker-tree-container">
+                                <!-- Tree Injected via JS -->
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
+                            <div class="lg:col-span-2">
+                                <p class="text-[10px] font-bold text-slate-400 mb-3 tracking-widest">결재 경로 (APPROVAL PATH) <span class="text-blue-400 ml-1 font-normal">드래그로 순서 변경 가능</span></p>
+                                <div id="approval-preview-list" class="space-y-3 min-h-[120px] rounded-2xl p-3 -m-3 transition-all duration-300" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDropPath(event)">
+                                    <!-- Preview Injected -->
+                                </div>
+                            </div>
+                            <div class="space-y-6">
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-400 mb-2 tracking-widest">합의 (AGREEMENT) <span class="text-blue-400 ml-1 font-normal">Drop here</span></p>
+                                    <div id="agreement-list" class="space-y-2 text-sm text-slate-300 min-h-[80px] bg-slate-900/80 rounded-xl p-4 border-2 border-slate-700 border-dashed transition-all duration-300" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'agree')"></div>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-400 mb-2 tracking-widest">참조 (REFERENCE) <span class="text-blue-400 ml-1 font-normal">Drop here</span></p>
+                                    <div id="reference-list" class="space-y-2 text-sm text-slate-300 min-h-[80px] bg-slate-900/80 rounded-xl p-4 border-2 border-slate-700 border-dashed transition-all duration-300" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ref')"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="p-6 border-t border-slate-100 bg-white">
-                    <button onclick="submitDraft()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 text-lg flex justify-center items-center space-x-2">
-                        <span>상신하기 (결재 요청)</span>
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                    </button>
+
+                <div class="p-8 border-t border-slate-100 bg-white relative z-20 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
+                    <button onclick="submitDraft()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg text-lg">상신하기 (결재 요청)</button>
                 </div>
             </div>
 
-            <div id="detail-canvas" class="fixed inset-y-0 right-0 w-full max-w-3xl bg-white shadow-[0_0_40px_rgba(0,0,0,0.1)] z-50 transform translate-x-full transition-transform duration-500 ease-in-out border-l border-slate-200">
-                <div class="h-full flex flex-col" id="detail-content-area">
-                    <!-- Dynamic Content Injected Here -->
+            <div id="detail-canvas" class="fixed inset-y-0 right-0 w-[800px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-500 ease-in-out border-l border-slate-200 flex flex-col">
+                <div id="detail-content-area" class="h-full flex flex-col">
+                    <!-- Dynamic Detail Content Injected Here by JS -->
                 </div>
             </div>
 
-            <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-[100] transform translate-y-32 transition-transform duration-500 flex items-center space-x-3 text-sm font-medium border border-slate-700">
-                <span id="toast-icon" class="text-lg">✅</span>
+            <!-- Toast Notification -->
+            <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-2xl shadow-2xl z-[100] transform translate-y-32 transition-transform duration-500 flex items-center space-x-3">
+                <span id="toast-icon">✅</span>
                 <span id="toast-msg">처리 완료</span>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 1. 조직도 및 인사 마스터 데이터 (계층 구조 반영) ---
-        // 조직 구조 데이터 (차트 렌더링용)
-        const orgStructure = {
-            name: "CEO", rank: "대표이사", leader: "이대표",
-            children: [
-                {
-                    name: "사업부문", rank: "부문장", leader: "최부문",
-                    children: [
-                        { name: "영업본부", rank: "본부장", leader: "강본부", children: [{ name: "영업1팀", rank: "팀장", leader: "김팀장" }] },
-                        { name: "IT본부", rank: "본부장", leader: "박본부", children: [{ name: "개발팀", rank: "팀장", leader: "정팀장" }] }
-                    ]
-                },
-                {
-                    name: "경영지원부문", rank: "부문장", leader: "신부문",
-                    children: [
-                        { name: "인사총무본부", rank: "본부장", leader: "윤본부", children: [{ name: "총무팀", rank: "팀장", leader: "이팀장" }] }
-                    ]
-                }
-            ]
-        };
-
-        // 유저 플랫 리스트 (기안/결재자 판별용)
-        // 팀 -> 본부 -> 부문 -> 대표이사 계층 구조 반영
-        const users = [
-            { id: 'admin', name: '최고관리자', rank: '시스템총괄', dept: 'IT본부', isApprover: true },
-            { id: 'user1', name: '나사원', rank: '사원', dept: '영업1팀', bossId: 'user2' },
-            { id: 'user2', name: '김팀장', rank: '팀장', dept: '영업1팀', bossId: 'user3', isApprover: true },
-            { id: 'user3', name: '강본부', rank: '본부장', dept: '영업본부', bossId: 'user4', isApprover: true },
-            { id: 'user4', name: '최부문', rank: '부문장', dept: '사업부문', bossId: 'user5', isApprover: true },
-            { id: 'user5', name: '이대표', rank: '대표이사', dept: 'CEO', bossId: null, isApprover: true },
-            { id: 'user6', name: '개발자A', rank: '선임', dept: '개발팀', bossId: 'user7' },
-            { id: 'user7', name: '정팀장', rank: '팀장', dept: '개발팀', bossId: 'user8', isApprover: true },
-            { id: 'user8', name: '박본부', rank: '본부장', dept: 'IT본부', bossId: 'user4', isApprover: true }
-        ];
-        
+        // --- STREAMING_CHUNK: State Management ---
         let documents = [];
-        let activeUserId = 'admin'; // 기본 접속 계정
         
-        // --- 2. 위임전결규정 마스터 (문서 유형 세분화 반영) ---
+        // 조직도 마스터 데이터 (계층 구조 포함)
+        const users = [
+            { id: 'admin', name: '최고관리자', rank: '시스템총괄', dept: 'IT본부', org: 'CEO직속', bossId: null, isApprover: true },
+            { id: 'user1', name: '이대표', rank: '대표이사', dept: '임원실', org: 'CEO직속', bossId: null, isApprover: true },
+            { id: 'user2', name: '박부문', rank: '부문장', dept: '사업부문', org: '사업부문', bossId: 'user1', isApprover: true },
+            { id: 'user3', name: '김본부', rank: '본부장', dept: 'IT본부', org: 'IT본부', bossId: 'user1', isApprover: true },
+            { id: 'user4', name: '최팀장', rank: '팀장', dept: '영업팀', org: '사업부문', bossId: 'user2', isApprover: true },
+            { id: 'user5', name: '정팀장', rank: '팀장', dept: '개발팀', org: 'IT본부', bossId: 'user3', isApprover: true },
+            { id: 'user6', name: '나기안', rank: '대리', dept: '개발팀', org: 'IT본부', bossId: 'user5', isApprover: false },
+            { id: 'user7', name: '오사원', rank: '사원', dept: '영업팀', org: '사업부문', bossId: 'user4', isApprover: false }
+        ];
+        
+        let activeUserId = 'admin';
+        
+        // 고도화된 위임전결 규정 (유형별, 금액별)
         const delegationRules = [
-            // 전사 공통 지출
-            { id: 1, type: 'common_expense', min: 0, max: 1000000, path: ['김팀장(전결)'] },
-            { id: 2, type: 'common_expense', min: 1000001, max: 10000000, path: ['김팀장', '강본부(전결)'] },
-            { id: 3, type: 'common_expense', min: 10000001, max: 999999999, path: ['김팀장', '강본부', '최부문(전결)'] },
-            // 사업부문 신규 계약
-            { id: 4, type: 'biz_contract', min: 0, max: 50000000, path: ['김팀장', '강본부', '최부문(전결)'] },
-            { id: 5, type: 'biz_contract', min: 50000001, max: 999999999, path: ['김팀장', '강본부', '최부문', '이대표(전결)'] },
-            // IT본부 서버 증설
-            { id: 6, type: 'it_server', min: 0, max: 5000000, path: ['정팀장', '박본부(전결)'] },
-            { id: 7, type: 'it_server', min: 5000001, max: 999999999, path: ['정팀장', '박본부', '최부문(전결)'] },
-            // 기타 자동
-            { id: 8, type: 'common_leave', min: 0, max: 999999999, path: ['소속팀장(전결)'] }
+            // 공통
+            { type: 'common_general', min: 0, max: 999999999, path: ['소속팀장', '소속본부장(전결)'] },
+            { type: 'common_expense', min: 0, max: 1000000, path: ['소속팀장(전결)'] },
+            { type: 'common_expense', min: 1000001, max: 10000000, path: ['소속팀장', '소속본부장(전결)'] },
+            { type: 'common_expense', min: 10000001, max: 999999999, path: ['소속팀장', '소속본부장', '대표이사(전결)'] },
+            { type: 'common_leave', min: 0, max: 999999999, path: ['소속팀장(전결)'] },
+            // 사업부문
+            { type: 'biz_contract', min: 0, max: 50000000, path: ['소속팀장', '부문장(전결)'] },
+            { type: 'biz_contract', min: 50000001, max: 999999999, path: ['소속팀장', '부문장', '대표이사(전결)'] },
+            { type: 'biz_sales', min: 0, max: 999999999, path: ['소속팀장(전결)'] },
+            // IT본부
+            { type: 'it_server', min: 0, max: 999999999, path: ['소속팀장', '본부장(전결)'] },
+            { type: 'it_auth', min: 0, max: 999999999, path: ['소속팀장(전결)'] }
         ];
 
-        // --- STREAMING_CHUNK:Editor and UI Helper Functions ---
-        // 스마트 에디터 포맷팅 명령
-        function formatDoc(cmd, value=null) {
-            document.execCommand(cmd, false, value);
-            document.getElementById('draft-content-editor').focus();
-        }
-
-        // 표 삽입 템플릿
-        function insertTableTemplate() {
-            const tableHTML = `
-                <table border="1">
-                    <tbody>
-                        <tr>
-                            <th>항목</th>
-                            <th>내용</th>
-                            <th>비고</th>
-                        </tr>
-                        <tr>
-                            <td>예산 과목</td>
-                            <td>여비교통비</td>
-                            <td>-</td>
-                        </tr>
-                        <tr>
-                            <td>상세 사유</td>
-                            <td>외근 출장 (부산)</td>
-                            <td>영수증 별도 첨부</td>
-                        </tr>
-                    </tbody>
-                </table><p><br></p>
-            `;
-            document.execCommand('insertHTML', false, tableHTML);
-        }
-
+        // --- STREAMING_CHUNK: Core App Initialization ---
         function initIdentitySelector() {
             const selector = document.getElementById('identity-selector');
             selector.innerHTML = users.map(u => `<option value="${u.id}" ${u.id === activeUserId ? 'selected' : ''}>${u.name} ${u.rank} (${u.dept})</option>`).join('');
@@ -478,9 +479,9 @@
             activeUserId = userId;
             const user = users.find(u => u.id === userId);
             document.getElementById('active-user-name').innerText = user.name + ' ' + user.rank;
-            document.getElementById('active-user-role').innerText = user.dept;
+            document.getElementById('active-user-role').innerText = user.dept + ' / ' + user.org;
             
-            showToast(`접속 페르소나 변경: ${user.name}님 시점`, '🔄');
+            showToast(`페르소나 전환: ${user.name}님 접속`, '👤');
             refreshGlobalList();
             updateStats();
         }
@@ -493,13 +494,188 @@
             document.getElementById('tab-' + tabId).classList.add('tab-active');
             document.getElementById('view-' + tabId).classList.remove('hidden');
 
+            const titles = { dashboard: '통합 대시보드', 'global-list': '전사 문서 관리', 'org-config': '조직도 및 인사 관리', 'rule-config': '위임전결규정 매트릭스' };
+            const descs = { dashboard: '전사 결재 현황을 실시간으로 모니터링합니다.', 'global-list': '모든 문서를 열람하고 상태를 추적합니다.', 'org-config': '조직 구조 시각화 및 계층별 상급자를 정의합니다.', 'rule-config': '부서별/분류별/금액별 자동 결재선을 설정합니다.' };
+            
+            document.getElementById('current-tab-title').innerText = titles[tabId];
+            document.getElementById('current-tab-desc').innerText = descs[tabId];
+
             if (tabId === 'dashboard') initCharts();
             if (tabId === 'global-list') refreshGlobalList();
-            if (tabId === 'org-config') { refreshOrgList(); renderOrgTree(); }
+            if (tabId === 'org-config') { refreshOrgList(); renderOrgTreeChart(); }
             if (tabId === 'rule-config') refreshRuleList();
         }
 
-        // --- STREAMING_CHUNK:Logic for Rules and Approvals ---
+        // --- STREAMING_CHUNK: Smart Editor Setup ---
+        function formatDoc(cmd, value=null) {
+            if(document.getElementById('draft-html-editor').classList.contains('hidden') === false) return; // HTML 모드일땐 무시
+            document.execCommand(cmd, false, value);
+            document.getElementById('draft-content-editor').focus();
+        }
+        
+        function insertTableTemplate() {
+            if(document.getElementById('draft-html-editor').classList.contains('hidden') === false) return;
+            const tableHTML = `
+                <table style="width:100%; border-collapse: collapse; margin-top:10px; margin-bottom:10px;">
+                    <tr><th style="border:1px solid #cbd5e1; padding:8px; background:#f1f5f9;">항목</th><th style="border:1px solid #cbd5e1; padding:8px; background:#f1f5f9;">내용</th><th style="border:1px solid #cbd5e1; padding:8px; background:#f1f5f9;">비고</th></tr>
+                    <tr><td style="border:1px solid #cbd5e1; padding:8px;">입력</td><td style="border:1px solid #cbd5e1; padding:8px;">입력</td><td style="border:1px solid #cbd5e1; padding:8px;"></td></tr>
+                    <tr><td style="border:1px solid #cbd5e1; padding:8px;">입력</td><td style="border:1px solid #cbd5e1; padding:8px;">입력</td><td style="border:1px solid #cbd5e1; padding:8px;"></td></tr>
+                </table><p><br></p>`;
+            document.execCommand('insertHTML', false, tableHTML);
+        }
+
+        // 표 편집 전용 로직
+        function handleTableAction(action) {
+            if(document.getElementById('draft-html-editor').classList.contains('hidden') === false) {
+                showToast('HTML 편집 모드에서는 표를 조작할 수 없습니다.', '⚠️');
+                return;
+            }
+
+            const sel = window.getSelection();
+            if (!sel.rangeCount) return showToast('표 내부의 셀을 먼저 마우스로 클릭해주세요.', '⚠️');
+            
+            let node = sel.getRangeAt(0).startContainer;
+            if (node.nodeType === 3) node = node.parentNode; // 텍스트 노드인 경우 부모 엘리먼트로 승격
+            
+            const td = node.closest('td, th');
+            if (!td) return showToast('표 내부의 셀을 먼저 마우스로 클릭해주세요.', '⚠️');
+            
+            const tr = td.closest('tr');
+            const tbody = tr.closest('tbody') || tr.closest('table');
+            const table = tr.closest('table');
+            
+            const cellIndex = Array.from(tr.children).indexOf(td);
+            const rowIndex = Array.from(tbody.children).indexOf(tr);
+
+            if (action === 'addRowAbove') {
+                const newRow = tr.cloneNode(true);
+                Array.from(newRow.children).forEach(c => c.innerHTML = '<br>');
+                tbody.insertBefore(newRow, tr);
+            } else if (action === 'addRowBelow') {
+                const newRow = tr.cloneNode(true);
+                Array.from(newRow.children).forEach(c => c.innerHTML = '<br>');
+                if (tr.nextSibling) tbody.insertBefore(newRow, tr.nextSibling);
+                else tbody.appendChild(newRow);
+            } else if (action === 'addColLeft' || action === 'addColRight') {
+                Array.from(table.rows).forEach(row => {
+                    if(!row.children[cellIndex]) return;
+                    const newCell = row.children[cellIndex].cloneNode(true);
+                    newCell.innerHTML = '<br>';
+                    if (action === 'addColLeft') {
+                        row.insertBefore(newCell, row.children[cellIndex]);
+                    } else {
+                        if (row.children[cellIndex].nextSibling) row.insertBefore(newCell, row.children[cellIndex].nextSibling);
+                        else row.appendChild(newCell);
+                    }
+                });
+            } else if (action === 'deleteRow') {
+                tr.remove();
+                if (table.rows.length === 0) table.remove();
+            } else if (action === 'deleteCol') {
+                Array.from(table.rows).forEach(row => {
+                    if(row.children[cellIndex]) row.children[cellIndex].remove();
+                });
+                if (table.rows[0] && table.rows[0].children.length === 0) table.remove();
+            } else if (action === 'deleteTable') {
+                table.remove();
+            } else if (action === 'equalizeCols') {
+                const firstRow = table.rows[0];
+                if(firstRow) {
+                    const colCount = firstRow.children.length;
+                    const pct = (100 / colCount).toFixed(2) + '%';
+                    Array.from(table.rows).forEach(row => {
+                        Array.from(row.children).forEach(cell => {
+                            cell.style.width = pct;
+                        });
+                    });
+                }
+            } else if (action === 'tableFull') {
+                table.style.width = '100%';
+            } else if (action === 'tableAuto') {
+                table.style.width = 'auto';
+                Array.from(table.rows).forEach(row => {
+                    Array.from(row.children).forEach(cell => {
+                        cell.style.width = 'auto';
+                    });
+                });
+            }
+        }
+
+        function insertSmartForm(type) {
+            if(document.getElementById('draft-html-editor').classList.contains('hidden') === false) {
+                showToast('HTML 편집 모드에서는 스마트 양식을 추가할 수 없습니다.', '⚠️');
+                return;
+            }
+            
+            let html = '';
+            if(type === 'meeting') {
+                html = `
+                <div style="background:#f8fafc; padding:20px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:15px;">
+                    <h3 style="color:#1e293b; font-weight:bold; font-size:16px; border-bottom:2px solid #3b82f6; padding-bottom:8px; margin-bottom:15px;">📄 주간 회의록</h3>
+                    <ul style="list-style-type: disc; margin-left: 20px; color:#475569; margin-bottom:15px;">
+                        <li><strong>일시:</strong> 202X년 X월 X일 00:00</li>
+                        <li><strong>장소:</strong> 대회의실</li>
+                        <li><strong>참석자:</strong> </li>
+                    </ul>
+                    <table style="width:100%; border-collapse: collapse; margin-top:10px; font-size:13px;">
+                        <tr><th style="border:1px solid #cbd5e1; padding:10px; background:#f1f5f9; width:20%;">안건</th><th style="border:1px solid #cbd5e1; padding:10px; background:#f1f5f9;">결정 사항 및 향후 계획 (Action Item)</th></tr>
+                        <tr><td style="border:1px solid #cbd5e1; padding:10px; text-align:center; font-weight:bold;">이슈 1</td><td style="border:1px solid #cbd5e1; padding:10px;"></td></tr>
+                        <tr><td style="border:1px solid #cbd5e1; padding:10px; text-align:center; font-weight:bold;">이슈 2</td><td style="border:1px solid #cbd5e1; padding:10px;"></td></tr>
+                    </table>
+                </div><p><br></p>`;
+            } else if(type === 'trip') {
+                html = `
+                <div style="background:#f8fafc; padding:20px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:15px;">
+                    <h3 style="color:#1e293b; font-weight:bold; font-size:16px; border-bottom:2px solid #10b981; padding-bottom:8px; margin-bottom:15px;">✈️ 출장 결과 보고서</h3>
+                    <table style="width:100%; border-collapse: collapse; font-size:13px;">
+                        <tr><th style="border:1px solid #cbd5e1; padding:10px; background:#f1f5f9; width:20%;">출장 목적</th><td style="border:1px solid #cbd5e1; padding:10px;" colspan="3"></td></tr>
+                        <tr>
+                            <th style="border:1px solid #cbd5e1; padding:10px; background:#f1f5f9; width:20%;">출장지</th><td style="border:1px solid #cbd5e1; padding:10px; width:30%;"></td>
+                            <th style="border:1px solid #cbd5e1; padding:10px; background:#f1f5f9; width:20%;">기간</th><td style="border:1px solid #cbd5e1; padding:10px; width:30%;">202X.XX.XX ~ 202X.XX.XX</td>
+                        </tr>
+                        <tr><th style="border:1px solid #cbd5e1; padding:10px; background:#f1f5f9; width:20%;">주요 성과</th><td style="border:1px solid #cbd5e1; padding:10px; line-height:1.6;" colspan="3">1. <br>2. <br>3. </td></tr>
+                    </table>
+                </div><p><br></p>`;
+            } else if(type === 'expense') {
+                html = `
+                <div style="background:#f8fafc; padding:20px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:15px;">
+                    <h3 style="color:#1e293b; font-weight:bold; font-size:16px; border-bottom:2px solid #f59e0b; padding-bottom:8px; margin-bottom:15px;">💳 지출 결의 상세내역</h3>
+                    <table style="width:100%; border-collapse: collapse; font-size:13px;">
+                        <tr><th style="border:1px solid #cbd5e1; padding:10px; background:#f1f5f9;">사용 일자</th><th style="border:1px solid #cbd5e1; padding:10px; background:#f1f5f9;">적요 (사용 목적 및 대상)</th><th style="border:1px solid #cbd5e1; padding:10px; background:#f1f5f9;">금액(원)</th><th style="border:1px solid #cbd5e1; padding:10px; background:#f1f5f9;">비고 (영수증 여부 등)</th></tr>
+                        <tr><td style="border:1px solid #cbd5e1; padding:10px; text-align:center;">MM/DD</td><td style="border:1px solid #cbd5e1; padding:10px;">팀 회식비 (부서원 5명)</td><td style="border:1px solid #cbd5e1; padding:10px; text-align:right;">0</td><td style="border:1px solid #cbd5e1; padding:10px; text-align:center;">법인카드</td></tr>
+                        <tr><td style="border:1px solid #cbd5e1; padding:10px; text-align:center;">MM/DD</td><td style="border:1px solid #cbd5e1; padding:10px;"></td><td style="border:1px solid #cbd5e1; padding:10px; text-align:right;">0</td><td style="border:1px solid #cbd5e1; padding:10px; text-align:center;"></td></tr>
+                        <tr><td style="border:1px solid #cbd5e1; padding:10px; background:#f1f5f9; text-align:center; font-weight:bold;" colspan="2">합 계</td><td style="border:1px solid #cbd5e1; padding:10px; font-weight:bold; text-align:right; color:#1d4ed8;">0</td><td style="border:1px solid #cbd5e1; padding:10px; background:#f1f5f9;"></td></tr>
+                    </table>
+                </div><p><br></p>`;
+            }
+            document.execCommand('insertHTML', false, html);
+        }
+
+        function toggleHTMLMode() {
+            const visualEditor = document.getElementById('draft-content-editor');
+            const htmlEditor = document.getElementById('draft-html-editor');
+            const btn = document.getElementById('btn-html-toggle');
+
+            if (htmlEditor.classList.contains('hidden')) {
+                // WYSIWYG -> HTML
+                htmlEditor.value = visualEditor.innerHTML;
+                visualEditor.classList.add('hidden');
+                htmlEditor.classList.remove('hidden');
+                btn.classList.replace('bg-slate-800', 'bg-blue-600');
+                btn.innerHTML = 'WYSIWYG 복귀';
+                showToast('HTML 소스 편집 모드로 전환되었습니다.', '💻');
+            } else {
+                // HTML -> WYSIWYG
+                visualEditor.innerHTML = htmlEditor.value;
+                htmlEditor.classList.add('hidden');
+                visualEditor.classList.remove('hidden');
+                btn.classList.replace('bg-blue-600', 'bg-slate-800');
+                btn.innerHTML = '&lt;HTML&gt; 편집';
+                showToast('기본 에디터 모드로 전환되었습니다.', '✏️');
+            }
+        }
+
+        // --- STREAMING_CHUNK: Dynamic Path & Type Mapping ---
         function getTypeName(type) {
             const map = { 
                 common_expense: '지출결의', common_leave: '휴가/근태', common_general: '일반품의',
@@ -515,23 +691,157 @@
             return rule ? rule.path : ['소속팀장', '소속본부장(전결)']; // 매칭 실패 시 동적(가정) 값 반환
         }
 
+        // --- STREAMING_CHUNK: Custom Approval & Mini Org Logic ---
+        window.currentDraftPath = [];
+        window.customAgreements = [];
+        window.customReferences = [];
+        
+        // --- Drag and Drop State ---
+        let draggedItemName = null;
+        let draggedSourceRole = null;
+
+        function handleDragStart(e, name, sourceRole) {
+            draggedItemName = name;
+            draggedSourceRole = sourceRole;
+            e.dataTransfer.setData('text/plain', name);
+            e.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => e.target.classList.add('opacity-40', 'scale-95'), 0);
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('opacity-40', 'scale-95');
+            document.querySelectorAll('.drop-zone-active').forEach(z => z.classList.remove('drop-zone-active'));
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('drop-zone-active');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drop-zone-active');
+        }
+
+        function moveRole(name, fromRole, toRole, toIdx = -1) {
+            // Remove from source
+            if (fromRole === 'path') window.currentDraftPath = window.currentDraftPath.filter(p => p !== name);
+            if (fromRole === 'agree') window.customAgreements = window.customAgreements.filter(p => p !== name);
+            if (fromRole === 'ref') window.customReferences = window.customReferences.filter(p => p !== name);
+
+            // Add to target
+            if (toRole === 'path') {
+                if (!window.currentDraftPath.includes(name)) {
+                    if (toIdx !== -1) window.currentDraftPath.splice(toIdx, 0, name);
+                    else window.currentDraftPath.push(name);
+                }
+            } else if (toRole === 'agree') {
+                if (!window.customAgreements.includes(name)) window.customAgreements.push(name);
+            } else if (toRole === 'ref') {
+                if (!window.customReferences.includes(name)) window.customReferences.push(name);
+            }
+        }
+
+        function handleDrop(e, targetRole) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drop-zone-active');
+            if (!draggedItemName) return;
+
+            moveRole(draggedItemName, draggedSourceRole, targetRole);
+            renderDraftPathUI();
+        }
+
+        function handleDropPath(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drop-zone-active');
+            if (!draggedItemName) return;
+
+            const targetItem = e.target.closest('.path-item');
+            let toIdx = window.currentDraftPath.length;
+            
+            if (targetItem) {
+                const targetName = targetItem.dataset.name;
+                toIdx = window.currentDraftPath.indexOf(targetName);
+                if (draggedSourceRole === 'path') {
+                    const fromIdx = window.currentDraftPath.indexOf(draggedItemName);
+                    if (fromIdx !== -1 && fromIdx < toIdx) toIdx--; // 순서 보정
+                }
+            }
+
+            moveRole(draggedItemName, draggedSourceRole, 'path', toIdx);
+            renderDraftPathUI();
+        }
+
         function previewApprovalLine() {
             const type = document.getElementById('draft-type').value;
             const amount = parseInt(document.getElementById('draft-amount').value) || 0;
             const path = getMatchingPath(type, amount);
+            
+            window.currentDraftPath = [...path]; // 초기화
+            renderDraftPathUI();
+        }
+
+        function buildPickerTreeHTML(node) {
+            let html = `<li>
+                <div class="inline-block bg-slate-800 border-2 border-slate-600 px-4 py-2 text-center rounded-xl shadow-md cursor-grab hover:border-blue-500 hover:bg-slate-700 transition transform hover:-translate-y-1 active:cursor-grabbing" 
+                     draggable="true" ondragstart="handleDragStart(event, '${node.name}', 'tree')" ondragend="handleDragEnd(event)">
+                    <span class="block text-white font-bold text-xs pointer-events-none">${node.name} <span class="font-normal text-slate-300">${node.rank}</span></span>
+                    <span class="block text-[9px] text-blue-300 pointer-events-none mt-0.5">${node.dept}</span>
+                </div>`;
+            const children = users.filter(u => u.bossId === node.id);
+            if (children.length > 0) {
+                html += `<ul class="pt-4">${children.map(c => buildPickerTreeHTML(c)).join('')}</ul>`;
+            }
+            html += `</li>`;
+            return html;
+        }
+
+        function toggleMiniOrg() {
+            const picker = document.getElementById('mini-org-picker');
+            picker.classList.toggle('hidden');
+            if(!picker.classList.contains('hidden')) {
+                const root = users.find(u => u.id === 'user1'); // CEO
+                document.getElementById('picker-tree-container').innerHTML = `<ul class="pt-2">${buildPickerTreeHTML(root)}</ul>`;
+            }
+        }
+
+        function removeCustomRole(name, role) {
+            if(role === 'path') window.currentDraftPath = window.currentDraftPath.filter(p => p !== name);
+            if(role === 'agree') window.customAgreements = window.customAgreements.filter(p => p !== name);
+            if(role === 'ref') window.customReferences = window.customReferences.filter(p => p !== name);
+            renderDraftPathUI();
+        }
+
+        function renderDraftPathUI() {
+            const path = window.currentDraftPath || [];
             const container = document.getElementById('approval-preview-list');
             
             container.innerHTML = path.map((p, idx) => `
-                <div class="flex items-center space-x-6 node-line">
-                    <div class="w-10 h-10 ${p.includes('(전결)') ? 'bg-emerald-500 shadow-lg shadow-emerald-500/40 text-white' : 'bg-slate-700 text-slate-300'} rounded-full flex items-center justify-center text-xs font-black shrink-0 z-10 relative border-2 border-slate-900">
+                <div class="flex items-center space-x-4 node-line path-item cursor-grab active:cursor-grabbing" draggable="true" ondragstart="handleDragStart(event, '${p}', 'path')" ondragend="handleDragEnd(event)" data-name="${p}">
+                    <div class="w-8 h-8 ${p.includes('(전결)') ? 'bg-emerald-500 shadow-lg shadow-emerald-500/40 text-white border-transparent' : 'bg-slate-800 text-slate-300 border-slate-600'} rounded-full flex items-center justify-center text-xs font-black shrink-0 z-10 relative border-2 pointer-events-none">
                         ${idx + 1}
                     </div>
-                    <div class="flex-1 bg-slate-900/50 border ${p.includes('(전결)') ? 'border-emerald-500/50' : 'border-slate-700'} p-4 rounded-2xl shadow-sm backdrop-blur-sm">
-                        <p class="text-[10px] font-bold ${p.includes('(전결)') ? 'text-emerald-400' : 'text-slate-500'} uppercase tracking-widest mb-0.5">${p.includes('(전결)') ? 'Final Approver' : 'Reviewer'}</p>
-                        <p class="text-sm font-bold text-slate-200">${p.replace('(전결)', '')}</p>
+                    <div class="flex-1 bg-slate-900/60 border ${p.includes('(전결)') ? 'border-emerald-500/50' : 'border-slate-600'} hover:border-blue-400 p-3 rounded-xl shadow-sm backdrop-blur-sm flex justify-between items-center group transition">
+                        <div class="pointer-events-none">
+                            <p class="text-[9px] font-bold ${p.includes('(전결)') ? 'text-emerald-400' : 'text-slate-400'} uppercase tracking-widest mb-0.5">${p.includes('(전결)') ? 'Final Approver' : 'Reviewer'}</p>
+                            <p class="text-sm font-bold text-white">${p.replace('(전결)', '')}</p>
+                        </div>
+                        <button type="button" onclick="removeCustomRole('${p}', 'path')" class="text-slate-500 hover:text-rose-400 text-lg opacity-0 group-hover:opacity-100 transition px-2">&times;</button>
                     </div>
                 </div>
             `).join('');
+
+            document.getElementById('agreement-list').innerHTML = window.customAgreements.map(a => `
+                <div class="bg-slate-800 p-2 rounded-lg text-xs border border-slate-600 flex justify-between items-center cursor-grab hover:border-emerald-400 transition" draggable="true" ondragstart="handleDragStart(event, '${a}', 'agree')" ondragend="handleDragEnd(event)">
+                    <span class="font-bold text-emerald-400 pointer-events-none ml-2">${a}</span>
+                    <button type="button" onclick="removeCustomRole('${a}', 'agree')" class="text-slate-400 hover:text-rose-400 text-lg leading-none">&times;</button>
+                </div>`).join('') || '<div class="text-slate-600 text-xs italic pointer-events-none text-center py-2">조직도에서 합의자를 끌어오세요.</div>';
+                
+            document.getElementById('reference-list').innerHTML = window.customReferences.map(r => `
+                <div class="bg-slate-800 p-2 rounded-lg text-xs border border-slate-600 flex justify-between items-center cursor-grab hover:border-slate-400 transition" draggable="true" ondragstart="handleDragStart(event, '${r}', 'ref')" ondragend="handleDragEnd(event)">
+                    <span class="font-bold text-slate-300 pointer-events-none ml-2">${r}</span>
+                    <button type="button" onclick="removeCustomRole('${r}', 'ref')" class="text-slate-400 hover:text-rose-400 text-lg leading-none">&times;</button>
+                </div>`).join('') || '<div class="text-slate-600 text-xs italic pointer-events-none text-center py-2">조직도에서 참조자를 끌어오세요.</div>';
         }
 
         // --- STREAMING_CHUNK:Submit and Document Rendering ---
@@ -540,15 +850,18 @@
             const title = document.getElementById('draft-title').value;
             const amount = parseInt(document.getElementById('draft-amount').value) || 0;
             const type = document.getElementById('draft-type').value;
-            // textarea value 대신 contenteditable div의 innerHTML을 가져옴
-            const contentHTML = document.getElementById('draft-content-editor').innerHTML;
+            
+            // HTML 편집 모드가 활성화되어 있다면 textarea의 값을 우선 사용
+            const isHtmlMode = !document.getElementById('draft-html-editor').classList.contains('hidden');
+            const contentHTML = isHtmlMode ? document.getElementById('draft-html-editor').value : document.getElementById('draft-content-editor').innerHTML;
 
             if (!title) {
                 showToast('결재 문서 제목을 입력해주세요.', '⚠️');
                 return;
             }
 
-            const path = getMatchingPath(type, amount);
+            const path = window.currentDraftPath && window.currentDraftPath.length > 0 ? window.currentDraftPath : getMatchingPath(type, amount);
+            
             const newDoc = {
                 id: 'DOC-' + Math.floor(Math.random() * 900000 + 100000),
                 creatorId: user.id,
@@ -561,27 +874,31 @@
                 createdAt: new Date().toLocaleString(),
                 status: '진행중',
                 currentStep: 0,
-                path: path,
+                path: [...path],
+                agreements: [...window.customAgreements],
+                references: [...window.customReferences],
                 logs: [{ actor: user.name, action: '기안 상신', time: new Date().toLocaleTimeString(), comment: '전자결재 기안을 상신합니다.' }]
             };
 
             documents.unshift(newDoc);
             
-            // 폼 초기화
+            // 폼 및 에디터 초기화
             document.getElementById('draft-title').value = '';
             document.getElementById('draft-amount').value = '0';
+            
+            if(!document.getElementById('draft-html-editor').classList.contains('hidden')) {
+                toggleHTMLMode(); // 작성 후 WYSIWYG 모드로 원복
+            }
             document.getElementById('draft-content-editor').innerHTML = '<p>여기에 결재 상세 내용을 작성해 주세요.</p>';
             
-            closeDraftModal();
-            showToast('기안 상신이 완료되었습니다.', '✅');
+            window.customAgreements = [];
+            window.customReferences = [];
             
+            closeDraftModal();
+            showToast('성공적으로 결재가 상신되었습니다.', '🚀');
             refreshGlobalList();
             updateStats();
-            logActivity(`[${user.dept}] ${user.name}님이 신규 문서 [${title}]을 기안했습니다.`);
-            
-            if(document.getElementById('tab-dashboard').classList.contains('tab-active')) {
-                changeTab('global-list');
-            }
+            logActivity(`[${newDoc.title}] 문서가 상신되었습니다.`);
         }
 
         function refreshGlobalList() {
@@ -589,29 +906,31 @@
             document.getElementById('global-count').innerText = documents.length;
 
             if (documents.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-20 text-center text-slate-400 font-medium bg-white">등록된 결재 문서가 없습니다.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-20 text-center text-slate-400">등록된 문서가 없습니다.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = documents.map(doc => {
                 const user = users.find(u => u.id === activeUserId);
-                // 어드민이거나, 현재 스텝의 결재자 이름이 내 이름과 일치하는 경우 결재 가능
-                const isMyTurn = (activeUserId === 'admin') || (doc.path[doc.currentStep] && doc.path[doc.currentStep].includes(user.name));
+                // 본인이 결재선 상 현재 차례이거나 관리자일 때 처리 가능
+                const isMyTurn = (activeUserId === 'admin') || (doc.path[doc.currentStep] && doc.path[doc.currentStep].includes(user.name)) || (doc.path[doc.currentStep] && doc.path[doc.currentStep].includes(user.rank));
                 
                 return `
-                <tr class="border-b border-slate-100 hover:bg-blue-50/50 transition cursor-pointer group bg-white" onclick="openDocDetail('${doc.id}')">
+                <tr class="border-b border-slate-100 hover:bg-slate-50 transition cursor-pointer" onclick="openDocDetail('${doc.id}')">
                     <td class="px-8 py-5">
                         <p class="font-bold text-slate-800">${doc.creatorName}</p>
-                        <p class="text-[10px] text-slate-400 font-medium mt-0.5">${doc.creatorDept}</p>
+                        <p class="text-[10px] text-slate-400">${doc.creatorDept}</p>
                     </td>
-                    <td class="px-8 py-5"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">${getTypeName(doc.type)}</span></td>
-                    <td class="px-8 py-5 font-bold text-slate-700 group-hover:text-blue-600 transition truncate max-w-[200px]">${doc.title}</td>
-                    <td class="px-8 py-5 text-right font-mono font-bold text-slate-600 group-hover:text-blue-700">${doc.amount.toLocaleString()}</td>
+                    <td class="px-8 py-5">
+                        <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-bold border border-slate-200">${getTypeName(doc.type)}</span>
+                    </td>
+                    <td class="px-8 py-5 font-bold text-slate-700">${doc.title}</td>
+                    <td class="px-8 py-5 text-right font-mono font-bold text-blue-600">${doc.amount.toLocaleString()}</td>
                     <td class="px-8 py-5 text-center">
-                        <span class="px-3 py-1 rounded-full text-[10px] font-bold ${getStatusColor(doc.status)} shadow-sm">${doc.status}</span>
+                        <span class="px-3 py-1 rounded-full text-[10px] font-bold ${getStatusColor(doc.status)}">${doc.status}</span>
                     </td>
                     <td class="px-8 py-5 text-center">
-                        ${isMyTurn && doc.status === '진행중' ? '<span class="text-[11px] bg-blue-600 text-white px-3 py-1.5 rounded-lg shadow-md hover:bg-blue-700 font-bold">결재하기</span>' : '<span class="text-[11px] text-slate-500 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg font-medium">조회</span>'}
+                        ${isMyTurn && doc.status === '진행중' ? '<span class="text-[10px] bg-blue-600 text-white px-3 py-1.5 rounded-lg shadow-sm font-bold animate-pulse">결재처리</span>' : '<span class="text-xs text-slate-400 font-medium">조회</span>'}
                     </td>
                 </tr>
             `}).join('');
@@ -621,93 +940,142 @@
             if (status === '진행중') return 'bg-blue-50 text-blue-600 border border-blue-200';
             if (status === '완료') return 'bg-emerald-50 text-emerald-600 border border-emerald-200';
             if (status === '반려') return 'bg-rose-50 text-rose-600 border border-rose-200';
-            return 'bg-slate-50 text-slate-500 border border-slate-200';
+            return 'bg-slate-50 text-slate-400';
         }
 
-        // --- STREAMING_CHUNK:Document Detail & Approval ---
+        // --- STREAMING_CHUNK: Document Detail View & Edits ---
         function openDocDetail(docId) {
             const doc = documents.find(d => d.id === docId);
             const user = users.find(u => u.id === activeUserId);
-            const isMyTurn = (activeUserId === 'admin') || (doc.path[doc.currentStep] && doc.path[doc.currentStep].includes(user.name));
+            
+            // "소속팀장" 등의 추상적 명칭이 들어갔을 때 실제 사용자 이름과 매칭되는지 간단 처리 (데모용)
+            let isMyTurn = activeUserId === 'admin';
+            if(doc.status === '진행중' && doc.path[doc.currentStep]) {
+                const stepTarget = doc.path[doc.currentStep];
+                if(stepTarget.includes(user.name) || stepTarget.includes(user.rank)) {
+                    isMyTurn = true;
+                }
+            }
             
             const detailArea = document.getElementById('detail-content-area');
+            
             detailArea.innerHTML = `
-                <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white shadow-sm z-10 relative">
+                <div class="p-8 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-30 shadow-sm">
                     <div>
-                        <span class="text-[10px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-1 rounded-md mb-2 inline-block tracking-wider">Document Viewer</span>
-                        <h3 class="text-2xl font-bold text-slate-900 tracking-tight">문서 상세 확인</h3>
-                        <p class="text-[10px] font-mono text-slate-400 mt-1">${doc.id} | 기안: ${doc.createdAt}</p>
-                    </div>
-                    <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 w-10 h-10 flex items-center justify-center rounded-full transition text-xl">&times;</button>
-                </div>
-                
-                <div class="flex-1 overflow-y-auto p-8 lg:p-10 space-y-10 scroll-hide bg-slate-50/50">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <span class="text-[10px] font-bold text-blue-700 bg-blue-100 border border-blue-200 px-2 py-1 rounded-md">${getTypeName(doc.type)}</span>
-                            <h2 class="text-3xl font-black mt-3 text-slate-900 tracking-tight">${doc.title}</h2>
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-0.5 rounded border border-slate-200">${getTypeName(doc.type)}</span>
+                            <span class="text-xs text-slate-400 font-mono">${doc.id}</span>
                         </div>
+                        <h3 class="text-2xl font-bold text-slate-900">${doc.title}</h3>
+                    </div>
+                    <div class="flex items-center space-x-6">
                         <div class="text-right">
-                            ${doc.status === '완료' ? '<div class="approval-stamp">Final Approved</div>' : ''}
-                            ${doc.status === '반려' ? '<div class="reject-stamp">Rejected</div>' : ''}
+                            ${doc.status === '완료' ? '<div class="approval-stamp border-emerald-500 text-emerald-600 text-xs px-3 py-1 rotate-[-10deg]">FINAL APPROVED</div>' : ''}
+                            ${doc.status === '반려' ? '<div class="reject-stamp border-rose-500 text-rose-600 text-xs px-3 py-1 rotate-[-10deg]">REJECTED</div>' : ''}
                         </div>
+                        <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-900 text-3xl leading-none">&times;</button>
                     </div>
+                </div>
 
+                <div class="flex-1 overflow-y-auto p-10 space-y-8 bg-slate-50 scroll-hide">
+                    
                     <div class="grid grid-cols-2 gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-sm">
                         <div><p class="text-[10px] text-slate-400 font-bold uppercase mb-1 tracking-wider">기안자 정보</p><p class="font-bold text-slate-800">${doc.creatorName} <span class="text-slate-500 font-medium">(${doc.creatorDept})</span></p></div>
                         <div><p class="text-[10px] text-slate-400 font-bold uppercase mb-1 tracking-wider">기안 금액</p><p class="font-bold text-blue-700 text-lg">₩ ${doc.amount.toLocaleString()}</p></div>
                     </div>
 
-                    <!-- 저장된 HTML 내용을 렌더링 -->
+                    <!-- 합의 및 참조자 표시 -->
+                    ${(doc.agreements && doc.agreements.length > 0) || (doc.references && doc.references.length > 0) ? `
+                    <div class="flex space-x-6 bg-slate-100 p-4 rounded-2xl border border-slate-200">
+                        ${doc.agreements && doc.agreements.length > 0 ? `<div><span class="text-[10px] font-bold text-slate-500 uppercase mr-2">합의자</span> <span class="text-sm font-bold text-slate-800">${doc.agreements.join(', ')}</span></div>` : ''}
+                        ${doc.references && doc.references.length > 0 ? `<div><span class="text-[10px] font-bold text-slate-500 uppercase mr-2">참조자</span> <span class="text-sm font-medium text-slate-600">${doc.references.join(', ')}</span></div>` : ''}
+                    </div>` : ''}
+
+                    <!-- 저장된 HTML 내용을 렌더링 (상급자 편집 권한 부여) -->
                     <div>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-3 ml-1 tracking-wider">상세 내용</p>
-                        <div id="draft-content-editor" class="bg-white border border-slate-200 p-8 rounded-3xl min-h-[200px] text-slate-800 leading-relaxed shadow-inner">
-                            ${doc.content}
+                        <div class="flex justify-between items-end mb-3 ml-1">
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">상세 내용</p>
+                            ${isMyTurn && doc.status === '진행중' ? `<span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold animate-pulse">✍️ 결재자 편집 모드 활성화됨</span>` : ''}
                         </div>
+                        ${isMyTurn && doc.status === '진행중' ? `
+                            <div id="detail-content-editor" contenteditable="true" class="bg-white border-2 border-blue-300 p-8 rounded-3xl min-h-[200px] text-slate-800 leading-relaxed shadow-[0_0_15px_rgba(59,130,246,0.1)] outline-none focus:ring-4 focus:ring-blue-100 transition">
+                                ${doc.content}
+                            </div>
+                        ` : `
+                            <div id="detail-content-editor" class="bg-white border border-slate-200 p-8 rounded-3xl min-h-[200px] text-slate-800 leading-relaxed shadow-inner">
+                                ${doc.content}
+                            </div>
+                        `}
                     </div>
 
                     <div>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-4 ml-1 tracking-wider">결재 흐름 및 이력</p>
+                        <div class="flex justify-between items-end mb-4 ml-1">
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">결재 흐름 및 이력</p>
+                            ${isMyTurn && doc.status === '진행중' ? `
+                            <div class="flex items-center space-x-2">
+                                <select id="detail-add-approver" class="text-xs border border-slate-300 rounded px-2 py-1 outline-none bg-white">
+                                    ${users.map(u => `<option value="${u.name}">${u.name} (${u.rank})</option>`).join('')}
+                                </select>
+                                <button onclick="appendApproverToDoc('${doc.id}')" class="bg-slate-700 text-white text-[10px] px-3 py-1.5 rounded font-bold hover:bg-slate-800">결재자 추가</button>
+                            </div>
+                            ` : ''}
+                        </div>
                         <div class="space-y-4">
                             ${doc.path.map((p, idx) => {
-                                const isDone = idx < doc.currentStep;
+                                const isDone = idx < doc.currentStep || doc.status === '완료';
                                 const isCurrent = idx === doc.currentStep && doc.status === '진행중';
-                                const stepLog = doc.logs.find(l => l.actor === p.replace('(전결)',''));
+                                const isRejected = doc.status === '반려' && idx === doc.currentStep;
                                 
+                                let circleColor = 'bg-slate-300';
+                                if(isDone) circleColor = 'bg-emerald-500 shadow-lg shadow-emerald-500/30';
+                                if(isCurrent) circleColor = 'bg-blue-600 animate-bounce shadow-lg shadow-blue-600/30';
+                                if(isRejected) circleColor = 'bg-rose-500';
+
                                 return `
-                                    <div class="flex items-start space-x-4 node-line">
-                                        <div class="w-8 h-8 ${isDone ? 'bg-emerald-500 shadow-emerald-200' : isCurrent ? 'bg-blue-600 animate-pulse shadow-blue-200 ring-4 ring-blue-100' : 'bg-slate-200'} rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 mt-1 shadow-sm z-10 relative transition-all">
-                                            ${isDone ? '✓' : idx + 1}
+                                    <div class="flex items-center space-x-4 node-line">
+                                        <div class="w-10 h-10 ${circleColor} rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 z-10 relative">
+                                            ${isDone ? '✓' : isRejected ? '!' : idx + 1}
                                         </div>
-                                        <div class="flex-1 ${isCurrent ? 'bg-blue-50/50 border-blue-200 shadow-sm' : isDone ? 'bg-white border-emerald-100' : 'bg-transparent border-slate-100 opacity-70'} border p-4 rounded-2xl flex flex-col justify-center transition">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-sm font-bold ${isCurrent ? 'text-blue-800' : 'text-slate-800'}">${p}</span>
-                                                <span class="text-[10px] font-bold px-2 py-0.5 rounded ${isDone ? 'bg-emerald-50 text-emerald-600' : isCurrent ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}">${isDone ? '승인완료' : isCurrent ? '대기중' : '예정'}</span>
+                                        <div class="flex-1 ${isCurrent ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'} border p-4 rounded-2xl shadow-sm flex justify-between items-center transition">
+                                            <div>
+                                                <p class="text-sm font-bold ${isCurrent ? 'text-blue-700' : 'text-slate-800'}">${p.replace('(전결)','')}</p>
+                                                ${p.includes('(전결)') ? `<p class="text-[9px] text-emerald-600 font-bold mt-0.5">최종 전결권자</p>` : ''}
                                             </div>
-                                            ${stepLog ? `<p class="text-xs text-slate-600 mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed"><span class="mr-1">💬</span> ${stepLog.comment}</p>` : ''}
+                                            <span class="text-[10px] font-bold ${isDone ? 'text-emerald-600 bg-emerald-50' : isCurrent ? 'text-blue-600 bg-blue-100' : isRejected ? 'text-rose-600 bg-rose-50' : 'text-slate-400 bg-slate-100'} px-2 py-1 rounded">
+                                                ${isDone ? '승인완료' : isCurrent ? '결재 대기중' : isRejected ? '반려됨' : '대기'}
+                                            </span>
                                         </div>
                                     </div>
                                 `;
                             }).join('')}
                         </div>
                     </div>
+                    
+                    ${doc.logs.length > 0 ? `
+                    <div class="bg-slate-100 p-4 rounded-2xl border border-slate-200">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase mb-3">시스템 로그 (Audit Trail)</p>
+                        <div class="space-y-2">
+                            ${doc.logs.map(l => `<div class="text-xs flex"><span class="text-slate-400 w-24 shrink-0">${l.time}</span> <span class="font-bold text-slate-700 mr-2">${l.actor}</span> <span class="text-slate-500">(${l.action}) ${l.comment}</span></div>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
-                
+
                 <div class="p-8 border-t border-slate-200 bg-white shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] relative z-20">
                     ${isMyTurn && doc.status === '진행중' ? `
                         <div class="mb-5">
-                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wider">결재자 의견 (Comment)</label>
-                            <input type="text" id="approval-comment" placeholder="승인 또는 반려 사유를 남겨주세요." class="w-full border border-slate-300 rounded-xl px-5 py-3.5 text-sm outline-none focus:ring-2 focus:ring-blue-100 transition bg-slate-50 focus:bg-white">
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wider">결재 메모 (Memo) / 반려 사유</label>
+                            <textarea id="approval-comment" rows="3" placeholder="결재 의견이나 메모를 상세히 기록해주세요. (상급자 편집을 진행한 경우 사유 포함)" class="w-full border border-slate-300 rounded-xl px-5 py-3.5 text-sm outline-none focus:ring-2 focus:ring-blue-100 transition bg-slate-50 focus:bg-white resize-none"></textarea>
                         </div>
                         <div class="flex space-x-4">
                             <button onclick="processApproval('${doc.id}', '반려')" class="flex-1 bg-white text-rose-600 border border-rose-200 py-4 rounded-2xl font-bold hover:bg-rose-50 hover:border-rose-300 transition shadow-sm">반려 처리</button>
                             <button onclick="processApproval('${doc.id}', '승인')" class="flex-[2] bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg hover:shadow-xl text-lg flex justify-center items-center">
-                                <span class="mr-2">승인 완료 (Approve)</span>
+                                <span class="mr-2">승인 및 다음 단계 진행</span> <span>→</span>
                             </button>
                         </div>
                     ` : `
-                        <div class="bg-slate-50 p-4 rounded-xl text-center border border-slate-100">
-                            <p class="text-xs text-slate-500 font-medium flex items-center justify-center"><span class="mr-2">🔒</span> ${activeUserId === 'admin' ? '최고관리자 권한으로 열람 중입니다. (결재 개입 불가)' : '현재 결재 대상자가 아니므로 조회만 가능합니다.'}</p>
+                        <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl text-center">
+                            <p class="text-xs text-slate-500 font-medium italic">이 문서는 현재 ${activeUserId === 'admin' ? '최고관리자 모드로 열람 중입니다.' : '본인의 결재 차례가 아니므로 조회만 가능합니다.'}</p>
                         </div>
                     `}
                 </div>
@@ -723,6 +1091,12 @@
             
             const commentInput = document.getElementById('approval-comment').value;
             const comment = commentInput || (action === '승인' ? '내용을 확인하고 승인합니다.' : '기안 내용 보완 후 재상신 바랍니다.');
+
+            // 상급자 내용 수정 반영 로직
+            const editorHTML = document.getElementById('detail-content-editor');
+            if (editorHTML && editorHTML.isContentEditable) {
+                doc.content = editorHTML.innerHTML; // 수정된 내용을 원본 문서에 덮어씌움
+            }
 
             if (action === '반려') {
                 doc.status = '반려';
@@ -742,37 +1116,48 @@
             logActivity(`[${doc.title}] 문서가 ${actorName}님에 의해 ${action} 처리되었습니다.`);
         }
 
+        // 상급자 권한으로 결재선 중간에 인원 추가
+        function appendApproverToDoc(docId) {
+            const doc = documents.find(d => d.id === docId);
+            const newApprover = document.getElementById('detail-add-approver').value;
+            
+            if(!doc.path.includes(newApprover)) {
+                // 현재 스텝 바로 뒤에 삽입
+                doc.path.splice(doc.currentStep + 1, 0, newApprover);
+                doc.logs.push({ actor: users.find(u=>u.id===activeUserId).name, action: '결재선 변경', time: new Date().toLocaleTimeString(), comment: `상급자 권한으로 결재선에 [${newApprover}]님을 추가 지정했습니다.` });
+                showToast('결재선이 성공적으로 업데이트되었습니다.', '🔄');
+                openDocDetail(docId); // UI 리렌더링
+            } else {
+                showToast('이미 결재선에 포함된 인원입니다.', '⚠️');
+            }
+        }
+
         // --- STREAMING_CHUNK:Render Master Config Data ---
         function buildTreeHTML(node) {
-            let html = `<li>
-                <div class="org-node-box">
-                    <p class="node-dept">${node.name}</p>
-                    <p class="node-name">${node.leader} <span class="node-rank">${node.rank}</span></p>
-                </div>`;
-            if (node.children && node.children.length > 0) {
-                html += '<ul>' + node.children.map(child => buildTreeHTML(child)).join('') + '</ul>';
+            let html = `<li><a href="#">${node.name}<br><span class="text-[9px] text-slate-500">${node.rank}</span></a>`;
+            const children = users.filter(u => u.bossId === node.id);
+            if (children.length > 0) {
+                html += `<ul>${children.map(c => buildTreeHTML(c)).join('')}</ul>`;
             }
-            html += '</li>';
+            html += `</li>`;
             return html;
         }
 
-        function renderOrgTree() {
-            const container = document.getElementById('org-tree-render');
-            container.innerHTML = `<ul>${buildTreeHTML(orgStructure)}</ul>`;
+        function renderOrgTreeChart() {
+            const root = users.find(u => u.id === 'user1'); // CEO
+            const treeContainer = document.getElementById('org-tree-chart');
+            treeContainer.innerHTML = `<div class="tree"><ul>${buildTreeHTML(root)}</ul></div>`;
         }
 
         function refreshOrgList() {
             const tbody = document.getElementById('org-list-tbody');
             tbody.innerHTML = users.map(u => `
-                <tr class="hover:bg-slate-50 transition group bg-white">
-                    <td class="px-6 py-4 font-bold text-slate-800 flex items-center space-x-3">
-                        <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition">${u.name.charAt(0)}</div>
-                        <span>${u.name}</span>
-                    </td>
-                    <td class="px-6 py-4 text-xs font-semibold text-slate-600">${u.rank}</td>
-                    <td class="px-6 py-4 text-xs text-slate-500"><span class="bg-slate-100 px-2 py-1 rounded-md border border-slate-200">${u.dept}</span></td>
-                    <td class="px-6 py-4 text-xs font-medium text-slate-700">${u.bossId ? users.find(b => b.id === u.bossId).name : '<span class="text-slate-300">-</span>'}</td>
-                    <td class="px-6 py-4 text-center text-[10px] font-mono text-slate-400">${u.id}</td>
+                <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                    <td class="px-6 py-4 font-bold text-slate-700">${u.name}</td>
+                    <td class="px-6 py-4 text-xs font-medium bg-slate-100 rounded inline-block mt-3">${u.rank}</td>
+                    <td class="px-6 py-4 text-xs font-bold text-slate-600">${u.dept}</td>
+                    <td class="px-6 py-4 text-xs text-slate-500">${u.org}</td>
+                    <td class="px-6 py-4 text-xs">${u.bossId ? users.find(b => b.id === u.bossId).name : '<span class="text-slate-300">-</span>'}</td>
                 </tr>
             `).join('');
         }
@@ -780,24 +1165,49 @@
         function refreshRuleList() {
             const container = document.getElementById('rules-container');
             container.innerHTML = delegationRules.map(r => `
-                <div class="flex items-center justify-between p-6 bg-white border border-slate-200 rounded-3xl group hover:border-blue-400 transition hover:shadow-md">
-                    <div class="flex items-center space-x-6">
-                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center min-w-[100px]">
-                            <p class="text-[10px] font-bold text-slate-700 mb-1 leading-tight">${getTypeName(r.type)}</p>
-                            <p class="text-[9px] text-slate-400 font-mono tracking-tighter">${r.type.split('_')[0].toUpperCase()}</p>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-slate-50 border border-slate-200 rounded-3xl group hover:border-blue-300 transition">
+                    <div class="flex items-center space-x-6 mb-4 sm:mb-0">
+                        <div class="bg-white border border-slate-200 p-3 rounded-2xl shadow-sm text-center min-w-[100px]">
+                            <p class="text-[10px] font-bold text-blue-600 uppercase mb-1 whitespace-nowrap">${getTypeName(r.type)}</p>
+                            <p class="text-[9px] text-slate-400 font-mono italic">(${r.type.split('_')[0].toUpperCase()})</p>
                         </div>
                         <div>
-                            <p class="text-sm font-black text-slate-800">₩ ${r.min.toLocaleString()} ~ ${r.max >= 999999999 ? '∞ (무제한)' : r.max.toLocaleString()}</p>
-                            <div class="flex items-center mt-3 space-x-2">
-                                ${r.path.map(p => `<span class="text-[11px] font-bold bg-white px-3 py-1 rounded-lg border border-slate-200 text-slate-600 shadow-sm ${p.includes('(전결)') ? 'border-emerald-300 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : ''}">${p}</span>`).join('<span class="text-slate-300 text-xs">→</span>')}
+                            <p class="text-sm font-bold text-slate-800">₩${r.min.toLocaleString()} ~ ${r.max >= 999999999 ? '∞ 무한대' : r.max.toLocaleString()}</p>
+                            <div class="flex items-center mt-2 space-x-2 flex-wrap gap-y-2">
+                                ${r.path.map((p, i) => `<span class="text-[10px] ${p.includes('(전결)') ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-600'} px-2 py-1 rounded font-bold border">${i+1}. ${p}</span>`).join('<span class="text-slate-300">→</span>')}
                             </div>
                         </div>
                     </div>
-                    <button class="text-xs font-bold text-slate-400 group-hover:text-blue-600 transition bg-slate-50 px-3 py-1.5 rounded-lg group-hover:bg-blue-50">수정</button>
+                    <button class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">수정</button>
                 </div>
             `).join('');
         }
 
+        // --- STREAMING_CHUNK: Dashboard Config ---
+        let mainChart = null;
+        function initCharts() {
+            const ctx = document.getElementById('deptEfficiencyChart').getContext('2d');
+            if (mainChart) mainChart.destroy();
+            mainChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['IT본부', '사업부문', '경영지원', '영업부문', '임원진'],
+                    datasets: [{
+                        label: '평균 결재 소요 시간 (h)',
+                        data: [1.2, 4.5, 3.1, 8.8, 1.5],
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
+                }
+            });
+        }
+
+        // --- STREAMING_CHUNK: UI Utilities ---
         function openDraftModal() { document.getElementById('draft-canvas').classList.remove('translate-x-full'); previewApprovalLine(); }
         function closeDraftModal() { document.getElementById('draft-canvas').classList.add('translate-x-full'); }
         function closeDetailModal() { document.getElementById('detail-canvas').classList.add('translate-x-full'); }
@@ -807,14 +1217,14 @@
             document.getElementById('toast-msg').innerText = msg;
             document.getElementById('toast-icon').innerText = icon;
             toast.style.transform = 'translate(-50%, -20px)';
-            setTimeout(() => { toast.style.transform = 'translate(-50%, 150px)'; }, 3000);
+            setTimeout(() => { toast.style.transform = 'translate(-50%, 100px)'; }, 3000);
         }
 
         function logActivity(text) {
             const logContainer = document.getElementById('recent-logs');
             const div = document.createElement('div');
-            div.className = 'flex items-start space-x-3 text-xs bg-slate-50/50 p-3.5 rounded-xl border border-slate-100 animate-in slide-in-from-right duration-300';
-            div.innerHTML = `<span class="text-blue-500 mt-0.5 text-[10px]">●</span> <p class="text-slate-600 leading-relaxed font-medium"><span class="font-bold text-slate-800 mr-2">${new Date().toLocaleTimeString('ko-KR', {hour12: false})}</span> ${text}</p>`;
+            div.className = 'flex items-start space-x-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-100 animate-in slide-in-from-right duration-300';
+            div.innerHTML = `<span class="text-blue-500 mt-0.5">●</span> <p class="leading-relaxed"><span class="font-bold bg-white px-2 py-0.5 rounded border border-slate-200 mr-1">${new Date().toLocaleTimeString()}</span> ${text}</p>`;
             logContainer.prepend(div);
         }
 
@@ -825,38 +1235,11 @@
             document.getElementById('stat-rejected').innerText = documents.filter(d => d.status === '반려').length;
         }
 
-        let mainChart = null;
-        function initCharts() {
-            const ctx = document.getElementById('deptEfficiencyChart').getContext('2d');
-            if (mainChart) mainChart.destroy();
-            mainChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['영업본부', '경영지원', 'IT본부', '사업부문'],
-                    datasets: [{
-                        label: '평균 결재 리드타임 (Hour)',
-                        data: [2.5, 5.1, 1.2, 8.4],
-                        backgroundColor: '#4f46e5',
-                        borderRadius: 12,
-                        barPercentage: 0.5
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { 
-                        y: { beginAtZero: true, grid: { color: '#f8fafc' }, border: { display: false } }, 
-                        x: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: 'bold' } } } 
-                    }
-                }
-            });
-        }
-
-        // --- STREAMING_CHUNK:App Initialization ---
+        // --- INIT ---
         window.onload = () => {
             initIdentitySelector();
             changeTab('dashboard');
-            logActivity('통합 지능형 시스템 서버에 안전하게 연결되었습니다.');
+            logActivity('통합 지능형 결재 시스템 v3.5.0이 정상적으로 시작되었습니다.');
         };
     </script>
 </body>
