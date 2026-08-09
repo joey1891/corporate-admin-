@@ -186,10 +186,10 @@
             </div>
 
             <!-- 2. Write Document Tab -->
-            <div id="tab-write" class="tab-content hidden h-full">
-                <div class="flex flex-col lg:flex-row h-full gap-6">
-                    <!-- Left: Form Input -->
-                    <div class="lg:w-2/3 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden shrink-0 h-full">
+            <div id="tab-write" class="tab-content hidden h-full overflow-y-auto">
+                <div class="flex flex-col gap-6 w-full max-w-5xl mx-auto pb-8">
+                    <!-- Top: Form Input -->
+                    <div class="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden shrink-0">
                         <div class="p-4 border-b border-slate-100 bg-slate-50 shrink-0 flex justify-between items-center">
                             <h3 class="font-bold text-slate-800"><i class="fa-solid fa-file-pen text-indigo-500 mr-2"></i>기안서 작성</h3>
                             <!-- Options for Form Type -->
@@ -198,7 +198,7 @@
                                 <button onclick="setFormMode('blank')" id="btn-mode-blank" class="px-3 py-1 text-xs font-bold rounded text-slate-500 hover:text-slate-700 transition">빈 양식</button>
                             </div>
                         </div>
-                        <div class="flex-1 overflow-y-auto p-6 space-y-5">
+                        <div class="p-6 space-y-5">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-600 mb-1">문서 분류 (부문)</label>
@@ -266,26 +266,57 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="p-4 bg-slate-50 border-t border-slate-200 text-right shrink-0">
-                            <button onclick="submitDoc()" class="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition">기안 상신하기</button>
-                        </div>
                     </div>
 
-                    <!-- Right: Rule & Org Info -->
-                    <div class="lg:w-1/3 flex flex-col gap-6 shrink-0 h-full">
-                        <div class="bg-slate-900 rounded-2xl p-6 shadow-lg text-white border border-slate-700 flex-1 overflow-y-auto">
-                            <h3 class="font-bold mb-4 flex items-center text-blue-400 border-b border-slate-700 pb-3"><i class="fa-solid fa-route mr-2"></i>조직도 픽커 및 결재선</h3>
-                            
-                            <div class="mb-4">
-                                <button onclick="openOrgPicker()" class="w-full py-2 bg-slate-800 border border-slate-600 rounded-lg text-xs font-bold hover:bg-slate-700 transition flex justify-center items-center">
-                                    <i class="fa-solid fa-users-viewfinder mr-2 text-amber-500"></i>조직도에서 드래그 앤 드롭 지정
-                                </button>
+                    <!-- Bottom: Rule & Org Info for Approval Line -->
+                    <div class="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden shrink-0">
+                        <div class="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-slate-800 shrink-0">
+                            <h3 class="font-bold"><i class="fa-solid fa-route mr-2 text-blue-500"></i>결재선 지정</h3>
+                            <button onclick="clearApprovalLine()" class="text-xs text-rose-500 hover:text-rose-700 px-3 py-1.5 rounded border border-rose-200 bg-rose-50 font-bold transition"><i class="fa-solid fa-rotate-left mr-1"></i>결재선 초기화</button>
+                        </div>
+                        
+                        <div class="p-4 border-b border-slate-200 bg-white flex items-center gap-3">
+                            <span class="text-xs font-bold text-slate-600"><i class="fa-solid fa-hand-pointer mr-1 text-amber-500"></i>조직도에서 추가할 역할:</span>
+                            <div class="flex bg-slate-100 rounded-lg p-1 border border-slate-200">
+                                <button id="mode-approvers" onclick="setAddMode('approvers')" class="px-4 py-1.5 text-xs font-bold rounded bg-indigo-500 text-white shadow-sm transition">결재 (승인)</button>
+                                <button id="mode-agreements" onclick="setAddMode('agreements')" class="px-4 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-700 transition hover:bg-slate-200">합의 / 협조</button>
+                                <button id="mode-references" onclick="setAddMode('references')" class="px-4 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-700 transition hover:bg-slate-200">참조</button>
                             </div>
+                        </div>
 
-                            <p class="text-xs text-slate-400 mb-3"><i class="fa-solid fa-robot mr-1"></i>입력 금액 및 양식에 따른 권장 결재선</p>
-                            <div id="auto-approval-line" class="space-y-2 mb-6">
-                                <!-- Dynamic Path -->
+                        <!-- Embedded Org Chart -->
+                        <div class="overflow-x-auto overflow-y-hidden bg-slate-50 relative p-4 border-b border-slate-200 min-h-[300px]" id="embedded-org-tree-container">
+                            <!-- Org tree will be rendered here -->
+                        </div>
+                        
+                        <!-- Selected Approval Line Grid -->
+                        <div class="p-4 bg-white grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
+                            <!-- Approvers -->
+                            <div class="border border-slate-200 rounded-lg flex flex-col h-[200px]">
+                                <div class="bg-indigo-50 p-2 text-center text-xs font-bold text-indigo-700 border-b border-indigo-100 shrink-0">결재 라인 (순서 중요)</div>
+                                <div id="list-approvers" class="p-2 space-y-2 flex-1 overflow-y-auto bg-slate-50">
+                                    <!-- Approver list items -->
+                                </div>
                             </div>
+                            <!-- Agreements -->
+                            <div class="border border-slate-200 rounded-lg flex flex-col h-[200px]">
+                                <div class="bg-emerald-50 p-2 text-center text-xs font-bold text-emerald-700 border-b border-emerald-100 shrink-0">합의 / 협조</div>
+                                <div id="list-agreements" class="p-2 space-y-2 flex-1 overflow-y-auto bg-slate-50">
+                                    <!-- Agreement list items -->
+                                </div>
+                            </div>
+                            <!-- References -->
+                            <div class="border border-slate-200 rounded-lg flex flex-col h-[200px]">
+                                <div class="bg-slate-100 p-2 text-center text-xs font-bold text-slate-600 border-b border-slate-200 shrink-0">단순 참조</div>
+                                <div id="list-references" class="p-2 space-y-2 flex-1 overflow-y-auto bg-slate-50">
+                                    <!-- Reference list items -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button Section -->
+                        <div class="p-4 bg-slate-50 border-t border-slate-200 text-right shrink-0 flex justify-end gap-3">
+                            <button onclick="submitDoc()" class="px-8 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition flex items-center"><i class="fa-solid fa-paper-plane mr-2"></i>기안 상신하기</button>
                         </div>
                     </div>
                 </div>
@@ -390,47 +421,6 @@
     </main>
 
     <!-- Modals -->
-    <!-- Org Picker Modal (Drag & Drop) -->
-    <div id="modal-org-picker" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden">
-            <div class="p-5 border-b border-slate-200 bg-slate-800 text-white flex justify-between items-center shrink-0">
-                <h3 class="font-bold text-lg"><i class="fa-solid fa-users-viewfinder text-amber-400 mr-2"></i>조직도 픽커 (결재/합의/참조 지정)</h3>
-                <button onclick="closeOrgPicker()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            
-            <div class="flex-1 p-6 flex flex-col gap-6 overflow-hidden bg-slate-50">
-                <p class="text-xs text-slate-500 font-bold shrink-0"><i class="fa-solid fa-circle-info mr-1"></i>임직원을 마우스로 끌어서 하단의 역할 박스에 놓아주세요. 역할 박스 내부에서도 순서 변경이 가능합니다.</p>
-                
-                <!-- Source: Grouped Org List (Sortable) -->
-                <div class="shrink-0 h-1/2 bg-white border border-slate-200 rounded-xl p-4 shadow-inner overflow-y-auto">
-                    <div id="picker-source-groups" class="flex flex-col gap-4">
-                        <!-- Grouped by Sector -> Users injected by JS -->
-                    </div>
-                </div>
-
-                <!-- Targets: Role Boxes (Sortable) -->
-                <div class="flex-1 grid grid-cols-3 gap-4 shrink-0 min-h-[150px]">
-                    <div class="bg-white rounded-xl border-2 border-slate-200 flex flex-col overflow-hidden">
-                        <div class="bg-slate-100 p-2 text-center text-xs font-bold text-slate-700 border-b border-slate-200 shrink-0">결재 라인 (순서 중요)</div>
-                        <div id="drop-zone-approval" class="role-box flex-1 p-2 flex flex-col gap-2 overflow-y-auto"></div>
-                    </div>
-                    <div class="bg-white rounded-xl border-2 border-slate-200 flex flex-col overflow-hidden">
-                        <div class="bg-indigo-50 p-2 text-center text-xs font-bold text-indigo-700 border-b border-indigo-100 shrink-0">합의/협조 부서</div>
-                        <div id="drop-zone-agreement" class="role-box flex-1 p-2 flex flex-col gap-2 overflow-y-auto"></div>
-                    </div>
-                    <div class="bg-white rounded-xl border-2 border-slate-200 flex flex-col overflow-hidden">
-                        <div class="bg-slate-50 p-2 text-center text-xs font-bold text-slate-500 border-b border-slate-200 shrink-0">단순 참조자</div>
-                        <div id="drop-zone-reference" class="role-box flex-1 p-2 flex flex-col gap-2 overflow-y-auto"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-4 border-t border-slate-200 bg-white text-right shrink-0">
-                <button onclick="applyPickerSelection()" class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow hover:bg-indigo-700">지정 완료 및 닫기</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Rule Config Modal -->
     <div id="modal-rule" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
@@ -535,10 +525,11 @@
         let delegationRules = [];
         let users = [];
 
-        // Drag & Drop Org instances
-        let pickerSortables = [];
-        let currentPickerRoles = { approval: [], agreement: [], reference: [] };
+        // Manual Approval Line selection
+        let manualApprovalLine = { approvers: [], agreements: [], references: [] };
+        let currentAddMode = 'approvers'; // Default add mode
 
+        // --- STREAMING_CHUNK:Implementing initialization and data fetching... ---
         // --- 2. Initial Data Loading ---
         async function initializeSystem() {
             showToast('시스템 데이터를 불러오는 중입니다...', 'fa-spinner fa-spin', 'text-amber-400');
@@ -647,6 +638,7 @@
             updateDashboard();
             updateDocCategories();
             renderOrgTree();
+            renderEmbeddedOrgTree(); // Render embedded tree for write tab
             renderGlobalList();
             renderCategoryManagement();
             renderRuleList();
@@ -762,7 +754,7 @@
             el.querySelector('p').classList.replace('text-slate-700', 'text-slate-800');
             
             selectedFormId = formId;
-            simulateApprovalLine();
+            // simulateApprovalLine(); // Do not simulate automatically when manual mode is active
             applySmartForm(); // Auto apply template
         }
 
@@ -870,43 +862,98 @@
 
         // --- STREAMING_CHUNK:Implementing Dynamic Approval Rules... ---
         // --- Rules & Dynamic Approval Line ---
+
+        function setAddMode(mode) {
+            currentAddMode = mode;
+            const modes = ['approvers', 'agreements', 'references'];
+            modes.forEach(m => {
+                const btn = document.getElementById(`mode-${m}`);
+                if (!btn) return;
+                if(m === mode) {
+                    btn.className = `px-4 py-1.5 text-xs font-bold rounded text-white shadow-sm transition ${mode === 'approvers' ? 'bg-indigo-500' : (mode === 'agreements' ? 'bg-emerald-500' : 'bg-slate-600')}`;
+                } else {
+                    btn.className = 'px-4 py-1.5 text-xs font-bold rounded text-slate-500 hover:text-slate-700 transition hover:bg-slate-200 bg-transparent';
+                }
+            });
+        }
+
         function simulateApprovalLine() {
-            const container = document.getElementById('auto-approval-line');
-            let amount = parseInt(document.getElementById('doc-amount').value) || 0;
-            
-            // Custom mapped roles from picker have priority
-            if(currentPickerRoles.approval.length > 0) {
-                container.innerHTML = `<div class="bg-indigo-50 border border-indigo-200 rounded p-2 text-indigo-700 text-xs font-bold mb-2">조직도 픽커 수동 지정 적용됨</div>`;
-                currentPickerRoles.approval.forEach((u, i) => {
-                    container.innerHTML += `<div class="flex items-center gap-2 mb-1"><div class="w-6 h-6 rounded-full bg-slate-700 text-white flex items-center justify-center text-[10px]">${i+1}</div><span class="text-sm font-semibold">${u.name} ${u.rank}</span></div>`;
+            const listApprovers = document.getElementById('list-approvers');
+            const listAgreements = document.getElementById('list-agreements');
+            const listReferences = document.getElementById('list-references');
+            if(!listApprovers) return;
+
+            // Render Approvers
+            listApprovers.innerHTML = '';
+            if(manualApprovalLine.approvers.length > 0) {
+                manualApprovalLine.approvers.forEach((u, i) => {
+                    listApprovers.innerHTML += `
+                        <div class="flex items-center justify-between bg-white border border-slate-200 p-2 rounded shadow-sm mb-1 group">
+                            <div class="flex items-center gap-2">
+                                <div class="w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] shadow">${i+1}</div>
+                                <span class="text-sm font-semibold text-slate-800">${u.name} <span class="text-xs text-slate-500 font-normal">${u.rank}</span></span>
+                            </div>
+                            <button onclick="removeManualApprover('${u.id}', 'approvers')" class="text-rose-300 hover:text-rose-500 hidden group-hover:block px-1"><i class="fa-solid fa-xmark"></i></button>
+                        </div>`;
                 });
+            } else { listApprovers.innerHTML = '<p class="text-xs text-slate-400 text-center mt-4">지정되지 않음</p>'; }
+
+            // Render Agreements
+            listAgreements.innerHTML = '';
+            if(manualApprovalLine.agreements.length > 0) {
+                manualApprovalLine.agreements.forEach((u, i) => {
+                    listAgreements.innerHTML += `
+                        <div class="flex items-center justify-between bg-white border border-slate-200 p-2 rounded shadow-sm mb-1 group">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-slate-800">${u.name} <span class="text-xs text-slate-500 font-normal">${u.rank}</span></span>
+                            </div>
+                            <button onclick="removeManualApprover('${u.id}', 'agreements')" class="text-rose-300 hover:text-rose-500 hidden group-hover:block px-1"><i class="fa-solid fa-xmark"></i></button>
+                        </div>`;
+                });
+            } else { listAgreements.innerHTML = '<p class="text-xs text-slate-400 text-center mt-4">지정되지 않음</p>'; }
+
+            // Render References
+            listReferences.innerHTML = '';
+            if(manualApprovalLine.references.length > 0) {
+                manualApprovalLine.references.forEach((u, i) => {
+                    listReferences.innerHTML += `
+                        <div class="flex items-center justify-between bg-white border border-slate-200 p-2 rounded shadow-sm mb-1 group">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-slate-800">${u.name} <span class="text-xs text-slate-500 font-normal">${u.rank}</span></span>
+                            </div>
+                            <button onclick="removeManualApprover('${u.id}', 'references')" class="text-rose-300 hover:text-rose-500 hidden group-hover:block px-1"><i class="fa-solid fa-xmark"></i></button>
+                        </div>`;
+                });
+            } else { listReferences.innerHTML = '<p class="text-xs text-slate-400 text-center mt-4">지정되지 않음</p>'; }
+        }
+        
+        function clearApprovalLine() {
+            manualApprovalLine = { approvers: [], agreements: [], references: [] };
+            simulateApprovalLine();
+        }
+
+        function removeManualApprover(userId, role) {
+            manualApprovalLine[role] = manualApprovalLine[role].filter(u => u.id !== userId);
+            simulateApprovalLine();
+        }
+
+        function addManualApprover(userId) {
+            const user = users.find(u => u.id === userId);
+            if(!user) return;
+            
+            // Prevent duplicates across all roles
+            if(manualApprovalLine.approvers.find(u => u.id === userId) ||
+               manualApprovalLine.agreements.find(u => u.id === userId) ||
+               manualApprovalLine.references.find(u => u.id === userId)) {
+                showToast('이미 결재선에 포함된 인원입니다.', 'fa-triangle-exclamation', 'text-amber-500');
                 return;
             }
-
-            // DB Rules fallback
-            let activeRule = null;
-            if(selectedFormId) {
-                activeRule = delegationRules.find(r => r.category_id === selectedFormId && amount >= r.min_amount && amount <= r.max_amount);
-            }
-            if(!activeRule) {
-                activeRule = delegationRules.find(r => !r.category_id && amount >= r.min_amount && amount <= r.max_amount); // common fallback
-            }
-
-            container.innerHTML = '';
-            if(activeRule && activeRule.path) {
-                const steps = activeRule.path.split(',');
-                steps.forEach((step, i) => {
-                    const isFinal = step.includes('(전결)');
-                    container.innerHTML += `
-                        <div class="flex items-center gap-2 mb-2">
-                            <div class="w-6 h-6 rounded-full ${isFinal ? 'bg-emerald-500' : 'bg-slate-700'} text-white flex items-center justify-center text-[10px] shadow">${i+1}</div>
-                            <span class="text-sm font-semibold text-slate-800">${step}</span>
-                        </div>
-                    `;
-                });
-            } else {
-                container.innerHTML = `<p class="text-xs text-amber-500">해당 조건의 규정이 없습니다. 기본 직계결재선이 자동 적용됩니다.</p>`;
-            }
+            
+            manualApprovalLine[currentAddMode].push(user);
+            simulateApprovalLine();
+            
+            const roleNames = { 'approvers': '결재자', 'agreements': '합의자', 'references': '참조자' };
+            showToast(`${user.name}님이 ${roleNames[currentAddMode]}로 추가되었습니다.`, 'fa-plus', 'text-blue-400');
         }
 
         // --- STREAMING_CHUNK:Implementing Form/Category Management... ---
@@ -1077,25 +1124,45 @@
             // Add Drag & Drop if Admin
             if(isAdminMode) initOrgDragDrop();
         }
+        
+        function renderEmbeddedOrgTree() {
+            const root = document.getElementById('embedded-org-tree-container');
+            if(!root) return;
+            
+            const ceo = users.find(u => !u.bossId || u.rank.includes('대표'));
+            if(!ceo) { root.innerHTML = '<p class="text-xs text-center text-slate-400">데이터 없음</p>'; return; }
 
-        function buildFlexTreeHTML(userId) {
+            // Adjust styles slightly for embedded view
+            const embeddedStyles = `
+                <style>
+                    #embedded-org-tree-container .tree-node { padding: 10px; min-width: 100px; transform: scale(0.85); transform-origin: top center; margin-bottom: -15px; }
+                    #embedded-org-tree-container .tree li { padding: 15px 2px 0 2px; }
+                    #embedded-org-tree-container .tree ul { padding-top: 15px; }
+                </style>
+            `;
+            root.innerHTML = embeddedStyles + `<div class="tree flex justify-center origin-top"><ul>${buildFlexTreeHTML(ceo.id, true)}</ul></div>`;
+        }
+
+        function buildFlexTreeHTML(userId, isEmbedded = false) {
             const user = users.find(u => u.id === userId);
             if(!user) return '';
             const children = users.filter(u => u.bossId === userId);
             
+            const clickAction = isEmbedded ? `addManualApprover('${user.id}')` : `openUserModal('${user.id}')`;
+            
             let html = `<li>
-                <div class="tree-node ${isAdminMode ? 'admin-mode' : 'cursor-pointer'}" 
+                <div class="tree-node ${isAdminMode && !isEmbedded ? 'admin-mode' : 'cursor-pointer hover:border-indigo-400'}" 
                      data-id="${user.id}"
-                     onclick="openUserModal('${user.id}')">
-                    <div class="w-10 h-10 ${isAdminMode ? 'bg-amber-500' : 'bg-slate-900'} text-white rounded-full mx-auto flex items-center justify-center font-bold text-sm mb-2 shadow-sm">${user.name.charAt(0)}</div>
-                    <div class="font-bold text-sm text-slate-900">${user.name} <span class="text-xs text-indigo-600">${user.rank}</span></div>
-                    <div class="text-[10px] text-slate-500 mt-1">${user.dept}</div>
+                     onclick="${clickAction}">
+                    <div class="w-8 h-8 ${isAdminMode && !isEmbedded ? 'bg-amber-500' : 'bg-slate-800'} text-white rounded-full mx-auto flex items-center justify-center font-bold text-xs mb-1 shadow-sm">${user.name.charAt(0)}</div>
+                    <div class="font-bold text-xs text-slate-900 whitespace-nowrap">${user.name} <span class="text-[10px] text-indigo-600">${user.rank}</span></div>
+                    <div class="text-[9px] text-slate-500 mt-1 truncate max-w-[80px] mx-auto">${user.dept}</div>
                 </div>
             `;
             
             if(children.length > 0) {
                 html += `<ul>`;
-                children.forEach(c => html += buildFlexTreeHTML(c.id));
+                children.forEach(c => html += buildFlexTreeHTML(c.id, isEmbedded));
                 html += `</ul>`;
             }
             html += `</li>`;
@@ -1191,82 +1258,7 @@
             showToast('인원 정보 저장 성공', 'fa-check', 'text-emerald-400');
             document.getElementById('modal-user').classList.add('hidden');
             renderOrgTree();
-        }
-
-        // --- STREAMING_CHUNK:Implementing Org Picker logic... ---
-        // --- Org Picker (Drag & Drop 결재선 지정) ---
-        function openOrgPicker() {
-            const groupContainer = document.getElementById('picker-source-groups');
-            groupContainer.innerHTML = '';
-            
-            // Group users by department (from single source)
-            const grouped = users.reduce((acc, u) => {
-                const dept = u.dept || '기타';
-                if(!acc[dept]) acc[dept] = [];
-                acc[dept].push(u); return acc;
-            }, {});
-
-            Object.keys(grouped).forEach(deptName => {
-                let html = `
-                    <div class="mb-4">
-                        <h4 class="text-xs font-bold text-slate-700 bg-slate-100 p-2 rounded flex items-center border border-slate-200"><i class="fa-solid fa-folder text-amber-500 mr-2"></i>${deptName}</h4>
-                        <div class="flex flex-wrap gap-2 mt-2 pl-2 sortable-source" data-group="${deptName}">
-                `;
-                grouped[deptName].forEach(u => {
-                    html += `
-                        <div class="bg-white border border-slate-300 rounded p-2 text-sm font-bold text-slate-800 shadow-sm cursor-grab w-[140px] flex items-center shrink-0 hover:bg-indigo-50 hover:border-indigo-300 transition" data-id="${u.id}" data-name="${u.name}" data-rank="${u.rank}">
-                            <div class="w-6 h-6 bg-slate-800 text-white rounded-full flex items-center justify-center text-[10px] mr-2 shrink-0 shadow-inner">${u.name.charAt(0)}</div>
-                            <div class="truncate flex-1">${u.name} <span class="text-xs text-indigo-600 font-normal">${u.rank}</span></div>
-                        </div>
-                    `;
-                });
-                html += `</div></div>`;
-                groupContainer.innerHTML += html;
-            });
-
-            document.getElementById('modal-org-picker').classList.remove('hidden');
-            initSortables();
-        }
-        function closeOrgPicker() { document.getElementById('modal-org-picker').classList.add('hidden'); }
-
-        function initSortables() {
-            if(pickerSortables.length > 0) { pickerSortables.forEach(s => s.destroy()); pickerSortables = []; }
-            
-            const commonOpts = { group: { name: 'shared', pull: 'clone', put: false }, animation: 150, sort: false, ghostClass: 'ghost-item' };
-            
-            document.querySelectorAll('.sortable-source').forEach(el => {
-                pickerSortables.push(new Sortable(el, commonOpts));
-            });
-
-            const targetOpts = { group: { name: 'shared', pull: false, put: true }, animation: 150, ghostClass: 'ghost-item',
-                onAdd: function (evt) {
-                    const item = evt.item;
-                    // Format item for drop zone
-                    item.className = "bg-white border border-slate-300 rounded p-2 text-sm font-bold text-slate-800 flex justify-between items-center group shadow-sm";
-                    const id = item.dataset.id; const name = item.dataset.name; const rank = item.dataset.rank;
-                    item.innerHTML = `
-                        <div class="flex items-center"><i class="fa-solid fa-grip-vertical text-slate-300 mr-2 cursor-grab"></i> <span>${name} <span class="text-xs text-slate-500 font-normal">${rank}</span></span></div>
-                        <button class="text-red-300 hover:text-red-500 hidden group-hover:block" onclick="this.parentNode.remove()"><i class="fa-solid fa-trash"></i></button>
-                    `;
-                }
-            };
-            
-            pickerSortables.push(new Sortable(document.getElementById('drop-zone-approval'), targetOpts));
-            pickerSortables.push(new Sortable(document.getElementById('drop-zone-agreement'), targetOpts));
-            pickerSortables.push(new Sortable(document.getElementById('drop-zone-reference'), targetOpts));
-        }
-
-        function applyPickerSelection() {
-            currentPickerRoles = { approval: [], agreement: [], reference: [] };
-            ['approval', 'agreement', 'reference'].forEach(role => {
-                const zone = document.getElementById(`drop-zone-${role}`);
-                Array.from(zone.children).forEach(el => {
-                    currentPickerRoles[role].push({ id: el.dataset.id, name: el.dataset.name, rank: el.dataset.rank });
-                });
-            });
-            closeOrgPicker();
-            simulateApprovalLine();
-            showToast('수동 결재선 픽커 반영 완료', 'fa-check', 'text-emerald-400');
+            renderEmbeddedOrgTree();
         }
 
         // --- STREAMING_CHUNK:Implementing Document Submission and Utilities... ---
@@ -1286,6 +1278,7 @@
             
             document.getElementById('doc-title').value = '';
             clearEditor();
+            clearApprovalLine(); // Reset the approval line for the next document
             switchTab('list');
             renderGlobalList();
         }
