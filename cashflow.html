@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise 스마트 자금 관리</title>
+    <title>자금 관리</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
@@ -24,43 +26,42 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useMemo, useEffect } = React;
+        const { useState, useMemo, useEffect, useCallback, useRef } = React;
+        
+        // Supabase 초기화
+        const supabaseUrl = 'https://zpzaiuqcoltshtsrllxx.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwemFpdXFjb2x0c2h0c3JsbHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjA4MTcsImV4cCI6MjEwMTczNjgxN30.zWiMJ0RDpSZlWaSBKcO1X3HvF-NBLw2YTqH6sjfRbME';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         const Icon = ({ name, className }) => {
-            const iconRef = React.useRef(null);
-            React.useEffect(() => {
+            const iconRef = useRef(null);
+            
+            useEffect(() => {
                 if (iconRef.current && window.lucide) {
+                    // 이전 아이콘(SVG)이 있다면 제거
+                    while (iconRef.current.firstChild) {
+                        iconRef.current.removeChild(iconRef.current.firstChild);
+                    }
+                    
+                    // 빈 <i> 태그 생성 (React가 추적하지 않는 요소)
+                    const iconElement = document.createElement('i');
+                    iconElement.setAttribute('data-lucide', name);
+                    if (className) iconElement.setAttribute('class', className);
+                    
+                    iconRef.current.appendChild(iconElement);
+                    
+                    // Lucide 아이콘 생성
                     window.lucide.createIcons({
+                        root: iconRef.current,
                         icons: { [name]: window.lucide.icons[name] },
-                        nameAttr: 'data-lucide',
-                        attrs: { class: className }
+                        nameAttr: 'data-lucide'
                     });
                 }
             }, [name, className]);
-            return <i ref={iconRef} data-lucide={name}></i>;
+            
+            // React는 span 껍데기만 관리하고 내부는 직접 조작하도록 분리
+            return <span ref={iconRef} className="inline-flex items-center justify-center"></span>;
         };
-
-        const DEFAULT_ACCOUNTS = [
-          { id: 'acc_1', name: '국민은행 (주거래)', initialCapital: 30000000, startDate: '2026-01-01' },
-          { id: 'acc_2', name: '기업은행 (보조/세금)', initialCapital: 15000000, startDate: '2026-01-01' },
-          { id: 'acc_3', name: '카카오뱅크 (비상금)', initialCapital: 5000000, startDate: '2026-01-01' }
-        ];
-
-        const DEFAULT_IN_CATEGORIES = [
-          '스마트스토어 정산', '오픈마켓(쿠팡/11번가)', '자사몰(간편결제/PG)', 
-          '신용카드 매출', 'B2B 현금/계좌이체', '대출/정부지원금', '기타 수입'
-        ];
-
-        const DEFAULT_OUT_CATEGORIES = [
-          '원부자재/상품 매입', '고정비 (임대료/관리비)', '인건비 (급여/퇴직금)', 
-          '4대보험료 납부', '원천세 납부', '부가세 납부', '법인세/종합소득세 납부', 
-          '마케팅/광고비', '물류/택배비', '대출이자/원금 상환'
-        ];
-
-        const DEFAULT_CLIENTS = [
-          '네이버파이낸셜', '(주)도매상사', '국세청', '토스페이먼츠', 
-          '소상공인시장진흥공단', '국민건강보험공단', '신용보증기금', '쿠팡(주)'
-        ];
 
         const formatCurrency = (amount) => new Intl.NumberFormat('ko-KR').format(amount) + '원';
         const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
@@ -83,30 +84,62 @@
           const events = [];
           if (day === 25) events.push({ type: 'salary', name: '급여 및 4대보험', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' });
           if (day === 10) events.push({ type: 'tax', name: '원천세 신고납부', color: 'bg-red-100 text-red-700 border-red-200' });
-          
           if (month === 1 && day === 25) events.push({ type: 'tax', name: '부가세 2기 확정', color: 'bg-orange-100 text-orange-700 border-orange-200' });
           if (month === 4 && day === 25) events.push({ type: 'tax', name: '부가세 1기 예정', color: 'bg-orange-100 text-orange-700 border-orange-200' });
           if (month === 7 && day === 25) events.push({ type: 'tax', name: '부가세 1기 확정', color: 'bg-orange-100 text-orange-700 border-orange-200' });
           if (month === 10 && day === 25) events.push({ type: 'tax', name: '부가세 2기 예정', color: 'bg-orange-100 text-orange-700 border-orange-200' });
-          
           if (month === 3 && day === 31) events.push({ type: 'tax', name: '법인세 결산납부', color: 'bg-purple-100 text-purple-700 border-purple-200' });
           if (month === 8 && day === 31) events.push({ type: 'tax', name: '법인세 중간예납', color: 'bg-purple-100 text-purple-700 border-purple-200' });
           return events;
         };
 
-        const generateInitialTransactions = (year) => [
-          { id: 1, date: `${year}-01-05`, type: 'IN', accountId: 'acc_1', category: '스마트스토어 정산', client: '네이버파이낸셜', amount: 1500000, note: '1주차 정산' },
-          { id: 2, date: `${year}-01-05`, type: 'OUT', accountId: 'acc_1', category: '원부자재/상품 매입', client: '(주)도매상사', amount: 500000, note: '박스/포장재' },
-          { id: 3, date: `${year}-01-10`, type: 'OUT', accountId: 'acc_2', category: '원천세 납부', client: '국세청', amount: 120000, note: '12월 귀속' },
-          { id: 4, date: `${year}-01-15`, type: 'IN', accountId: 'acc_1', category: '자사몰(간편결제/PG)', client: '토스페이먼츠', amount: 2300000, note: '정산금' },
-          { id: 5, date: `${year}-01-25`, type: 'OUT', accountId: 'acc_2', category: '부가세 납부', client: '국세청', amount: 1800000, note: '2기 확정' },
-          { id: 6, date: `${year}-02-10`, type: 'IN', accountId: 'acc_1', category: '대출/정부지원금', client: '소상공인시장진흥공단', amount: 10000000, note: '성장지원금' },
-        ];
+        function AuthLock({ onAuthenticated }) {
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState(false);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (password === '245024') {
+                    setError(false);
+                    onAuthenticated();
+                } else {
+                    setError(true);
+                    setPassword('');
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm">
+                        <div className="flex justify-center mb-6">
+                            <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center">
+                                <Icon name="lock" className="w-8 h-8 text-indigo-600" />
+                            </div>
+                        </div>
+                        <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">보안 인증</h2>
+                        <p className="text-sm text-center text-gray-500 mb-8">자금 수지 현황표에 접근하려면<br/>비밀번호를 입력하세요.</p>
+                        
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="비밀번호 입력" className={`w-full px-4 py-3 rounded-lg border text-center tracking-widest text-lg font-mono outline-none transition-colors ${error ? 'border-red-500 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'}`} autoFocus />
+                                {error && <p className="text-xs text-red-500 mt-2 text-center font-semibold animate-pulse">비밀번호가 일치하지 않습니다.</p>}
+                            </div>
+                            <button type="submit" className="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-md">확인</button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
 
         function CashFlowTracker() {
           const currentYear = new Date().getFullYear();
           const todayStr = `${currentYear}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+          
+          const companyId = 'b0722421-a3f5-4f40-b615-ce1bb80145c2'; // 기본 테스트용 company_id (Supabase 제약조건 통과용)
 
+          const [isAuthenticated, setIsAuthenticated] = useState(false);
+          const [isLoadingData, setIsLoadingData] = useState(true); // DB 로딩 상태
+          
           const [role, setRole] = useState('ADMIN');
           const [activeTab, setActiveTab] = useState('CALENDAR');
           const [activeMonth, setActiveMonth] = useState(new Date().getMonth() + 1);
@@ -114,37 +147,90 @@
           const [selectedAccount, setSelectedAccount] = useState('ALL');
           const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-          const [accounts, setAccounts] = useState(DEFAULT_ACCOUNTS);
-          const [inCategories, setInCategories] = useState(DEFAULT_IN_CATEGORIES);
-          const [outCategories, setOutCategories] = useState(DEFAULT_OUT_CATEGORIES);
-          const [clients, setClients] = useState(DEFAULT_CLIENTS);
-          const [transactions, setTransactions] = useState(generateInitialTransactions(currentYear));
-          const [fundingPlans, setFundingPlans] = useState([
-            { id: 1, date: `${currentYear}-05-20`, source: '신용보증기금', type: '보증서 대출', amount: 50000000, status: '심사중' }
-          ]);
+          // DB 연동 상태 변수
+          const [accounts, setAccounts] = useState([]);
+          const [inCategories, setInCategories] = useState([]);
+          const [outCategories, setOutCategories] = useState([]);
+          const [clients, setClients] = useState([]);
+          const [transactions, setTransactions] = useState([]);
+          const [fundingPlans, setFundingPlans] = useState([]);
 
           const [txForm, setTxForm] = useState({
-            type: 'IN', accountId: accounts[0]?.id || '', category: inCategories[0] || '', client: '', amount: '', note: '',
+            type: 'IN', accountId: '', category: '', client: '', amount: '', note: '',
             isRecurring: false, recurType: 'month', recurUntil: `${currentYear}-12-31`
           });
           const [fundingForm, setFundingForm] = useState({ date: '', source: '', type: '', amount: '', status: '계획' });
           
-          // Using objects to track edit state to allow canceling
-          const [editingAccId, setEditingAccId] = useState(null);
-          const [editAccForm, setEditAccForm] = useState({ name: '', startDate: '', initialCapital: '' });
+          // 조달 계획 및 지원금 수정 상태 추가
+          const [editingFundingId, setEditingFundingId] = useState(null);
+          const [editFundingForm, setEditFundingForm] = useState({ date: '', source: '', type: '', amount: '', status: '' });
           
-          const [editingClientIndex, setEditingClientIndex] = useState(null);
-          const [editClientValue, setEditClientValue] = useState('');
-
-          const [editingCatInIndex, setEditingCatInIndex] = useState(null);
-          const [editCatInValue, setEditCatInValue] = useState('');
-          
-          const [editingCatOutIndex, setEditingCatOutIndex] = useState(null);
-          const [editCatOutValue, setEditCatOutValue] = useState('');
+          const [editingGrantId, setEditingGrantId] = useState(null);
+          const [editGrantForm, setEditGrantForm] = useState({ date: '', accountId: '', client: '', category: '', amount: '', note: '' });
 
           const [expandedMonths, setExpandedMonths] = useState({});
+          
+          // 각 일자의 트랜잭션 상세 열림 상태를 관리하는 객체
+          const [openDailyTx, setOpenDailyTx] = useState({});
 
-          useEffect(() => { if(window.lucide) window.lucide.createIcons(); }, [activeTab, activeMonth, selectedDate, role]);
+          // 알림 메시지 상태
+          const [toast, setToast] = useState(null);
+          const showToast = (msg, isError = false) => {
+              setToast({ msg, isError });
+              setTimeout(() => setToast(null), 3000);
+          };
+
+          // DB 데이터 불러오기 함수
+          const fetchInitialData = useCallback(async () => {
+              setIsLoadingData(true);
+              try {
+                  // 1. 통장 내역
+                  const { data: accData } = await supabase.from('cashflow_accounts').select('*').eq('company_id', companyId);
+                  setAccounts(accData?.map(a => ({ id: a.id, name: a.name, initialCapital: a.initial_capital, startDate: new Date(a.created_at).toISOString().split('T')[0] })) || []);
+                  
+                  // 2. 카테고리 내역
+                  const { data: catData } = await supabase.from('cashflow_categories').select('*').eq('company_id', companyId);
+                  if (catData) {
+                      setInCategories(catData.filter(c => c.type === 'IN').map(c => ({ id: c.id, name: c.name })));
+                      setOutCategories(catData.filter(c => c.type === 'OUT').map(c => ({ id: c.id, name: c.name })));
+                  }
+                  
+                  // 3. 거래처 내역
+                  const { data: cliData } = await supabase.from('cashflow_clients').select('*').eq('company_id', companyId);
+                  setClients(cliData?.map(c => ({ id: c.id, name: c.name })) || []);
+                  
+                  // 4. 자금 수지 내역
+                  const { data: txData } = await supabase.from('cashflow_transactions').select('*').eq('company_id', companyId);
+                  setTransactions(txData?.map(t => ({ id: t.id, date: t.transaction_date, type: t.type, accountId: t.account_id, category: t.category_name, client: t.client_name, amount: t.amount, note: t.note })) || []);
+                  
+                  // 5. 조달 계획 내역
+                  const { data: fdData } = await supabase.from('cashflow_funding_plans').select('*').eq('company_id', companyId);
+                  setFundingPlans(fdData?.map(f => ({ id: f.id, date: f.planned_date, source: f.source, type: f.funding_type, amount: f.amount, status: f.status })) || []);
+                  
+              } catch (error) {
+                  console.error("Data Fetch Error:", error);
+                  showToast("데이터를 불러오는데 실패했습니다.", true);
+              } finally {
+                  setIsLoadingData(false);
+              }
+          }, []);
+
+          // 인증 완료 시 데이터 패칭
+          useEffect(() => {
+              if (isAuthenticated) {
+                  fetchInitialData();
+              }
+          }, [isAuthenticated, fetchInitialData]);
+
+          // 폼 초기값 세팅 (데이터 로드 완료 후)
+          useEffect(() => {
+              if (accounts.length > 0 && inCategories.length > 0) {
+                  setTxForm(prev => ({ ...prev, accountId: prev.accountId || accounts[0].id, category: prev.category || inCategories[0].name }));
+              }
+          }, [accounts, inCategories]);
+
+
+          useEffect(() => { if(window.lucide && isAuthenticated) window.lucide.createIcons(); }, [activeTab, activeMonth, selectedDate, role, isAuthenticated, transactions, accounts, clients]);
 
           const toggleMonth = (month) => setExpandedMonths(prev => ({ ...prev, [month]: !prev[month] }));
 
@@ -202,12 +288,13 @@
             return balances;
           }, [accounts, selectedAccount, txByDate, currentYear]);
 
-          const handleAddTransaction = (e) => {
+          // --- DB 데이터 조작 함수 (Transactions) ---
+          const handleAddTransaction = async (e) => {
             e.preventDefault();
             if (role !== 'ADMIN' || !txForm.client || !txForm.amount) return;
             
             const amountNum = Number(txForm.amount.replace(/[^0-9]/g, ''));
-            let newTxs = [];
+            const dbInsertData = [];
             
             if (txForm.isRecurring && txForm.recurUntil) {
                 let currDate = new Date(selectedDate);
@@ -215,32 +302,112 @@
                 
                 while(currDate <= endDate) {
                     const dateStr = `${currDate.getFullYear()}-${String(currDate.getMonth()+1).padStart(2,'0')}-${String(currDate.getDate()).padStart(2,'0')}`;
-                    newTxs.push({ id: Date.now() + Math.random(), date: dateStr, type: txForm.type, accountId: txForm.accountId, category: txForm.category, client: txForm.client, amount: amountNum, note: txForm.note });
+                    dbInsertData.push({ 
+                        company_id: companyId, transaction_date: dateStr, type: txForm.type, 
+                        account_id: txForm.accountId, category_name: txForm.category, client_name: txForm.client, 
+                        amount: amountNum, note: txForm.note 
+                    });
                     
                     if (txForm.recurType === 'week') currDate.setDate(currDate.getDate() + 7);
                     else if (txForm.recurType === 'month') currDate.setMonth(currDate.getMonth() + 1);
                     else if (txForm.recurType === 'year') currDate.setFullYear(currDate.getFullYear() + 1);
                 }
             } else {
-                newTxs.push({ id: Date.now(), date: selectedDate, type: txForm.type, accountId: txForm.accountId, category: txForm.category, client: txForm.client, amount: amountNum, note: txForm.note });
+                dbInsertData.push({ 
+                    company_id: companyId, transaction_date: selectedDate, type: txForm.type, 
+                    account_id: txForm.accountId, category_name: txForm.category, client_name: txForm.client, 
+                    amount: amountNum, note: txForm.note 
+                });
             }
 
-            setTransactions([...transactions, ...newTxs]);
-            setTxForm({ ...txForm, client: '', amount: '', note: '' });
+            try {
+                const { data, error } = await supabase.from('cashflow_transactions').insert(dbInsertData).select();
+                if (error) throw error;
+                
+                // 프론트 상태 업데이트
+                const newTxs = data.map(t => ({ id: t.id, date: t.transaction_date, type: t.type, accountId: t.account_id, category: t.category_name, client: t.client_name, amount: t.amount, note: t.note }));
+                setTransactions([...transactions, ...newTxs]);
+                setTxForm({ ...txForm, client: '', amount: '', note: '' });
+                showToast("내역이 등록되었습니다.");
+            } catch(e) {
+                showToast("내역 등록 실패", true);
+                console.error(e);
+            }
           };
 
-          const handleAddFunding = (e) => {
+          const handleAddFunding = async (e) => {
             e.preventDefault();
             if (role !== 'ADMIN') return;
-            const newPlan = { id: Date.now(), ...fundingForm, amount: Number(fundingForm.amount.replace(/[^0-9]/g, '')) };
-            setFundingPlans([...fundingPlans, newPlan]);
-            setFundingForm({ date: '', source: '', type: '', amount: '', status: '계획' });
+            const amountNum = Number(fundingForm.amount.replace(/[^0-9]/g, ''));
+            
+            try {
+                const { data, error } = await supabase.from('cashflow_funding_plans').insert([{
+                    company_id: companyId, planned_date: fundingForm.date, source: fundingForm.source, 
+                    funding_type: fundingForm.type, amount: amountNum, status: fundingForm.status
+                }]).select();
+                if (error) throw error;
+                
+                const newPlan = { id: data[0].id, date: data[0].planned_date, source: data[0].source, type: data[0].funding_type, amount: data[0].amount, status: data[0].status };
+                setFundingPlans([...fundingPlans, newPlan]);
+                setFundingForm({ date: '', source: '', type: '', amount: '', status: '계획' });
+                showToast("조달 계획이 등록되었습니다.");
+            } catch(e) {
+                showToast("등록 실패", true);
+            }
           };
 
-          const handleDelete = (id, type = 'TX') => {
+          const handleDelete = async (id, type = 'TX') => {
             if (role !== 'ADMIN') return;
-            if (type === 'TX') setTransactions(transactions.filter(t => t.id !== id));
-            if (type === 'FUNDING') setFundingPlans(fundingPlans.filter(t => t.id !== id));
+            
+            if (!window.confirm("정말로 삭제하시겠습니까?")) return;
+
+            try {
+                if (type === 'TX') {
+                    const { error } = await supabase.from('cashflow_transactions').delete().eq('id', id);
+                    if (error) throw error;
+                    setTransactions(transactions.filter(t => t.id !== id));
+                } else if (type === 'FUNDING') {
+                    const { error } = await supabase.from('cashflow_funding_plans').delete().eq('id', id);
+                    if (error) throw error;
+                    setFundingPlans(fundingPlans.filter(t => t.id !== id));
+                }
+                showToast("삭제되었습니다.");
+            } catch(e) {
+                showToast("삭제 실패", true);
+            }
+          };
+
+          // 조달 계획 수정 저장 함수
+          const saveEditFunding = async (id) => {
+            const amountNum = Number(editFundingForm.amount.replace(/[^0-9]/g, ''));
+            try {
+                const { error } = await supabase.from('cashflow_funding_plans').update({
+                    planned_date: editFundingForm.date, source: editFundingForm.source, 
+                    funding_type: editFundingForm.type, amount: amountNum, status: editFundingForm.status
+                }).eq('id', id);
+                if (error) throw error;
+                
+                setFundingPlans(fundingPlans.map(f => f.id === id ? { ...f, date: editFundingForm.date, source: editFundingForm.source, type: editFundingForm.type, amount: amountNum, status: editFundingForm.status } : f));
+                setEditingFundingId(null);
+                showToast("조달 계획이 수정되었습니다.");
+            } catch(e) { showToast("수정 실패", true); }
+          };
+
+          // 정부지원금(거래 내역) 수정 저장 함수
+          const saveEditGrant = async (id) => {
+            const amountNum = Number(editGrantForm.amount.replace(/[^0-9]/g, ''));
+            try {
+                const { error } = await supabase.from('cashflow_transactions').update({
+                    transaction_date: editGrantForm.date, account_id: editGrantForm.accountId, 
+                    client_name: editGrantForm.client, category_name: editGrantForm.category, 
+                    amount: amountNum, note: editGrantForm.note
+                }).eq('id', id);
+                if (error) throw error;
+                
+                setTransactions(transactions.map(t => t.id === id ? { ...t, date: editGrantForm.date, accountId: editGrantForm.accountId, client: editGrantForm.client, category: editGrantForm.category, amount: amountNum, note: editGrantForm.note } : t));
+                setEditingGrantId(null);
+                showToast("정부지원금 내역이 수정되었습니다.");
+            } catch(e) { showToast("수정 실패", true); }
           };
 
           const renderCalendar = () => {
@@ -266,6 +433,7 @@
 
               const dayFundings = fundingPlans.filter(p => p.date === dateStr);
               const dayGrantTxs = txByDate[dateStr]?.list.filter(t => t.type === 'IN' && (t.category.includes('지원금') || t.category.includes('대출'))) || [];
+              const dayFundingsTotal = dayFundings.reduce((sum, f) => sum + f.amount, 0);
 
               days.push(
                 <div key={dateStr} onClick={() => setSelectedDate(dateStr)} className={`h-28 border-r border-b border-gray-200 p-1.5 cursor-pointer transition-all flex flex-col hover:bg-indigo-50/50 relative overflow-hidden ${isSelected ? 'bg-indigo-50 ring-2 ring-indigo-500 ring-inset z-10' : (holidayName ? 'bg-red-50/30' : 'bg-white')}`}>
@@ -287,9 +455,17 @@
                     {data.out > 0 && <div className="text-red-600 flex justify-between"><span>지출</span><span>-{formatCurrency(data.out).replace('원','')}</span></div>}
                   </div>
 
-                  <div className="mt-auto pt-1 border-t border-gray-100 flex justify-between text-[10px]">
-                     <span className="text-gray-400">잔액</span>
-                     <span className="text-gray-800 font-semibold truncate ml-1">{formatCurrency(data.end).replace('원','')}</span>
+                  <div className="mt-auto pt-1 border-t border-gray-100 flex flex-col gap-0.5 text-[10px]">
+                     <div className="flex justify-between">
+                         <span className="text-gray-400">잔액</span>
+                         <span className="text-gray-800 font-semibold truncate ml-1">{formatCurrency(data.end).replace('원','')}</span>
+                     </div>
+                     {dayFundingsTotal > 0 && (
+                         <div className="flex justify-between bg-indigo-50 px-1 -mx-1 rounded">
+                             <span className="text-indigo-500 font-bold">조달</span>
+                             <span className="text-indigo-600 font-bold truncate ml-1">+{formatCurrency(dayFundingsTotal).replace('원','')}</span>
+                         </div>
+                     )}
                   </div>
                 </div>
               );
@@ -345,9 +521,11 @@
                                             const dData = dailyBalances[dStr];
                                             const dayNum = parseInt(dStr.split('-')[2], 10);
                                             const txList = txByDate[dStr]?.list || [];
-                                            const [isTxOpen, setIsTxOpen] = useState(false);
                                             
-                                            // 요일 및 공휴일 확인
+                                            // useState 대신 컴포넌트 상태 객체 참조
+                                            const isTxOpen = openDailyTx[dStr];
+                                            const toggleDailyTx = () => setOpenDailyTx(prev => ({...prev, [dStr]: !prev[dStr]}));
+                                            
                                             const monthDayStr = dStr.substring(5);
                                             const holidayName = HOLIDAYS[monthDayStr];
                                             const dayOfWeek = new Date(dStr).getDay();
@@ -357,7 +535,7 @@
 
                                             return (
                                                 <React.Fragment key={dStr}>
-                                                    <tr className="border-b border-gray-50 hover:bg-indigo-50/30 cursor-pointer" onClick={() => setIsTxOpen(!isTxOpen)}>
+                                                    <tr className="border-b border-gray-50 hover:bg-indigo-50/30 cursor-pointer" onClick={toggleDailyTx}>
                                                         <td className={`py-2 font-medium flex flex-col ${dayColorClass}`}>
                                                             <span>{dayNum}일</span>
                                                             {holidayName && <span className="text-[8px] leading-tight text-red-400 font-normal">{holidayName}</span>}
@@ -418,13 +596,48 @@
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600"><th className="p-4 font-semibold">날짜</th><th className="p-4 font-semibold">입금 계좌</th><th className="p-4 font-semibold">지원 기관(거래처)</th><th className="p-4 font-semibold">항목/메모</th><th className="p-4 font-semibold text-right">금액</th></tr>
+                      <tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600"><th className="p-4 font-semibold">날짜</th><th className="p-4 font-semibold">입금 계좌</th><th className="p-4 font-semibold">지원 기관(거래처)</th><th className="p-4 font-semibold">항목/메모</th><th className="p-4 font-semibold text-right">금액</th>{role === 'ADMIN' && <th className="p-4 font-semibold text-center w-24">관리</th>}</tr>
                     </thead>
                     <tbody>
-                      {grantTxs.length === 0 ? (<tr><td colSpan="5" className="p-8 text-center text-gray-400">내역이 없습니다.</td></tr>) : (
+                      {grantTxs.length === 0 ? (<tr><td colSpan={role==='ADMIN'?6:5} className="p-8 text-center text-gray-400">내역이 없습니다.</td></tr>) : (
                         grantTxs.sort((a,b) => new Date(b.date) - new Date(a.date)).map(tx => (
                           <tr key={tx.id} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="p-4 text-sm">{tx.date}</td><td className="p-4 text-sm">{accounts.find(a => a.id === tx.accountId)?.name}</td><td className="p-4 text-sm font-medium">{tx.client}</td><td className="p-4 text-sm text-gray-600">{tx.category} {tx.note && <span className="text-xs text-gray-400 block">{tx.note}</span>}</td><td className="p-4 text-sm font-bold text-blue-600 text-right">{formatCurrency(tx.amount)}</td>
+                            {editingGrantId === tx.id ? (
+                                <>
+                                    <td className="p-2"><input type="date" value={editGrantForm.date} onChange={e=>setEditGrantForm({...editGrantForm, date: e.target.value})} className="border p-1.5 rounded text-xs w-full"/></td>
+                                    <td className="p-2">
+                                        <select value={editGrantForm.accountId} onChange={e=>setEditGrantForm({...editGrantForm, accountId: e.target.value})} className="border p-1.5 rounded text-xs w-full">
+                                            {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                        </select>
+                                    </td>
+                                    <td className="p-2"><input type="text" value={editGrantForm.client} onChange={e=>setEditGrantForm({...editGrantForm, client: e.target.value})} className="border p-1.5 rounded text-xs w-full"/></td>
+                                    <td className="p-2">
+                                        <div className="flex flex-col gap-1">
+                                            <input type="text" value={editGrantForm.category} onChange={e=>setEditGrantForm({...editGrantForm, category: e.target.value})} className="border p-1.5 rounded text-xs w-full"/>
+                                            <input type="text" value={editGrantForm.note} onChange={e=>setEditGrantForm({...editGrantForm, note: e.target.value})} placeholder="메모" className="border p-1.5 rounded text-xs w-full"/>
+                                        </div>
+                                    </td>
+                                    <td className="p-2"><input type="text" value={editGrantForm.amount} onChange={e=>{const val=e.target.value.replace(/[^0-9]/g, ''); setEditGrantForm({...editGrantForm, amount: val ? new Intl.NumberFormat('ko-KR').format(val) : ''});}} className="border p-1.5 rounded text-xs w-full text-right"/></td>
+                                    <td className="p-2 text-center">
+                                        <div className="flex gap-1 justify-center">
+                                            <button onClick={() => saveEditGrant(tx.id)} className="bg-emerald-500 text-white p-1.5 rounded text-xs font-bold hover:bg-emerald-600">저장</button>
+                                            <button onClick={() => setEditingGrantId(null)} className="bg-gray-300 text-gray-700 p-1.5 rounded text-xs font-bold hover:bg-gray-400">취소</button>
+                                        </div>
+                                    </td>
+                                </>
+                            ) : (
+                                <>
+                                    <td className="p-4 text-sm">{tx.date}</td><td className="p-4 text-sm">{accounts.find(a => a.id === tx.accountId)?.name}</td><td className="p-4 text-sm font-medium">{tx.client}</td><td className="p-4 text-sm text-gray-600">{tx.category} {tx.note && <span className="text-xs text-gray-400 block">{tx.note}</span>}</td><td className="p-4 text-sm font-bold text-blue-600 text-right">{formatCurrency(tx.amount)}</td>
+                                    {role === 'ADMIN' && (
+                                        <td className="p-4 text-center">
+                                            <div className="flex gap-2 justify-center">
+                                                <button onClick={() => {setEditingGrantId(tx.id); setEditGrantForm({date: tx.date, accountId: tx.accountId, client: tx.client, category: tx.category, amount: new Intl.NumberFormat('ko-KR').format(tx.amount), note: tx.note || ''});}} className="text-gray-400 hover:text-blue-500"><Icon name="pen" className="w-4 h-4"/></button>
+                                                <button onClick={() => handleDelete(tx.id, 'TX')} className="text-gray-400 hover:text-red-500"><Icon name="trash-2" className="w-4 h-4"/></button>
+                                            </div>
+                                        </td>
+                                    )}
+                                </>
+                            )}
                           </tr>
                         ))
                       )}
@@ -454,14 +667,39 @@
 
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <table className="w-full text-left border-collapse">
-                  <thead><tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600"><th className="p-4 font-semibold">예정일</th><th className="p-4 font-semibold">조달처</th><th className="p-4 font-semibold">유형</th><th className="p-4 font-semibold text-right">예상 조달금액</th><th className="p-4 font-semibold text-center">상태</th>{role === 'ADMIN' && <th className="p-4 font-semibold text-center">관리</th>}</tr></thead>
+                  <thead><tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600"><th className="p-4 font-semibold">예정일</th><th className="p-4 font-semibold">조달처</th><th className="p-4 font-semibold">유형</th><th className="p-4 font-semibold text-right">예상 조달금액</th><th className="p-4 font-semibold text-center">상태</th>{role === 'ADMIN' && <th className="p-4 font-semibold text-center w-24">관리</th>}</tr></thead>
                   <tbody>
                     {fundingPlans.length === 0 ? (<tr><td colSpan={role==='ADMIN'?6:5} className="p-8 text-center text-gray-400">등록된 조달 계획이 없습니다.</td></tr>) : (
                       fundingPlans.sort((a,b) => new Date(a.date) - new Date(b.date)).map(plan => (
                         <tr key={plan.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-4 text-sm">{plan.date}</td><td className="p-4 text-sm font-medium">{plan.source}</td><td className="p-4 text-sm text-gray-600">{plan.type}</td><td className="p-4 text-sm font-bold text-indigo-600 text-right">{formatCurrency(plan.amount)}</td>
-                          <td className="p-4 text-sm text-center"><span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-semibold">{plan.status}</span></td>
-                          {role === 'ADMIN' && (<td className="p-4 text-center"><button onClick={() => handleDelete(plan.id, 'FUNDING')} className="text-gray-400 hover:text-red-500"><Icon name="trash-2" className="w-4 h-4 mx-auto"/></button></td>)}
+                          {editingFundingId === plan.id ? (
+                              <>
+                                <td className="p-2"><input type="date" value={editFundingForm.date} onChange={e=>setEditFundingForm({...editFundingForm, date: e.target.value})} className="border p-1.5 rounded text-xs w-full"/></td>
+                                <td className="p-2"><input type="text" value={editFundingForm.source} onChange={e=>setEditFundingForm({...editFundingForm, source: e.target.value})} className="border p-1.5 rounded text-xs w-full"/></td>
+                                <td className="p-2"><input type="text" value={editFundingForm.type} onChange={e=>setEditFundingForm({...editFundingForm, type: e.target.value})} className="border p-1.5 rounded text-xs w-full"/></td>
+                                <td className="p-2"><input type="text" value={editFundingForm.amount} onChange={e=>{const val=e.target.value.replace(/[^0-9]/g, ''); setEditFundingForm({...editFundingForm, amount: val ? new Intl.NumberFormat('ko-KR').format(val) : ''});}} className="border p-1.5 rounded text-xs w-full text-right"/></td>
+                                <td className="p-2"><input type="text" value={editFundingForm.status} onChange={e=>setEditFundingForm({...editFundingForm, status: e.target.value})} className="border p-1.5 rounded text-xs w-full text-center"/></td>
+                                <td className="p-2 text-center">
+                                    <div className="flex gap-1 justify-center">
+                                        <button onClick={() => saveEditFunding(plan.id)} className="bg-emerald-500 text-white p-1.5 rounded text-xs font-bold hover:bg-emerald-600">저장</button>
+                                        <button onClick={() => setEditingFundingId(null)} className="bg-gray-300 text-gray-700 p-1.5 rounded text-xs font-bold hover:bg-gray-400">취소</button>
+                                    </div>
+                                </td>
+                              </>
+                          ) : (
+                              <>
+                                <td className="p-4 text-sm">{plan.date}</td><td className="p-4 text-sm font-medium">{plan.source}</td><td className="p-4 text-sm text-gray-600">{plan.type}</td><td className="p-4 text-sm font-bold text-indigo-600 text-right">{formatCurrency(plan.amount)}</td>
+                                <td className="p-4 text-sm text-center"><span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-semibold">{plan.status}</span></td>
+                                {role === 'ADMIN' && (
+                                    <td className="p-4 text-center">
+                                        <div className="flex gap-2 justify-center">
+                                            <button onClick={() => {setEditingFundingId(plan.id); setEditFundingForm({date: plan.date, source: plan.source, type: plan.type, amount: new Intl.NumberFormat('ko-KR').format(plan.amount), status: plan.status});}} className="text-gray-400 hover:text-blue-500"><Icon name="pen" className="w-4 h-4"/></button>
+                                            <button onClick={() => handleDelete(plan.id, 'FUNDING')} className="text-gray-400 hover:text-red-500"><Icon name="trash-2" className="w-4 h-4"/></button>
+                                        </div>
+                                    </td>
+                                )}
+                              </>
+                          )}
                         </tr>
                       ))
                     )}
@@ -471,6 +709,7 @@
             </div>
           );
 
+          // --- Settings Modal DB Integration ---
           const SettingsModal = () => {
             const [newCatIn, setNewCatIn] = useState('');
             const [newCatOut, setNewCatOut] = useState('');
@@ -479,43 +718,138 @@
             const [newAccCap, setNewAccCap] = useState('');
             const [newClient, setNewClient] = useState('');
             
+            // Edit states
+            const [editingAccId, setEditingAccId] = useState(null);
+            const [editAccForm, setEditAccForm] = useState({ name: '', startDate: '', initialCapital: '' });
+            
+            const [editingClientIndex, setEditingClientIndex] = useState(null);
+            const [editClientValue, setEditClientValue] = useState('');
+            
+            const [editingCatInIndex, setEditingCatInIndex] = useState(null);
+            const [editCatInValue, setEditCatInValue] = useState('');
+            
+            const [editingCatOutIndex, setEditingCatOutIndex] = useState(null);
+            const [editCatOutValue, setEditCatOutValue] = useState('');
+
             if (!isSettingsOpen) return null;
 
-            const handleAddAccount = () => {
+            // 계좌(Account) DB 처리
+            const handleAddAccount = async () => {
               if (!newAccName || !newAccCap || !newAccDate) return;
-              const newAcc = { id: `acc_${Date.now()}`, name: newAccName, startDate: newAccDate, initialCapital: Number(newAccCap.replace(/[^0-9]/g, '')) };
-              setAccounts([...accounts, newAcc]);
-              setNewAccName(''); setNewAccCap('');
+              const capNum = Number(newAccCap.replace(/[^0-9]/g, ''));
+              try {
+                  const { data, error } = await supabase.from('cashflow_accounts').insert([{ company_id: companyId, name: newAccName, initial_capital: capNum }]).select();
+                  if (error) throw error;
+                  setAccounts([...accounts, { id: data[0].id, name: data[0].name, initialCapital: data[0].initial_capital, startDate: new Date(data[0].created_at).toISOString().split('T')[0] }]);
+                  setNewAccName(''); setNewAccCap('');
+                  showToast("계좌가 등록되었습니다.");
+              } catch(e) { showToast("등록 실패", true); }
             };
 
-            const startEditAccount = (acc) => { setEditingAccId(acc.id); setEditAccForm({ name: acc.name, startDate: acc.startDate, initialCapital: new Intl.NumberFormat('ko-KR').format(acc.initialCapital) }); };
-            const saveEditAccount = () => {
-                setAccounts(accounts.map(acc => acc.id === editingAccId ? { ...acc, name: editAccForm.name, startDate: editAccForm.startDate, initialCapital: Number(editAccForm.initialCapital.replace(/[^0-9]/g, '')) } : acc));
-                setEditingAccId(null);
+            const saveEditAccount = async (id) => {
+                const capNum = Number(editAccForm.initialCapital.replace(/[^0-9]/g, ''));
+                try {
+                    const { error } = await supabase.from('cashflow_accounts').update({ name: editAccForm.name, initial_capital: capNum }).eq('id', id);
+                    if (error) throw error;
+                    setAccounts(accounts.map(acc => acc.id === id ? { ...acc, name: editAccForm.name, initialCapital: capNum } : acc));
+                    setEditingAccId(null);
+                    showToast("계좌가 수정되었습니다.");
+                } catch(e) { showToast("수정 실패", true); }
             };
 
-            const saveEditClient = (oldClient, index) => {
-                if(!editClientValue) return;
-                const updatedClients = [...clients];
-                updatedClients[index] = editClientValue;
-                setClients(updatedClients);
-                // Also update existing transactions
-                setTransactions(transactions.map(t => t.client === oldClient ? { ...t, client: editClientValue } : t));
-                setEditingClientIndex(null);
+            const deleteAccount = async (id) => {
+                if(!window.confirm("계좌를 삭제하시겠습니까? 관련 내역이 모두 삭제될 수 있습니다.")) return;
+                try {
+                    const { error } = await supabase.from('cashflow_accounts').delete().eq('id', id);
+                    if (error) throw error;
+                    setAccounts(accounts.filter(a => a.id !== id));
+                    showToast("계좌가 삭제되었습니다.");
+                } catch(e) { showToast("삭제 실패", true); }
             };
 
-            const saveEditCategory = (oldCat, index, type) => {
-                if(type === 'IN') {
-                    if(!editCatInValue) return;
-                    const updated = [...inCategories]; updated[index] = editCatInValue; setInCategories(updated);
-                    setTransactions(transactions.map(t => (t.type === 'IN' && t.category === oldCat) ? { ...t, category: editCatInValue } : t));
-                    setEditingCatInIndex(null);
-                } else {
-                    if(!editCatOutValue) return;
-                    const updated = [...outCategories]; updated[index] = editCatOutValue; setOutCategories(updated);
-                    setTransactions(transactions.map(t => (t.type === 'OUT' && t.category === oldCat) ? { ...t, category: editCatOutValue } : t));
-                    setEditingCatOutIndex(null);
-                }
+            // 거래처(Client) DB 처리
+            const handleAddClient = async () => {
+                if(!newClient) return;
+                try {
+                    const { data, error } = await supabase.from('cashflow_clients').insert([{ company_id: companyId, name: newClient }]).select();
+                    if (error) throw error;
+                    setClients([...clients, {id: data[0].id, name: data[0].name}]);
+                    setNewClient('');
+                    showToast("거래처가 등록되었습니다.");
+                } catch(e) { showToast("등록 실패", true); }
+            };
+            
+            const saveEditClient = async (c, idx) => {
+                try {
+                    const { error } = await supabase.from('cashflow_clients').update({ name: editClientValue }).eq('id', c.id);
+                    if (error) throw error;
+                    
+                    const updatedClients = [...clients];
+                    updatedClients[idx].name = editClientValue;
+                    setClients(updatedClients);
+                    
+                    // Transaction 테이블의 거래처 텍스트도 일괄 수정 (선택적)
+                    await supabase.from('cashflow_transactions').update({ client_name: editClientValue }).eq('client_name', c.name).eq('company_id', companyId);
+                    setTransactions(transactions.map(t => t.client === c.name ? { ...t, client: editClientValue } : t));
+                    
+                    setEditingClientIndex(null);
+                    showToast("거래처가 수정되었습니다.");
+                } catch(e) { showToast("수정 실패", true); }
+            };
+
+            const deleteClient = async (id) => {
+                if(!window.confirm("삭제하시겠습니까?")) return;
+                try {
+                    const { error } = await supabase.from('cashflow_clients').delete().eq('id', id);
+                    if(error) throw error;
+                    setClients(clients.filter(c => c.id !== id));
+                    showToast("삭제되었습니다.");
+                } catch(e) { showToast("삭제 실패", true); }
+            };
+
+            // 카테고리(Category) DB 처리
+            const handleAddCategory = async (type) => {
+                const val = type === 'IN' ? newCatIn : newCatOut;
+                if(!val) return;
+                try {
+                    const { data, error } = await supabase.from('cashflow_categories').insert([{ company_id: companyId, type: type, name: val }]).select();
+                    if (error) throw error;
+                    if(type === 'IN') { setInCategories([...inCategories, {id: data[0].id, name: data[0].name}]); setNewCatIn(''); }
+                    else { setOutCategories([...outCategories, {id: data[0].id, name: data[0].name}]); setNewCatOut(''); }
+                    showToast("유형이 등록되었습니다.");
+                } catch(e) { showToast("등록 실패", true); }
+            };
+            
+            const saveEditCategory = async (c, idx, type) => {
+                const val = type === 'IN' ? editCatInValue : editCatOutValue;
+                try {
+                    const { error } = await supabase.from('cashflow_categories').update({ name: val }).eq('id', c.id);
+                    if (error) throw error;
+                    
+                    if(type === 'IN') {
+                        const updated = [...inCategories]; updated[idx].name = val; setInCategories(updated);
+                        await supabase.from('cashflow_transactions').update({ category_name: val }).eq('category_name', c.name).eq('type', 'IN').eq('company_id', companyId);
+                        setTransactions(transactions.map(t => (t.type === 'IN' && t.category === c.name) ? { ...t, category: val } : t));
+                        setEditingCatInIndex(null);
+                    } else {
+                        const updated = [...outCategories]; updated[idx].name = val; setOutCategories(updated);
+                        await supabase.from('cashflow_transactions').update({ category_name: val }).eq('category_name', c.name).eq('type', 'OUT').eq('company_id', companyId);
+                        setTransactions(transactions.map(t => (t.type === 'OUT' && t.category === c.name) ? { ...t, category: val } : t));
+                        setEditingCatOutIndex(null);
+                    }
+                    showToast("수정되었습니다.");
+                } catch(e) { showToast("수정 실패", true); }
+            };
+
+            const deleteCategory = async (id, type) => {
+                if(!window.confirm("삭제하시겠습니까?")) return;
+                try {
+                    const { error } = await supabase.from('cashflow_categories').delete().eq('id', id);
+                    if(error) throw error;
+                    if (type === 'IN') setInCategories(inCategories.filter(c => c.id !== id));
+                    else setOutCategories(outCategories.filter(c => c.id !== id));
+                    showToast("삭제되었습니다.");
+                } catch(e) { showToast("삭제 실패", true); }
             };
             
             return (
@@ -537,7 +871,7 @@
                           <div className="flex gap-2">
                               <div className="flex-1 flex flex-col gap-1">
                                   <label className="text-[10px] font-bold text-gray-500">기초자금 시작일</label>
-                                  <input type="date" value={newAccDate} onChange={e=>setNewAccDate(e.target.value)} className="border border-gray-300 p-2 rounded text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full"/>
+                                  <input type="date" value={newAccDate} onChange={e=>setNewAccDate(e.target.value)} className="border border-gray-300 p-2 rounded text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full" disabled title="DB 생성일자로 자동 지정됩니다"/>
                               </div>
                               <div className="flex-1 flex flex-col gap-1">
                                   <label className="text-[10px] font-bold text-gray-500">시작 잔액</label>
@@ -550,16 +884,15 @@
                         </div>
                         <ul className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                           {accounts.map(acc => (
-                            <li key={acc.id} className="bg-white p-3 rounded-lg text-sm border border-gray-200 shadow-sm hover:border-indigo-300 transition-colors">
+                            <li key={acc.id} className="bg-white p-3 rounded-lg text-sm border border-gray-200 shadow-sm">
                               {editingAccId === acc.id ? (
                                   <div className="flex flex-col gap-2">
                                       <input type="text" value={editAccForm.name} onChange={e=>setEditAccForm({...editAccForm, name: e.target.value})} className="border border-indigo-300 p-1.5 rounded text-sm w-full focus:ring-1 focus:ring-indigo-500 outline-none" />
                                       <div className="flex gap-2 items-center">
-                                          <input type="date" value={editAccForm.startDate} onChange={e=>setEditAccForm({...editAccForm, startDate: e.target.value})} className="border border-indigo-300 p-1.5 rounded text-xs flex-1 outline-none" />
                                           <input type="text" value={editAccForm.initialCapital} onChange={e=>{ const val = e.target.value.replace(/[^0-9]/g, ''); setEditAccForm({...editAccForm, initialCapital: val ? new Intl.NumberFormat('ko-KR').format(val) : ''}); }} className="border border-indigo-300 p-1.5 rounded text-xs flex-1 text-right outline-none" />
-                                          <div className="flex gap-1">
-                                            <button onClick={saveEditAccount} className="px-3 py-1.5 bg-emerald-500 text-white font-bold rounded text-xs hover:bg-emerald-600 shadow-sm">저장</button>
-                                            <button onClick={() => setEditingAccId(null)} className="px-3 py-1.5 bg-gray-200 text-gray-700 font-bold rounded text-xs hover:bg-gray-300 shadow-sm">취소</button>
+                                          <div className="flex gap-1 shrink-0">
+                                            <button onClick={() => saveEditAccount(acc.id)} className="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded text-[11px] hover:bg-emerald-700 shadow-sm">저장</button>
+                                            <button onClick={() => setEditingAccId(null)} className="px-3 py-1.5 bg-gray-200 text-gray-700 font-bold rounded text-[11px] hover:bg-gray-300 shadow-sm">취소</button>
                                           </div>
                                       </div>
                                   </div>
@@ -569,9 +902,9 @@
                                           <span className="font-bold text-gray-800 truncate">{acc.name}</span>
                                           <span className="text-[11px] text-gray-500 font-medium">시작일: {acc.startDate} <span className="mx-1">|</span> {formatCurrency(acc.initialCapital)}</span>
                                       </div>
-                                      <div className="flex items-center gap-1 shrink-0">
-                                          <button onClick={() => startEditAccount(acc)} className="px-2 py-1 bg-gray-50 border border-gray-200 text-blue-600 font-bold rounded text-xs hover:bg-blue-50 shadow-sm">수정</button>
-                                          <button onClick={() => setAccounts(accounts.filter(a => a.id !== acc.id))} className="px-2 py-1 bg-gray-50 border border-gray-200 text-red-600 font-bold rounded text-xs hover:bg-red-50 shadow-sm">삭제</button>
+                                      <div className="flex gap-1 shrink-0">
+                                          <button onClick={() => { setEditingAccId(acc.id); setEditAccForm({ name: acc.name, initialCapital: new Intl.NumberFormat('ko-KR').format(acc.initialCapital) }); }} className="px-3 py-1.5 bg-gray-100 text-gray-700 font-bold border border-gray-200 rounded text-[11px] hover:bg-gray-200 shadow-sm">수정</button>
+                                          <button onClick={() => deleteAccount(acc.id)} className="px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 font-bold rounded text-[11px] hover:bg-red-100 shadow-sm">삭제</button>
                                       </div>
                                   </div>
                               )}
@@ -585,23 +918,23 @@
                         <h4 className="font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2 flex items-center gap-2"><Icon name="building-2" className="w-4 h-4 text-indigo-600"/> 거래처 관리</h4>
                         <div className="flex gap-2 mb-4">
                             <input type="text" value={newClient} onChange={e=>setNewClient(e.target.value)} placeholder="새 거래처명" className="border border-gray-300 p-2 rounded flex-1 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"/>
-                            <button onClick={() => { if(newClient) { setClients([...clients, newClient]); setNewClient('');} }} className="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm">추가</button>
+                            <button onClick={handleAddClient} className="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm">추가</button>
                         </div>
                         <ul className="grid grid-cols-1 gap-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                             {clients.map((c, i) => (
-                                <li key={i} className="bg-gray-50 p-2.5 rounded-lg text-sm border border-gray-200 hover:bg-white hover:border-indigo-200 transition-colors flex items-center justify-between">
+                                <li key={c.id} className="bg-gray-50 p-2 rounded-lg text-sm border border-gray-200 flex items-center justify-between">
                                     {editingClientIndex === i ? (
-                                        <div className="flex w-full items-center gap-2">
+                                        <div className="flex w-full items-center gap-1.5">
                                             <input type="text" value={editClientValue} onChange={e => setEditClientValue(e.target.value)} className="flex-1 text-sm p-1.5 border border-indigo-300 rounded outline-none focus:ring-1 focus:ring-indigo-500" autoFocus />
-                                            <button onClick={() => saveEditClient(c, i)} className="px-2 py-1.5 bg-emerald-500 text-white font-bold rounded hover:bg-emerald-600 text-xs shadow-sm">저장</button>
-                                            <button onClick={() => setEditingClientIndex(null)} className="px-2 py-1.5 bg-gray-200 text-gray-700 font-bold rounded hover:bg-gray-300 text-xs shadow-sm">취소</button>
+                                            <button onClick={() => saveEditClient(c, i)} className="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded text-[11px] hover:bg-emerald-700 shadow-sm">저장</button>
+                                            <button onClick={() => setEditingClientIndex(null)} className="px-3 py-1.5 bg-gray-200 text-gray-700 font-bold rounded text-[11px] hover:bg-gray-300 shadow-sm">취소</button>
                                         </div>
                                     ) : (
                                         <>
-                                            <span className="truncate flex-1 text-sm font-bold text-gray-700 mr-2">{c}</span>
+                                            <span className="truncate flex-1 text-sm font-bold text-gray-700 mr-2 px-1">{c.name}</span>
                                             <div className="flex gap-1 shrink-0">
-                                                <button onClick={() => {setEditingClientIndex(i); setEditClientValue(c);}} className="px-2 py-1 bg-white border border-gray-200 text-blue-600 font-bold rounded text-[11px] hover:bg-blue-50 shadow-sm">수정</button>
-                                                <button onClick={() => setClients(clients.filter((_, idx) => idx !== i))} className="px-2 py-1 bg-white border border-gray-200 text-red-600 font-bold rounded text-[11px] hover:bg-red-50 shadow-sm">삭제</button>
+                                                <button onClick={() => {setEditingClientIndex(i); setEditClientValue(c.name);}} className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 font-bold rounded text-[11px] hover:bg-gray-100 shadow-sm">수정</button>
+                                                <button onClick={() => deleteClient(c.id)} className="px-3 py-1.5 bg-white border border-gray-200 text-red-600 font-bold rounded text-[11px] hover:bg-red-50 shadow-sm">삭제</button>
                                             </div>
                                         </>
                                     )}
@@ -618,23 +951,23 @@
                         <h4 className="font-bold text-blue-700 mb-4 border-b border-gray-100 pb-2">수입 유형 (카테고리) 관리</h4>
                         <div className="flex gap-2 mb-4">
                             <input type="text" value={newCatIn} onChange={e=>setNewCatIn(e.target.value)} placeholder="새 수입항목" className="border border-gray-300 p-2 rounded flex-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"/>
-                            <button onClick={() => { if(newCatIn) { setInCategories([...inCategories, newCatIn]); setNewCatIn('');} }} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm">추가</button>
+                            <button onClick={() => handleAddCategory('IN')} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm">추가</button>
                         </div>
                         <ul className="max-h-[250px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
                             {inCategories.map((c, i) => (
-                                <li key={i} className="flex justify-between items-center bg-gray-50 hover:bg-blue-50/50 p-3 rounded-lg border border-gray-200 hover:border-blue-200 transition-colors">
+                                <li key={c.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-200">
                                     {editingCatInIndex === i ? (
-                                        <div className="flex w-full items-center gap-2">
+                                        <div className="flex w-full items-center gap-1.5">
                                             <input type="text" value={editCatInValue} onChange={e => setEditCatInValue(e.target.value)} className="flex-1 text-sm p-1.5 border border-blue-300 rounded outline-none focus:ring-1 focus:ring-blue-500" autoFocus />
-                                            <button onClick={() => saveEditCategory(c, i, 'IN')} className="px-2 py-1.5 bg-emerald-500 text-white font-bold rounded hover:bg-emerald-600 text-xs shadow-sm">저장</button>
-                                            <button onClick={() => setEditingCatInIndex(null)} className="px-2 py-1.5 bg-gray-200 text-gray-700 font-bold rounded hover:bg-gray-300 text-xs shadow-sm">취소</button>
+                                            <button onClick={() => saveEditCategory(c, i, 'IN')} className="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded text-[11px] hover:bg-emerald-700 shadow-sm">저장</button>
+                                            <button onClick={() => setEditingCatInIndex(null)} className="px-3 py-1.5 bg-gray-200 text-gray-700 font-bold rounded text-[11px] hover:bg-gray-300 shadow-sm">취소</button>
                                         </div>
                                     ) : (
                                         <>
-                                            <span className="text-gray-700 font-bold text-sm truncate flex-1 mr-2">{c}</span>
+                                            <span className="text-gray-700 font-bold text-sm truncate flex-1 mr-2 px-1">{c.name}</span>
                                             <div className="flex gap-1 shrink-0">
-                                                <button onClick={() => {setEditingCatInIndex(i); setEditCatInValue(c);}} className="px-2 py-1 bg-white border border-gray-200 text-blue-600 font-bold rounded text-[11px] hover:bg-blue-50 shadow-sm">수정</button>
-                                                <button onClick={() => setInCategories(inCategories.filter((_, idx) => idx !== i))} className="px-2 py-1 bg-white border border-gray-200 text-red-600 font-bold rounded text-[11px] hover:bg-red-50 shadow-sm">삭제</button>
+                                                <button onClick={() => {setEditingCatInIndex(i); setEditCatInValue(c.name);}} className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 font-bold rounded text-[11px] hover:bg-gray-100 shadow-sm">수정</button>
+                                                <button onClick={() => deleteCategory(c.id, 'IN')} className="px-3 py-1.5 bg-white border border-gray-200 text-red-600 font-bold rounded text-[11px] hover:bg-red-50 shadow-sm">삭제</button>
                                             </div>
                                         </>
                                     )}
@@ -649,23 +982,23 @@
                         <h4 className="font-bold text-red-700 mb-4 border-b border-gray-100 pb-2">지출 유형 (카테고리) 관리</h4>
                         <div className="flex gap-2 mb-4">
                             <input type="text" value={newCatOut} onChange={e=>setNewCatOut(e.target.value)} placeholder="새 지출항목" className="border border-gray-300 p-2 rounded flex-1 text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none"/>
-                            <button onClick={() => { if(newCatOut) { setOutCategories([...outCategories, newCatOut]); setNewCatOut('');} }} className="bg-red-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-red-700 transition-colors shadow-sm">추가</button>
+                            <button onClick={() => handleAddCategory('OUT')} className="bg-red-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-red-700 transition-colors shadow-sm">추가</button>
                         </div>
                         <ul className="max-h-[250px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
                             {outCategories.map((c, i) => (
-                                <li key={i} className="flex justify-between items-center bg-gray-50 hover:bg-red-50/50 p-3 rounded-lg border border-gray-200 hover:border-red-200 transition-colors">
+                                <li key={c.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-200">
                                      {editingCatOutIndex === i ? (
-                                        <div className="flex w-full items-center gap-2">
+                                        <div className="flex w-full items-center gap-1.5">
                                             <input type="text" value={editCatOutValue} onChange={e => setEditCatOutValue(e.target.value)} className="flex-1 text-sm p-1.5 border border-red-300 rounded outline-none focus:ring-1 focus:ring-red-500" autoFocus />
-                                            <button onClick={() => saveEditCategory(c, i, 'OUT')} className="px-2 py-1.5 bg-emerald-500 text-white font-bold rounded hover:bg-emerald-600 text-xs shadow-sm">저장</button>
-                                            <button onClick={() => setEditingCatOutIndex(null)} className="px-2 py-1.5 bg-gray-200 text-gray-700 font-bold rounded hover:bg-gray-300 text-xs shadow-sm">취소</button>
+                                            <button onClick={() => saveEditCategory(c, i, 'OUT')} className="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded text-[11px] hover:bg-emerald-700 shadow-sm">저장</button>
+                                            <button onClick={() => setEditingCatOutIndex(null)} className="px-3 py-1.5 bg-gray-200 text-gray-700 font-bold rounded text-[11px] hover:bg-gray-300 shadow-sm">취소</button>
                                         </div>
                                     ) : (
                                         <>
-                                            <span className="text-gray-700 font-bold text-sm truncate flex-1 mr-2">{c}</span>
+                                            <span className="text-gray-700 font-bold text-sm truncate flex-1 mr-2 px-1">{c.name}</span>
                                             <div className="flex gap-1 shrink-0">
-                                                <button onClick={() => {setEditingCatOutIndex(i); setEditCatOutValue(c);}} className="px-2 py-1 bg-white border border-gray-200 text-blue-600 font-bold rounded text-[11px] hover:bg-blue-50 shadow-sm">수정</button>
-                                                <button onClick={() => setOutCategories(outCategories.filter((_, idx) => idx !== i))} className="px-2 py-1 bg-white border border-gray-200 text-red-600 font-bold rounded text-[11px] hover:bg-red-50 shadow-sm">삭제</button>
+                                                <button onClick={() => {setEditingCatOutIndex(i); setEditCatOutValue(c.name);}} className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 font-bold rounded text-[11px] hover:bg-gray-100 shadow-sm">수정</button>
+                                                <button onClick={() => deleteCategory(c.id, 'OUT')} className="px-3 py-1.5 bg-white border border-gray-200 text-red-600 font-bold rounded text-[11px] hover:bg-red-50 shadow-sm">삭제</button>
                                             </div>
                                         </>
                                     )}
@@ -684,22 +1017,41 @@
           const selectedDayTx = txByDate[selectedDate]?.list || [];
           const selectedEvents = selectedDate ? getFixedEvents(parseInt(selectedDate.split('-')[1]), parseInt(selectedDate.split('-')[2])) : [];
 
+          if (!isAuthenticated) {
+              return <AuthLock onAuthenticated={() => setIsAuthenticated(true)} />;
+          }
+          
+          if (isLoadingData) {
+              return (
+                  <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+                      <Icon name="loader-2" className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
+                      <p className="text-gray-600 font-bold">클라우드 데이터베이스 동기화 중...</p>
+                  </div>
+              )
+          }
+
           return (
-            <div className="min-h-screen bg-gray-100 text-gray-800 font-sans flex flex-col h-screen overflow-hidden">
-              <header className="bg-indigo-900 text-white px-6 py-3 flex justify-between items-center shrink-0">
+            <div className="min-h-screen bg-gray-100 text-gray-800 font-sans flex flex-col h-screen overflow-hidden relative">
+              {/* Toast Notification */}
+              {toast && (
+                  <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-[200] px-6 py-3 rounded-lg shadow-xl text-white font-bold text-sm flex items-center gap-2 transition-all ${toast.isError ? 'bg-red-500' : 'bg-gray-800'}`}>
+                      <Icon name={toast.isError ? 'alert-circle' : 'check-circle'} className="w-5 h-5" />
+                      {toast.msg}
+                  </div>
+              )}
+
+              <header className="bg-indigo-900 text-white px-6 py-3 flex justify-between items-center shrink-0 z-50">
                 <div className="flex items-center gap-3">
                   <a href="index.html" title="사내 업무 포털로 돌아가기" className="flex items-center gap-1.5 p-2 bg-indigo-800 hover:bg-indigo-700 text-indigo-100 hover:text-white rounded-lg transition-colors mr-2 border border-indigo-700 shadow-sm">
                     <Icon name="home" className="w-5 h-5" />
                   </a>
                   
-                  <Icon name="wallet" className="w-6 h-6 text-indigo-300" />
-                  <h1 className="text-xl font-bold tracking-tight">Enterprise 스마트 자금 관리</h1>
-                  <div className="ml-8 flex gap-1 bg-indigo-800/50 p-1 rounded-lg hidden lg:flex">
+                  <div className="ml-2 flex gap-1 bg-indigo-800/50 p-1 rounded-lg hidden lg:flex">
                     {[
                       { id: 'CALENDAR', icon: 'calendar', label: '월별상세' },
                       { id: 'YEARLY', icon: 'line-chart', label: '전체보기(연간)' },
                       { id: 'GRANTS', icon: 'landmark', label: '정부지원금' },
-                      { id: 'FUNDING', icon: 'piggy-bank', label: '조달계획' }
+                      { id: 'FUNDING', icon: 'piggy-bank', label: '자금조달계획' }
                     ].map(tab => (
                       <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeTab === tab.id ? 'bg-white text-indigo-900 shadow-sm' : 'text-indigo-200 hover:text-white hover:bg-indigo-700/50'}`}>
                         <Icon name={tab.icon} className="w-4 h-4" />{tab.label}
@@ -709,7 +1061,6 @@
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                     <span className="text-indigo-200 text-sm">통장 필터:</span>
                      <select value={selectedAccount} onChange={(e) => setSelectedAccount(e.target.value)} className="bg-indigo-800 text-white border-none rounded py-1 pl-2 pr-8 text-sm focus:ring-2 focus:ring-indigo-400 cursor-pointer outline-none"><option value="ALL">전체 통장 합산</option>{accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}</select>
                   </div>
                   <div className="w-px h-6 bg-indigo-700 mx-2"></div>
@@ -792,16 +1143,16 @@
                             <div className="p-5 border-b border-gray-200 bg-white">
                               <form onSubmit={handleAddTransaction} className="flex flex-col gap-3">
                                 <div className="flex bg-gray-100 p-1 rounded-lg">
-                                  <button type="button" onClick={() => setTxForm({...txForm, type: 'IN', category: inCategories[0]})} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${txForm.type === 'IN' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>수입 등록</button>
-                                  <button type="button" onClick={() => setTxForm({...txForm, type: 'OUT', category: outCategories[0]})} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${txForm.type === 'OUT' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>지출 등록</button>
+                                  <button type="button" onClick={() => setTxForm({...txForm, type: 'IN', category: inCategories.length > 0 ? inCategories[0].name : ''})} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${txForm.type === 'IN' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>수입 등록</button>
+                                  <button type="button" onClick={() => setTxForm({...txForm, type: 'OUT', category: outCategories.length > 0 ? outCategories[0].name : ''})} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${txForm.type === 'OUT' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>지출 등록</button>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                   <select value={txForm.accountId} onChange={(e) => setTxForm({...txForm, accountId: e.target.value})} className="px-3 py-2 border border-gray-300 rounded-md text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-none bg-white">{accounts.length === 0 && <option value="">계좌 없음</option>}{accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
-                                  <select value={txForm.category} onChange={(e) => setTxForm({...txForm, category: e.target.value})} className="px-3 py-2 border border-gray-300 rounded-md text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-none bg-white">{(txForm.type === 'IN' ? inCategories : outCategories).map(cat => (<option key={cat} value={cat}>{cat}</option>))}</select>
+                                  <select value={txForm.category} onChange={(e) => setTxForm({...txForm, category: e.target.value})} className="px-3 py-2 border border-gray-300 rounded-md text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-none bg-white">{(txForm.type === 'IN' ? inCategories : outCategories).map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}</select>
                                 </div>
                                 <div className="relative">
                                   <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none"><Icon name="building-2" className="h-4 w-4 text-gray-400" /></div>
-                                  <select required value={txForm.client} onChange={(e) => setTxForm({...txForm, client: e.target.value})} className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none appearance-none bg-white"><option value="" disabled>거래처 선택 (설정에서 관리)</option>{clients.map(c => <option key={c} value={c}>{c}</option>)}</select>
+                                  <select required value={txForm.client} onChange={(e) => setTxForm({...txForm, client: e.target.value})} className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none appearance-none bg-white"><option value="" disabled>거래처 선택 (설정에서 관리)</option>{clients.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
                                 </div>
                                 <div className="relative">
                                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span className="text-gray-400 sm:text-sm font-bold">₩</span></div>
