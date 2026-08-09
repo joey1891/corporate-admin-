@@ -6,7 +6,6 @@
     <title>Smart e-Approval | 차세대 지능형 전자결재 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -16,15 +15,62 @@
         .scroll-hide::-webkit-scrollbar { display: none; }
         .tab-active { background-color: #1e293b; color: white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
         
-        /* Org Chart Styling (Hierarchy View) */
-        .org-tree { display: flex; flex-direction: column; align-items: center; gap: 2rem; padding: 2rem; min-width: max-content; margin: 0 auto; }
-        .org-node { background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 1rem; width: 180px; text-align: center; position: relative; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); transition: all 0.2s; }
-        .org-node:hover { border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); z-index: 10; }
-        .org-node::before { content: ''; position: absolute; top: -2rem; left: 50%; transform: translateX(-50%); width: 2px; height: 2rem; background-color: #cbd5e1; }
-        .org-node.root::before { display: none; }
-        .org-children { display: flex; gap: 2rem; position: relative; }
-        .org-children::before { content: ''; position: absolute; top: -2rem; left: 90px; right: 90px; height: 2px; background-color: #cbd5e1; }
-        .org-children.single::before { display: none; }
+        /* 유연하고 완벽한 조직도 트리 CSS (Flex 기반) */
+        .tree {
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+            min-width: max-content;
+        }
+        .tree ul {
+            padding-top: 20px; position: relative;
+            transition: all 0.5s;
+            display: flex;
+            justify-content: center;
+        }
+        .tree li {
+            float: left; text-align: center;
+            list-style-type: none;
+            position: relative;
+            padding: 20px 10px 0 10px;
+            transition: all 0.5s;
+        }
+        .tree li::before, .tree li::after {
+            content: ''; position: absolute; top: 0; right: 50%;
+            border-top: 2px solid #cbd5e1;
+            width: 50%; height: 20px;
+        }
+        .tree li::after {
+            right: auto; left: 50%;
+            border-left: 2px solid #cbd5e1;
+        }
+        .tree li:only-child::after, .tree li:only-child::before {
+            display: none;
+        }
+        .tree li:only-child { padding-top: 0; }
+        .tree li:first-child::before, .tree li:last-child::after {
+            border: 0 none;
+        }
+        .tree li:last-child::before {
+            border-right: 2px solid #cbd5e1;
+            border-radius: 0 8px 0 0;
+        }
+        .tree li:first-child::after {
+            border-radius: 8px 0 0 0;
+        }
+        .tree ul ul::before {
+            content: ''; position: absolute; top: 0; left: 50%;
+            border-left: 2px solid #cbd5e1;
+            width: 0; height: 20px;
+        }
+        .tree-node {
+            background: white; border: 2px solid #e2e8f0; border-radius: 12px;
+            padding: 1rem; min-width: 140px; display: inline-block;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); transition: all 0.2s;
+            cursor: pointer;
+        }
+        .tree-node:hover { border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        .tree-node.admin-mode:hover { border-color: #f59e0b; }
 
         /* Rich Text Editor Tools */
         .editor-toolbar button { padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; font-size: 12px; font-weight: bold; color: #475569; transition: all 0.2s; display: flex; align-items: center; gap: 4px; }
@@ -41,353 +87,405 @@
         .draggable-item:active { cursor: grabbing; opacity: 0.8; transform: scale(0.98); }
     </style>
 </head>
-<body class="text-slate-800">
+<body class="text-slate-800 flex h-screen overflow-hidden">
+    <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col shrink-0 z-20">
+        <div class="p-8">
+            <div class="flex items-center space-x-3 text-white">
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold">S</div>
+                <span class="font-bold text-xl">Smart-E <span class="text-xs text-blue-400">ADMIN</span></span>
+            </div>
+        </div>
 
-    <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-slate-950 text-slate-300 flex flex-col shrink-0 z-20">
-            <div class="p-8">
-                <div class="flex items-center space-x-3 text-white">
-                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold">S</div>
-                    <span class="font-bold text-xl">Smart-E <span class="text-xs text-blue-400">ADMIN</span></span>
+        <nav class="flex-1 px-4 space-y-1">
+            <p class="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Main Console</p>
+            <button onclick="changeTab('dashboard')" id="tab-dashboard" class="w-full flex items-center space-x-3 p-3 rounded-xl tab-active transition">
+                <i class="fa-solid fa-chart-pie w-5 text-center"></i> <span>통합 대시보드</span>
+            </button>
+            <button onclick="changeTab('global-list')" id="tab-global-list" class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-900 transition">
+                <i class="fa-solid fa-folder-open w-5 text-center"></i> <span>기안 (전사문서함)</span>
+            </button>
+            
+            <p class="px-4 py-2 mt-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Master Data</p>
+            <button onclick="changeTab('org-config')" id="tab-org-config" class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-900 transition">
+                <i class="fa-solid fa-sitemap w-5 text-center"></i> <span>조직도 및 인사 관리</span>
+            </button>
+            <button onclick="changeTab('rule-config')" id="tab-rule-config" class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-900 transition">
+                <i class="fa-solid fa-scale-balanced w-5 text-center"></i> <span>위임전결규정 설정</span>
+            </button>
+        </nav>
+    </aside>
+
+    <div class="flex-1 flex flex-col overflow-hidden relative">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 z-30 shadow-sm">
+            <div>
+                <h2 id="current-tab-title" class="text-xl font-bold text-slate-900">통합 대시보드</h2>
+                <p id="current-tab-desc" class="text-xs text-slate-500">전사 결재 현황을 실시간으로 모니터링합니다.</p>
+            </div>
+            
+            <div class="flex items-center space-x-6">
+                <!-- Admin Edit Mode Toggle -->
+                <div id="admin-mode-container" class="flex items-center space-x-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">최고관리자 편집 모드</span>
+                    <button onclick="toggleAdminMode()" id="admin-mode-toggle" class="relative inline-flex h-5 w-9 items-center rounded-full bg-slate-300 transition-colors">
+                        <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform translate-x-1"></span>
+                    </button>
+                </div>
+
+                <div class="flex items-center bg-slate-50 rounded-lg p-1 border border-slate-200">
+                    <span class="text-xs font-bold text-slate-400 px-3"><i class="fa-solid fa-user-switch mr-1"></i> Persona</span>
+                    <select onchange="switchIdentity(this.value)" id="identity-selector" class="bg-white border-none rounded-md text-sm font-bold text-blue-700 px-3 py-1 outline-none cursor-pointer shadow-sm">
+                        <!-- Injected via JS -->
+                    </select>
+                </div>
+                <div class="text-right pl-4 border-l border-slate-200">
+                    <p id="active-user-name" class="text-sm font-bold text-slate-900">신원종</p>
+                    <p id="active-user-role" class="text-[10px] text-slate-500 font-medium">대표이사(최고관리자)</p>
                 </div>
             </div>
+        </header>
 
-            <nav class="flex-1 px-4 space-y-1">
-                <p class="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Main Console</p>
-                <button onclick="changeTab('dashboard')" id="tab-dashboard" class="w-full flex items-center space-x-3 p-3 rounded-xl tab-active transition">
-                    <i class="fa-solid fa-chart-pie w-5 text-center"></i> <span>통합 대시보드</span>
-                </button>
-                <button onclick="changeTab('global-list')" id="tab-global-list" class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-900 transition">
-                    <i class="fa-solid fa-folder-open w-5 text-center"></i> <span>기안 (전사문서함)</span>
-                </button>
-                
-                <p class="px-4 py-2 mt-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Master Data</p>
-                <button onclick="changeTab('org-config')" id="tab-org-config" class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-900 transition">
-                    <i class="fa-solid fa-sitemap w-5 text-center"></i> <span>조직도 및 인사 관리</span>
-                </button>
-                <button onclick="changeTab('rule-config')" id="tab-rule-config" class="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-slate-900 transition">
-                    <i class="fa-solid fa-scale-balanced w-5 text-center"></i> <span>위임전결규정 설정</span>
-                </button>
-            </nav>
+        <div id="main-scroll" class="flex-1 overflow-y-auto p-8 scroll-hide bg-slate-50">
+            
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="space-y-8 animate-in fade-in duration-500">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-1">총 기안 문서</p>
+                        <h3 id="stat-total" class="text-3xl font-bold text-slate-900">0</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-1">결재 진행 중</p>
+                        <h3 id="stat-pending" class="text-3xl font-bold text-blue-600">0</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-1">최종 완료</p>
+                        <h3 id="stat-completed" class="text-3xl font-bold text-emerald-600">0</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-1">반려 처리</p>
+                        <h3 id="stat-rejected" class="text-3xl font-bold text-rose-500">0</h3>
+                    </div>
+                </div>
 
-            <div class="p-6 border-t border-slate-900">
-                <div class="bg-slate-900 p-4 rounded-2xl">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">System Status</p>
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs text-emerald-400 font-medium"><i class="fa-solid fa-circle text-[8px] mr-1"></i>DB Connected</span>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                    <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm">
+                        <h4 class="font-bold mb-6 flex justify-between items-center">
+                            <span>부문별 기안 현황 (DB 연동)</span>
+                        </h4>
+                        <div class="chart-container">
+                            <canvas id="deptEfficiencyChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                        <h4 class="font-bold mb-6">최신 결재 로그</h4>
+                        <div id="recent-logs" class="space-y-3 flex-1 overflow-y-auto pr-2">
+                            <!-- Logs Injected -->
+                        </div>
                     </div>
                 </div>
             </div>
-        </aside>
 
-        <div class="flex-1 flex flex-col overflow-hidden relative">
-            <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 z-30 shadow-sm">
-                <div>
-                    <h2 id="current-tab-title" class="text-xl font-bold text-slate-900">통합 대시보드</h2>
-                    <p id="current-tab-desc" class="text-xs text-slate-500">전사 결재 현황을 실시간으로 모니터링합니다.</p>
-                </div>
-                
-                <div class="flex items-center space-x-6">
-                    <!-- Admin Edit Mode Toggle -->
-                    <div id="admin-mode-container" class="flex items-center space-x-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Edit Mode</span>
-                        <button onclick="toggleAdminMode()" id="admin-mode-toggle" class="relative inline-flex h-5 w-9 items-center rounded-full bg-slate-300 transition-colors">
-                            <span class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform translate-x-1"></span>
-                        </button>
+            <!-- Global List View -->
+            <div id="view-global-list" class="hidden space-y-6 animate-in fade-in duration-500">
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <button onclick="openDraftModal()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-sm"><i class="fa-solid fa-pen-nib mr-2"></i>새 문서 기안하기</button>
                     </div>
+                    <table class="w-full text-left">
+                        <thead class="bg-white border-b border-slate-100 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                            <tr>
+                                <th class="px-8 py-4">기안자</th>
+                                <th class="px-8 py-4">문서 유형</th>
+                                <th class="px-8 py-4">문서 제목</th>
+                                <th class="px-8 py-4 text-center">결재 상태</th>
+                                <th class="px-8 py-4 text-center">상세 확인</th>
+                            </tr>
+                        </thead>
+                        <tbody id="global-doc-tbody" class="text-sm font-medium">
+                            <!-- Records Injected -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-                    <div class="flex items-center bg-slate-50 rounded-lg p-1 border border-slate-200">
-                        <span class="text-xs font-bold text-slate-400 px-3"><i class="fa-solid fa-user-switch mr-1"></i> Persona</span>
-                        <select onchange="switchIdentity(this.value)" id="identity-selector" class="bg-white border-none rounded-md text-sm font-bold text-blue-700 px-3 py-1 outline-none cursor-pointer shadow-sm">
-                            <!-- Injected -->
+            <!-- Org Config View -->
+            <div id="view-org-config" class="hidden space-y-8 animate-in fade-in duration-500">
+                <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm overflow-hidden">
+                    <h4 class="text-lg font-bold mb-6 flex items-center">
+                        <i class="fa-solid fa-network-wired text-blue-500 mr-2"></i>전사 조직도 차트 (Org-Chart View)
+                        <span class="ml-auto text-xs text-slate-400 font-normal">※ 편집 모드 ON일 때 블록을 클릭하여 인원 정보를 수정할 수 있습니다.</span>
+                    </h4>
+                    
+                    <div class="w-full overflow-x-auto pb-8 scroll-hide bg-slate-50/50 rounded-3xl border border-slate-100 flex justify-center">
+                        <div id="org-chart-render" class="tree">
+                            <!-- Flex Tree Injected via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="org-editor-section" class="hidden bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-center mb-6">
+                        <h4 class="text-lg font-bold"><i class="fa-solid fa-user-pen text-amber-500 mr-2"></i>조직 구성원 리스트 (Edit Mode)</h4>
+                        <button onclick="openUserModal()" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md hover:bg-slate-800"><i class="fa-solid fa-plus mr-1"></i> 신규 인원 등록</button>
+                    </div>
+                    <table class="w-full text-left text-sm border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase">
+                            <tr>
+                                <th class="px-6 py-3 border-b">이름</th>
+                                <th class="px-6 py-3 border-b">직급</th>
+                                <th class="px-6 py-3 border-b">소속/부서</th>
+                                <th class="px-6 py-3 border-b text-center">설정</th>
+                            </tr>
+                        </thead>
+                        <tbody id="org-list-tbody" class="bg-white divide-y divide-slate-100">
+                            <!-- List Injected -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Rule Config View -->
+            <div id="view-rule-config" class="hidden space-y-8 animate-in fade-in duration-500">
+                <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-center mb-6">
+                        <h4 class="text-lg font-bold"><i class="fa-solid fa-scale-balanced text-emerald-500 mr-2"></i>기안 유형별 위임전결규정 매트릭스</h4>
+                        <button onclick="openRuleModal()" class="text-xs bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-100 border border-emerald-200 shadow-sm"><i class="fa-solid fa-plus mr-1"></i>신규 규정 추가</button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="rules-container">
+                        <!-- Rules Injected -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Draft Canvas (Sidebar Modal) -->
+        <div id="draft-canvas" class="fixed inset-y-0 right-0 w-full md:w-[900px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-500 ease-in-out border-l border-slate-200 flex flex-col">
+            <div class="p-6 border-b border-slate-200 flex justify-between items-center bg-white z-10 shadow-sm">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-lg"><i class="fa-solid fa-pen-nib"></i></div>
+                    <div>
+                        <h3 class="text-lg font-bold leading-tight">기안 작성</h3>
+                        <p class="text-xs text-slate-500">DB 연동 스마트폼 시스템</p>
+                    </div>
+                </div>
+                <button onclick="closeDraftModal()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50/50 scroll-hide">
+                
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">문서 분류 선택 (DB 연동)</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <select id="draft-sector" onchange="handleSectorChange()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none bg-slate-50">
+                            <option value="">-- 부문 선택 --</option>
+                        </select>
+                        <select id="draft-category" onchange="handleCategoryChange()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none bg-slate-50" disabled>
+                            <option value="">-- 양식 선택 --</option>
                         </select>
                     </div>
-                    <div class="text-right pl-4 border-l border-slate-200">
-                        <p id="active-user-name" class="text-sm font-bold text-slate-900">신원종</p>
-                        <p id="active-user-role" class="text-[10px] text-slate-500 font-medium">대표이사(최고관리자)</p>
-                    </div>
-                </div>
-            </header>
-
-            <div id="main-scroll" class="flex-1 overflow-y-auto p-8 scroll-hide bg-slate-50">
-                <div id="view-dashboard" class="space-y-8 animate-in fade-in duration-500">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">총 기안 문서</p>
-                            <h3 id="stat-total" class="text-3xl font-bold text-slate-900">0</h3>
-                        </div>
-                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">결재 진행 중</p>
-                            <h3 id="stat-pending" class="text-3xl font-bold text-blue-600">0</h3>
-                        </div>
-                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">최종 완료</p>
-                            <h3 id="stat-completed" class="text-3xl font-bold text-emerald-600">0</h3>
-                        </div>
-                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                            <p class="text-xs font-bold text-slate-400 uppercase mb-1">반려 처리</p>
-                            <h3 id="stat-rejected" class="text-3xl font-bold text-rose-500">0</h3>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                        <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm">
-                            <h4 class="font-bold mb-6 flex justify-between items-center">
-                                <span>부문별 기안 현황 (DB 연동)</span>
-                            </h4>
-                            <div class="chart-container">
-                                <canvas id="deptEfficiencyChart"></canvas>
-                            </div>
-                        </div>
-                        <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                            <h4 class="font-bold mb-6">최신 결재 로그</h4>
-                            <div id="recent-logs" class="space-y-3 flex-1 overflow-y-auto pr-2">
-                                <!-- Logs Injected -->
-                            </div>
+                    <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-600">작성 방식</span>
+                        <div class="flex bg-slate-100 p-1 rounded-lg">
+                            <button onclick="setFormMode('smart')" id="btn-mode-smart" class="px-3 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-blue-600">스마트 템플릿</button>
+                            <button onclick="setFormMode('blank')" id="btn-mode-blank" class="px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700">빈 양식</button>
                         </div>
                     </div>
                 </div>
 
-                <div id="view-global-list" class="hidden space-y-6 animate-in fade-in duration-500">
-                    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <button onclick="openDraftModal()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-sm"><i class="fa-solid fa-pen-nib mr-2"></i>새 문서 기안하기</button>
-                        </div>
-                        <table class="w-full text-left">
-                            <thead class="bg-white border-b border-slate-100 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                                <tr>
-                                    <th class="px-8 py-4">기안자</th>
-                                    <th class="px-8 py-4">문서 유형</th>
-                                    <th class="px-8 py-4">문서 제목</th>
-                                    <th class="px-8 py-4 text-center">결재 상태</th>
-                                    <th class="px-8 py-4 text-center">상세 확인</th>
-                                </tr>
-                            </thead>
-                            <tbody id="global-doc-tbody" class="text-sm font-medium">
-                                <!-- Records Injected -->
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <input type="text" id="draft-title" placeholder="문서 제목을 입력하세요" class="w-full text-xl font-bold border-b border-slate-200 py-2 outline-none focus:border-blue-600 transition placeholder-slate-300">
                 </div>
 
-                <div id="view-org-config" class="hidden space-y-8 animate-in fade-in duration-500">
-                    <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm overflow-hidden">
-                        <h4 class="text-lg font-bold mb-6 flex items-center"><i class="fa-solid fa-network-wired text-blue-500 mr-2"></i>전사 조직도 차트 (Org-Chart)</h4>
-                        <div class="w-full overflow-x-auto pb-8 scroll-hide bg-slate-50/50 rounded-3xl border border-slate-100 min-h-[400px] flex items-center justify-center">
-                            <div id="org-chart-render" class="org-tree">
-                                <!-- Tree Injected -->
-                            </div>
+                <!-- Enhanced Rich Text Editor -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                    <div class="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap gap-2 editor-toolbar items-center">
+                        <div class="flex bg-white rounded border border-slate-200">
+                            <button onclick="execCmd('bold')" title="굵게"><i class="fa-solid fa-bold"></i></button>
+                            <button onclick="execCmd('italic')" title="기울임"><i class="fa-solid fa-italic"></i></button>
+                            <button onclick="execCmd('underline')" title="밑줄"><i class="fa-solid fa-underline"></i></button>
+                            <button onclick="execCmd('strikeThrough')" title="취소선"><i class="fa-solid fa-strikethrough"></i></button>
+                        </div>
+                        <div class="flex bg-white rounded border border-slate-200 p-1 gap-1 items-center">
+                            <span class="text-[10px] text-slate-400 font-bold ml-1">크기</span>
+                            <select onchange="execCmd('fontSize', this.value); this.value='';" class="border-none ml-1">
+                                <option value="">기본</option>
+                                <option value="1">아주작게</option><option value="3">보통</option>
+                                <option value="5">크게</option><option value="7">아주크게</option>
+                            </select>
+                        </div>
+                        <div class="flex bg-white rounded border border-slate-200">
+                            <button onclick="execCmd('foreColor', '#ef4444')" title="글자색(빨강)"><i class="fa-solid fa-droplet text-red-500"></i></button>
+                            <button onclick="execCmd('foreColor', '#3b82f6')" title="글자색(파랑)"><i class="fa-solid fa-droplet text-blue-500"></i></button>
+                            <button onclick="execCmd('hiliteColor', '#fef08a')" title="형광펜"><i class="fa-solid fa-highlighter text-yellow-400"></i></button>
+                            <button onclick="execCmd('foreColor', '#1e293b'); execCmd('hiliteColor', 'transparent');" title="색상 초기화"><i class="fa-solid fa-eraser"></i></button>
+                        </div>
+                        <div class="flex bg-white rounded border border-slate-200">
+                            <button onclick="insertSymbol('✓')" title="기호 삽입">✓</button>
+                            <button onclick="insertSymbol('※')" title="기호 삽입">※</button>
+                            <button onclick="insertSymbol('★')" title="기호 삽입">★</button>
+                        </div>
+                        <div class="flex bg-white rounded border border-slate-200">
+                            <button onclick="insertTable()"><i class="fa-solid fa-table"></i> 표 삽입</button>
+                            <select onchange="handleTableTool(this.value); this.value='';" class="border-none border-l pl-1">
+                                <option value="">표 편집 (도구)</option>
+                                <option value="add_row">행 추가</option>
+                                <option value="add_col">열 추가</option>
+                                <option value="del_row">행 삭제</option>
+                                <option value="del_col">열 삭제</option>
+                                <option value="width_100">너비 100% 맞춤</option>
+                                <option value="width_even">열 너비 동일하게</option>
+                            </select>
+                        </div>
+                        <div class="ml-auto">
+                            <button onclick="toggleHtmlMode()" id="btn-html-mode" class="text-xs bg-slate-800 text-white border-none px-3"><i class="fa-solid fa-code"></i> HTML</button>
                         </div>
                     </div>
-
-                    <div id="org-editor-section" class="hidden bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm">
-                        <div class="flex justify-between items-center mb-6">
-                            <h4 class="text-lg font-bold"><i class="fa-solid fa-user-pen text-amber-500 mr-2"></i>조직 구성원 관리 (Edit Mode)</h4>
-                            <button class="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold">+ 신규 인원 등록</button>
-                        </div>
-                        <table class="w-full text-left text-sm border border-slate-200 rounded-xl overflow-hidden">
-                            <thead class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase">
-                                <tr>
-                                    <th class="px-6 py-3 border-b">이름</th>
-                                    <th class="px-6 py-3 border-b">직급</th>
-                                    <th class="px-6 py-3 border-b">부서(소속)</th>
-                                    <th class="px-6 py-3 border-b">직계 상급자</th>
-                                </tr>
-                            </thead>
-                            <tbody id="org-list-tbody" class="bg-white divide-y divide-slate-100">
-                                <!-- List Injected -->
-                            </tbody>
-                        </table>
+                    
+                    <div id="draft-content" contenteditable="true" class="p-6 min-h-[300px] text-sm text-slate-700 outline-none leading-relaxed transition-colors">
+                        <p class="text-slate-400 italic">상단에서 부문과 양식을 선택해 주세요.</p>
                     </div>
+                    <textarea id="draft-html-content" class="hidden p-6 min-h-[300px] text-sm text-slate-300 bg-slate-900 outline-none font-mono w-full"></textarea>
                 </div>
 
-                <div id="view-rule-config" class="hidden space-y-8 animate-in fade-in duration-500">
-                    <div class="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm">
-                        <div class="flex justify-between items-center mb-6">
-                            <h4 class="text-lg font-bold">부문별 전결 규정 매트릭스</h4>
-                            <button class="text-xs bg-slate-100 px-3 py-1.5 rounded-lg font-bold text-slate-600 hover:bg-slate-200"><i class="fa-solid fa-plus mr-1"></i>규정 추가</button>
+                <div class="bg-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden select-none">
+                    <h4 class="font-bold mb-2 flex items-center relative z-10"><i class="fa-solid fa-users text-blue-400 mr-2"></i>조직도 픽커 (결재/합의/참조 지정)</h4>
+                    <p class="text-xs text-slate-400 mb-6 relative z-10">임직원을 마우스로 끌어서 하단의 역할 박스에 놓아주세요. 역할 박스 내부에서도 순서 변경이 가능합니다.</p>
+                    
+                    <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 mb-4 h-48 overflow-y-auto" id="picker-source">
+                        <!-- Injected draggable members grouped by dept -->
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-slate-800 rounded-xl p-3 border border-slate-700">
+                            <h5 class="text-[10px] font-bold text-blue-400 mb-2 uppercase tracking-widest"><i class="fa-solid fa-pen-nib mr-1"></i>결재 (APPROVAL)</h5>
+                            <div id="drop-path" class="drop-zone p-2 space-y-2 flex flex-col" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'path')"></div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="rules-container">
-                            <!-- Rules Injected -->
+                        <div class="bg-slate-800 rounded-xl p-3 border border-slate-700">
+                            <h5 class="text-[10px] font-bold text-emerald-400 mb-2 uppercase tracking-widest"><i class="fa-solid fa-handshake mr-1"></i>합의 (AGREEMENT)</h5>
+                            <div id="drop-agree" class="drop-zone p-2 space-y-2 flex flex-col" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'agree')"></div>
+                        </div>
+                        <div class="bg-slate-800 rounded-xl p-3 border border-slate-700">
+                            <h5 class="text-[10px] font-bold text-amber-400 mb-2 uppercase tracking-widest"><i class="fa-solid fa-copy mr-1"></i>참조 (REFERENCE)</h5>
+                            <div id="drop-ref" class="drop-zone p-2 space-y-2 flex flex-col" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ref')"></div>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <div class="p-6 border-t border-slate-200 bg-white shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)] flex space-x-4">
+                <button onclick="submitDraft()" class="flex-1 bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-md flex items-center justify-center gap-2"><i class="fa-solid fa-paper-plane"></i>기안 상신하기</button>
+            </div>
+        </div>
 
-            <div id="draft-canvas" class="fixed inset-y-0 right-0 w-full md:w-[900px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-500 ease-in-out border-l border-slate-200 flex flex-col">
-                <div class="p-6 border-b border-slate-200 flex justify-between items-center bg-white z-10 shadow-sm">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-lg"><i class="fa-solid fa-pen-nib"></i></div>
+        <!-- Detail Modal -->
+        <div id="detail-canvas" class="fixed inset-y-0 right-0 w-full md:w-[800px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-500 ease-in-out border-l border-slate-200">
+            <div class="h-full flex flex-col" id="detail-content-area">
+                <!-- Dynamic Detail Content -->
+            </div>
+        </div>
+
+        <!-- System Modals -->
+        <div id="modal-rule" class="hidden fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white w-[500px] rounded-3xl shadow-2xl p-8 transform transition-all">
+                <div class="flex justify-between items-center mb-6 border-b pb-4">
+                    <h3 class="text-xl font-bold"><i class="fa-solid fa-scale-balanced text-emerald-500 mr-2"></i>위임전결규정 추가/수정</h3>
+                    <button onclick="document.getElementById('modal-rule').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">대상 기안 양식</label>
+                        <select id="rule-type" class="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm bg-slate-50"></select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <h3 class="text-lg font-bold leading-tight">기안 작성</h3>
-                            <p class="text-xs text-slate-500">DB 연동 스마트폼 시스템</p>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">최소 금액 (이상)</label>
+                            <input type="number" id="rule-min" value="0" class="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">최대 금액 (미만, 공란=무제한)</label>
+                            <input type="number" id="rule-max" placeholder="무제한" class="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm bg-white">
                         </div>
                     </div>
-                    <button onclick="closeDraftModal()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-                
-                <div class="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50/50 scroll-hide">
-                    <!-- DB 연동 문서 분류 -->
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">문서 분류 선택 (DB 연동)</label>
-                        <div class="grid grid-cols-2 gap-4">
-                            <select id="draft-sector" onchange="handleSectorChange()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none bg-slate-50">
-                                <option value="">-- 부문 선택 --</option>
-                            </select>
-                            <select id="draft-category" onchange="handleCategoryChange()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none bg-slate-50" disabled>
-                                <option value="">-- 양식 선택 --</option>
-                            </select>
-                        </div>
-                        <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-                            <span class="text-xs font-bold text-slate-600">작성 방식</span>
-                            <div class="flex bg-slate-100 p-1 rounded-lg">
-                                <button onclick="setFormMode('smart')" id="btn-mode-smart" class="px-3 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-blue-600">스마트 템플릿</button>
-                                <button onclick="setFormMode('blank')" id="btn-mode-blank" class="px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700">빈 양식</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                        <input type="text" id="draft-title" placeholder="문서 제목을 입력하세요" class="w-full text-xl font-bold border-b border-slate-200 py-2 outline-none focus:border-blue-600 transition placeholder-slate-300">
-                    </div>
-
-                    <!-- Enhanced Rich Text Editor -->
-                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                        <div class="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap gap-2 editor-toolbar items-center">
-                            <div class="flex bg-white rounded border border-slate-200">
-                                <button onclick="execCmd('bold')" title="굵게"><i class="fa-solid fa-bold"></i></button>
-                                <button onclick="execCmd('italic')" title="기울임"><i class="fa-solid fa-italic"></i></button>
-                                <button onclick="execCmd('underline')" title="밑줄"><i class="fa-solid fa-underline"></i></button>
-                                <button onclick="execCmd('strikeThrough')" title="취소선"><i class="fa-solid fa-strikethrough"></i></button>
-                            </div>
-                            <div class="flex bg-white rounded border border-slate-200 p-1 gap-1 items-center">
-                                <span class="text-[10px] text-slate-400 font-bold ml-1">크기</span>
-                                <select onchange="execCmd('fontSize', this.value); this.value='';" class="border-none ml-1">
-                                    <option value="">기본</option>
-                                    <option value="1">아주작게</option><option value="3">보통</option>
-                                    <option value="5">크게</option><option value="7">아주크게</option>
-                                </select>
-                            </div>
-                            <div class="flex bg-white rounded border border-slate-200">
-                                <button onclick="execCmd('foreColor', '#ef4444')" title="글자색(빨강)"><i class="fa-solid fa-droplet text-red-500"></i></button>
-                                <button onclick="execCmd('foreColor', '#3b82f6')" title="글자색(파랑)"><i class="fa-solid fa-droplet text-blue-500"></i></button>
-                                <button onclick="execCmd('hiliteColor', '#fef08a')" title="형광펜"><i class="fa-solid fa-highlighter text-yellow-400"></i></button>
-                                <button onclick="execCmd('foreColor', '#1e293b'); execCmd('hiliteColor', 'transparent');" title="색상 초기화"><i class="fa-solid fa-eraser"></i></button>
-                            </div>
-                            <div class="flex bg-white rounded border border-slate-200">
-                                <button onclick="insertSymbol('✓')" title="기호 삽입">✓</button>
-                                <button onclick="insertSymbol('※')" title="기호 삽입">※</button>
-                                <button onclick="insertSymbol('★')" title="기호 삽입">★</button>
-                            </div>
-                            <div class="flex bg-white rounded border border-slate-200">
-                                <button onclick="insertTable()"><i class="fa-solid fa-table"></i> 표 삽입</button>
-                                <select onchange="handleTableTool(this.value); this.value='';" class="border-none border-l pl-1">
-                                    <option value="">표 편집 (도구)</option>
-                                    <option value="add_row">행 추가</option>
-                                    <option value="add_col">열 추가</option>
-                                    <option value="del_row">행 삭제</option>
-                                    <option value="del_col">열 삭제</option>
-                                    <option value="width_100">너비 100% 맞춤</option>
-                                    <option value="width_even">열 너비 동일하게</option>
-                                </select>
-                            </div>
-                            <div class="ml-auto">
-                                <button onclick="toggleHtmlMode()" id="btn-html-mode" class="text-xs bg-slate-800 text-white border-none px-3"><i class="fa-solid fa-code"></i> HTML</button>
-                            </div>
-                        </div>
-                        
-                        <div id="draft-content" contenteditable="true" class="p-6 min-h-[300px] text-sm text-slate-700 outline-none leading-relaxed transition-colors">
-                            <p class="text-slate-400 italic">상단에서 부문과 양식을 선택해 주세요.</p>
-                        </div>
-                        <textarea id="draft-html-content" class="hidden p-6 min-h-[300px] text-sm text-slate-300 bg-slate-900 outline-none font-mono"></textarea>
-                    </div>
-
-                    <div class="bg-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden select-none">
-                        <h4 class="font-bold mb-2 flex items-center relative z-10"><i class="fa-solid fa-users text-blue-400 mr-2"></i>조직도 픽커 (결재/합의/참조 지정)</h4>
-                        <p class="text-xs text-slate-400 mb-6 relative z-10">임직원을 마우스로 끌어서 하단의 역할 박스에 놓아주세요. 결재 영역 내에서 순서 변경도 가능합니다.</p>
-                        
-                        <!-- Source Container -->
-                        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 mb-4 h-48 overflow-y-auto" id="picker-source">
-                            <!-- Injected draggable members -->
-                        </div>
-
-                        <!-- Drop Zones -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="bg-slate-800 rounded-xl p-3 border border-slate-700">
-                                <h5 class="text-[10px] font-bold text-blue-400 mb-2 uppercase tracking-widest"><i class="fa-solid fa-pen-nib mr-1"></i>결재 (APPROVAL)</h5>
-                                <div id="drop-path" class="drop-zone p-2 space-y-2 flex flex-col" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'path')"></div>
-                            </div>
-                            <div class="bg-slate-800 rounded-xl p-3 border border-slate-700">
-                                <h5 class="text-[10px] font-bold text-emerald-400 mb-2 uppercase tracking-widest"><i class="fa-solid fa-handshake mr-1"></i>합의 (AGREEMENT)</h5>
-                                <div id="drop-agree" class="drop-zone p-2 space-y-2 flex flex-col" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'agree')"></div>
-                            </div>
-                            <div class="bg-slate-800 rounded-xl p-3 border border-slate-700">
-                                <h5 class="text-[10px] font-bold text-amber-400 mb-2 uppercase tracking-widest"><i class="fa-solid fa-copy mr-1"></i>참조 (REFERENCE)</h5>
-                                <div id="drop-ref" class="drop-zone p-2 space-y-2 flex flex-col" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ref')"></div>
-                            </div>
-                        </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">자동 결재선 템플릿 (쉼표로 직급/이름 구분)</label>
+                        <input type="text" id="rule-path" placeholder="예: 팀장, 본부장, 대표이사(전결)" class="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm bg-white">
                     </div>
                 </div>
-                
-                <div class="p-6 border-t border-slate-200 bg-white shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)] flex space-x-4">
-                    <button onclick="submitDraft()" class="flex-1 bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-md flex items-center justify-center gap-2"><i class="fa-solid fa-paper-plane"></i>기안 상신하기</button>
+                <div class="mt-8 flex justify-end gap-3">
+                    <button onclick="document.getElementById('modal-rule').classList.add('hidden')" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold">취소</button>
+                    <button onclick="saveRule()" class="px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-emerald-700">규정 저장</button>
                 </div>
             </div>
+        </div>
 
-            <div id="detail-canvas" class="fixed inset-y-0 right-0 w-full md:w-[800px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-500 ease-in-out border-l border-slate-200">
-                <div class="h-full flex flex-col" id="detail-content-area">
-                    <!-- Dynamic Content -->
+        <div id="modal-user" class="hidden fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white w-[400px] rounded-3xl shadow-2xl p-8">
+                <div class="flex justify-between items-center mb-6 border-b pb-4">
+                    <h3 id="modal-user-title" class="text-xl font-bold"><i class="fa-solid fa-user-plus text-blue-500 mr-2"></i>조직 구성원 등록</h3>
+                    <button onclick="document.getElementById('modal-user').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div class="space-y-4">
+                    <input type="hidden" id="edit-user-id">
+                    <div><label class="block text-xs font-bold text-slate-500 mb-1">이름</label><input type="text" id="edit-user-name" class="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-1">직급</label><input type="text" id="edit-user-rank" class="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-1">소속(팀/본부)</label><input type="text" id="edit-user-dept" class="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm"></div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">직계 상급자 (결재선 매핑용)</label>
+                        <select id="edit-user-boss" class="w-full border border-slate-300 px-3 py-2 rounded-lg text-sm bg-slate-50"></select>
+                    </div>
+                </div>
+                <div class="mt-8 flex justify-end gap-3">
+                    <button onclick="document.getElementById('modal-user').classList.add('hidden')" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold">취소</button>
+                    <button onclick="saveUser()" class="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-blue-700">저장</button>
                 </div>
             </div>
+        </div>
 
-            <!-- Toast -->
-            <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-[100] transform translate-y-32 transition-transform duration-500 flex items-center space-x-3 text-sm font-medium">
-                <i id="toast-icon" class="fa-solid fa-check text-emerald-400"></i>
-                <span id="toast-msg">처리 완료</span>
-            </div>
+        <!-- Toast -->
+        <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl z-[200] transform translate-y-32 transition-transform duration-500 flex items-center space-x-3 text-sm font-medium">
+            <i id="toast-icon" class="fa-solid fa-check text-emerald-400"></i>
+            <span id="toast-msg">처리 완료</span>
         </div>
     </div>
 
     <script>
         // --- DATA & STATE ---
-        let documents = [];
-        let dbCategories = [];
         let users = [];
+        let dbCategories = [];
         let delegationRules = [];
+        let documents = [];
         let activeUserId = 'admin_1';
         let isAdminMode = false;
         let isHtmlMode = false;
         
-        // Drag and Drop state
         let draggedUserId = null;
         let dndLists = { path: [], agree: [], ref: [] };
-        let currentFocusedTable = null; // For table editing
+        let currentFocusedTable = null; 
 
-        // Initialization
+        // Initial Data Generators
         function generateMockUsers() {
             users = [
                 { id: 'admin_1', name: '신원종', rank: '대표이사(최고관리자)', dept: '임원실', role: 'admin' },
-                { id: 'div_1', name: '김본부장', rank: '본부장', dept: '경영지원본부', bossId: 'admin_1', role: 'user' },
-                { id: 'team_1', name: '이팀장', rank: '팀장', dept: '재무/회계팀', bossId: 'div_1', role: 'user' },
+                { id: 'div_1', name: '김본부장', rank: '본부장', dept: '경영관리부문', bossId: 'admin_1', role: 'user' },
+                { id: 'team_1', name: '이팀장', rank: '팀장', dept: '재무/자금팀', bossId: 'div_1', role: 'user' },
                 { id: 'team_2', name: '최팀장', rank: '팀장', dept: '인사/노무팀', bossId: 'div_1', role: 'user' },
                 { id: 'div_2', name: '정부문장', rank: '부문장', dept: '영업/사업부문', bossId: 'admin_1', role: 'user' },
-                { id: 'team_3', name: '한팀장', rank: '팀장', dept: '국내영업팀', bossId: 'div_2', role: 'user' },
-                { id: 'team_4', name: '강팀장', rank: '팀장', dept: '해외수출팀', bossId: 'div_2', role: 'user' },
-                { id: 'user_1', name: '나기안', rank: '대리', dept: '해외수출팀', bossId: 'team_4', role: 'user' }
+                { id: 'team_3', name: '한팀장', rank: '팀장', dept: '영업(국내)팀', bossId: 'div_2', role: 'user' },
+                { id: 'team_4', name: '강팀장', rank: '팀장', dept: '영업(해외)팀', bossId: 'div_2', role: 'user' },
+                { id: 'user_1', name: '나기안', rank: '대리', dept: '영업(해외)팀', bossId: 'team_4', role: 'user' }
             ];
         }
 
         function generateMockCategories() {
             dbCategories = [
-                { id: 's1', name: '재무 / 회계 부문', parent_id: null },
+                { id: 's1', name: '경영관리부문', parent_id: null },
                 { id: 'c1_1', name: '지출 결의서', parent_id: 's1', template: 'table_expense' },
                 { id: 'c1_2', name: '품의 / 구매 요청서', parent_id: 's1', template: 'table_purchase' },
-                { id: 's2', name: '경영지원 / HR 부문', parent_id: null },
-                { id: 'c2_1', name: '휴가 / 근태 신청서', parent_id: 's2', template: 'table_hr' },
-                { id: 's3', name: '영업 / 사업 부문', parent_id: null },
-                { id: 'c3_1', name: '신규 계약 품의', parent_id: 's3', template: 'table_contract' },
-                { id: 'c3_2', name: '영업 활동 보고서', parent_id: 's3', template: 'table_sales' }
+                { id: 's2', name: '영업/사업부문', parent_id: null },
+                { id: 'c2_1', name: '영업(국내) 일일보고', parent_id: 's2', template: 'table_hr' },
+                { id: 'c2_2', name: '해외영업 출장품의', parent_id: 's2', template: 'table_contract' },
+                { id: 's3', name: 'IT / 인프라 부문', parent_id: null },
+                { id: 'c3_1', name: '서버 / 시스템 증설 신청', parent_id: 's3', template: 'table_blank' }
             ];
             
             delegationRules = [
@@ -396,6 +494,22 @@
             ];
         }
 
+        function generateMockDocuments() {
+            documents = [
+                {
+                    id: 'DOC-1001', sector_id: 's1', category_id: 'c1_1', title: '경영관리부문 워크샵 식대 청구', content: '<p>식대 청구합니다.</p>',
+                    creator_name: '이팀장', creator_dept: '재무/자금팀', created_at: new Date(Date.now() - 86400000).toLocaleString(),
+                    status: '진행중', current_step: 0, path: [{name: '김본부장', id: 'div_1', rank: '본부장', status: '대기'}], agreements: [], references: [], logs: []
+                },
+                {
+                    id: 'DOC-1002', sector_id: 's2', category_id: 'c2_1', title: '국내영업 3분기 실적 보고', content: '<p>실적 보고입니다.</p>',
+                    creator_name: '한팀장', creator_dept: '영업(국내)팀', created_at: new Date(Date.now() - 172800000).toLocaleString(),
+                    status: '완료', current_step: 1, path: [{name: '정부문장', id: 'div_2', rank: '부문장', status: '승인완료'}], agreements: [], references: [], logs: []
+                }
+            ];
+        }
+
+        // --- STREAMING_CHUNK: Setting up UI & Interactions... ---
         function initIdentitySelector() {
             const selector = document.getElementById('identity-selector');
             selector.innerHTML = users.map(u => `<option value="${u.id}">${u.name} ${u.rank}</option>`).join('');
@@ -427,36 +541,42 @@
                 btn.classList.replace('bg-slate-300', 'bg-blue-600');
                 span.classList.replace('translate-x-1', 'translate-x-5');
                 document.getElementById('org-editor-section').classList.remove('hidden');
-                showToast('관리자 편집 모드 ON', 'fa-unlock');
+                showToast('최고관리자 편집 모드 ON', 'fa-unlock');
             } else {
                 btn.classList.replace('bg-blue-600', 'bg-slate-300');
                 span.classList.replace('translate-x-5', 'translate-x-1');
                 document.getElementById('org-editor-section').classList.add('hidden');
-                showToast('관리자 편집 모드 OFF', 'fa-lock');
+                showToast('최고관리자 편집 모드 OFF', 'fa-lock');
             }
+            renderOrgChart(); // 트리 노드 호버 이펙트 변경용
             renderOrgList();
+            renderRuleList();
         }
 
-        // --- STREAMING_CHUNK: Dashboard & Charts ---
         let deptEfficiencyChartInstance = null;
         function initCharts() {
             const ctx = document.getElementById('deptEfficiencyChart');
             if(!ctx) return;
-            if (deptEfficiencyChartInstance) deptEfficiencyChartInstance.destroy();
+            if (deptEfficiencyChartInstance) { deptEfficiencyChartInstance.destroy(); }
 
+            // DB Category 기반 동적 차트 렌더링
             const sectors = dbCategories.filter(c => !c.parent_id);
-            let labels = []; let data = [];
+            let chartLabels = [];
+            let chartData = [];
 
             if (sectors.length > 0) {
                 sectors.forEach(sec => {
-                    labels.push(sec.name);
-                    data.push(documents.filter(d => d.sector_id === sec.id).length);
+                    chartLabels.push(sec.name);
+                    const count = documents.filter(d => d.sector_id === sec.id).length;
+                    chartData.push(count);
                 });
-            } else { labels = ['데이터 없음']; data = [0]; }
+            } else {
+                chartLabels = ['데이터 없음']; chartData = [0];
+            }
 
             deptEfficiencyChartInstance = new Chart(ctx.getContext('2d'), {
                 type: 'bar',
-                data: { labels: labels, datasets: [{ label: '기안 건수', data: data, backgroundColor: '#3b82f6', borderRadius: 4 }] },
+                data: { labels: chartLabels, datasets: [{ label: '기안 건수', data: chartData, backgroundColor: '#3b82f6', borderRadius: 4 }] },
                 options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
             });
         }
@@ -469,7 +589,6 @@
             initCharts();
         }
 
-        // --- STREAMING_CHUNK: Tabs & Lists ---
         function changeTab(tabId) {
             ['dashboard', 'global-list', 'org-config', 'rule-config'].forEach(t => {
                 document.getElementById('tab-' + t).classList.remove('tab-active');
@@ -478,129 +597,177 @@
             document.getElementById('tab-' + tabId).classList.add('tab-active');
             document.getElementById('view-' + tabId).classList.remove('hidden');
 
-            if (tabId === 'dashboard') initCharts();
+            if (tabId === 'dashboard') updateStats();
             if (tabId === 'global-list') renderGlobalList();
             if (tabId === 'org-config') { renderOrgChart(); renderOrgList(); }
             if (tabId === 'rule-config') renderRuleList();
         }
 
-        function renderRuleList() {
-            const container = document.getElementById('rules-container');
-            if (!container) return;
-            if (delegationRules.length === 0) { container.innerHTML = '<p class="text-sm text-slate-400 py-8 text-center">등록된 규정이 없습니다.</p>'; return; }
-            container.innerHTML = delegationRules.map(rule => `
-                <div class="flex items-center justify-between p-6 bg-slate-50 border border-slate-200 rounded-3xl group hover:border-blue-300 transition">
-                    <div class="flex items-center space-x-6">
-                        <div class="bg-white p-3 rounded-2xl shadow-sm text-center min-w-[120px]">
-                            <p class="text-[10px] font-bold text-blue-600 uppercase mb-1">${rule.typeName}</p>
-                            <p class="text-[10px] text-slate-400 font-mono italic">Range Matrix</p>
-                        </div>
-                        <div>
-                            <p class="text-sm font-bold text-slate-800">₩${rule.min.toLocaleString()} ~ ${rule.max >= 999999999 ? '∞' : rule.max.toLocaleString()}</p>
-                            <div class="flex items-center mt-2 space-x-1">
-                                ${rule.pathTemplate.map(p => `<span class="text-[10px] bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-500">${p}</span>`).join('<span class="text-slate-300"><i class="fa-solid fa-angle-right"></i></span>')}
-                            </div>
-                        </div>
-                    </div>
-                    ${isAdminMode ? `<button class="text-xs font-bold text-blue-600 hover:underline">수정</button>` : `<span class="text-slate-300 text-xs"><i class="fa-solid fa-lock"></i></span>`}
-                </div>
-            `).join('');
-        }
-
+        // --- STREAMING_CHUNK: Tree Org-Chart Rendering... ---
         function renderOrgChart() {
             const container = document.getElementById('org-chart-render');
             const rootUser = users.find(u => !u.bossId);
-            if (!rootUser) { container.innerHTML = '<p>조직도 최상위 노드를 찾을 수 없습니다.</p>'; return; }
-            container.innerHTML = buildTreeHTML(rootUser.id);
+            if (!rootUser) { container.innerHTML = '<p class="text-sm text-slate-500">조직 노드를 찾을 수 없습니다.</p>'; return; }
+            
+            // Flex 기반 Tree 구조 HTML 생성
+            container.innerHTML = `<ul>${buildTreeHTML(rootUser.id)}</ul>`;
         }
 
-        function buildTreeHTML(userId, isRoot = true) {
+        function buildTreeHTML(userId) {
             const user = users.find(u => u.id === userId);
             if(!user) return '';
             const children = users.filter(u => u.bossId === userId);
-            let html = `<div style="display:flex; flex-direction:column; align-items:center;">`;
+            
+            let html = `<li>`;
             html += `
-                <div class="org-node ${isRoot ? 'root' : ''}">
-                    <div class="w-8 h-8 bg-slate-800 text-white rounded-full mx-auto flex items-center justify-center font-bold text-xs mb-2">${user.name.charAt(0)}</div>
+                <div class="tree-node ${isAdminMode ? 'admin-mode' : ''}" ${isAdminMode ? `onclick="editUser('${user.id}')" title="클릭하여 수정"` : ''}>
+                    <div class="w-8 h-8 ${isAdminMode ? 'bg-amber-500' : 'bg-slate-900'} text-white rounded-full mx-auto flex items-center justify-center font-bold text-xs mb-2 shadow-sm">${user.name.charAt(0)}</div>
                     <div class="font-bold text-sm text-slate-900">${user.name}</div>
-                    <div class="text-[10px] text-slate-500">${user.dept} (${user.rank})</div>
+                    <div class="text-[10px] text-slate-500 font-medium">${user.dept} <br>(${user.rank})</div>
                 </div>
             `;
             if (children.length > 0) {
-                html += `<div style="width:2px; height:2rem; background-color:#cbd5e1;"></div>`;
-                html += `<div class="org-children ${children.length === 1 ? 'single' : ''}">`;
-                children.forEach(child => { html += buildTreeHTML(child.id, false); });
-                html += `</div>`;
+                html += `<ul>`;
+                children.forEach(child => { html += buildTreeHTML(child.id); });
+                html += `</ul>`;
             }
-            html += `</div>`;
+            html += `</li>`;
             return html;
         }
 
+        // --- STREAMING_CHUNK: Rules & User Managers... ---
         function renderOrgList() {
             const tbody = document.getElementById('org-list-tbody');
+            if(!tbody) return;
             tbody.innerHTML = users.map(u => `
                 <tr class="hover:bg-slate-50 transition">
-                    <td class="px-6 py-3 font-bold text-slate-700">${u.name}</td>
-                    <td class="px-6 py-3">${u.rank}</td>
-                    <td class="px-6 py-3 text-slate-500">${u.dept}</td>
-                    <td class="px-6 py-3">${u.bossId ? users.find(b => b.id === u.bossId)?.name : '-'}</td>
+                    <td class="px-6 py-3 font-bold text-slate-800">${u.name}</td>
+                    <td class="px-6 py-3 text-slate-600">${u.rank}</td>
+                    <td class="px-6 py-3 text-slate-600">${u.dept}</td>
+                    <td class="px-6 py-3 text-center">
+                        <button onclick="editUser('${u.id}')" class="text-blue-500 hover:bg-blue-50 px-2 py-1 rounded text-xs"><i class="fa-solid fa-pen"></i> 수정</button>
+                    </td>
                 </tr>
             `).join('');
         }
 
-        // --- STREAMING_CHUNK: Rich Text Editor ---
-        function execCmd(cmd, value=null) { document.execCommand(cmd, false, value); document.getElementById('draft-content').focus(); }
-        function insertSymbol(sym) { document.execCommand('insertText', false, sym); }
-        function insertTable() {
-            const tableHTML = `<table style="width:100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin-bottom: 1rem;"><tr><td style="border: 1px solid #cbd5e1; padding: 8px;">내용</td><td style="border: 1px solid #cbd5e1; padding: 8px;">내용</td></tr><tr><td style="border: 1px solid #cbd5e1; padding: 8px;">내용</td><td style="border: 1px solid #cbd5e1; padding: 8px;">내용</td></tr></table><p><br></p>`;
-            document.execCommand('insertHTML', false, tableHTML);
-        }
-
-        // Catch table clicks for editing
-        document.getElementById('draft-content').addEventListener('click', function(e) {
-            if(e.target.tagName === 'TD' || e.target.tagName === 'TH') {
-                currentFocusedTable = e.target.closest('table');
-                document.querySelectorAll('table').forEach(t => t.style.outline = 'none');
-                currentFocusedTable.style.outline = '2px dashed #3b82f6';
-            } else {
-                if(currentFocusedTable) currentFocusedTable.style.outline = 'none';
-                currentFocusedTable = null;
-            }
-        });
-
-        function handleTableTool(tool) {
-            if(!currentFocusedTable) return showToast('표 내부 셀을 먼저 클릭해주세요.', 'fa-info');
-            const table = currentFocusedTable;
-            if(tool === 'width_100') { table.style.width = '100%'; return; }
-            if(tool === 'width_even') { Array.from(table.rows[0].cells).forEach(c => c.style.width = (100 / table.rows[0].cells.length) + '%'); return; }
-            // Simple row/col add logic
-            if(tool === 'add_row') {
-                const row = table.insertRow(-1);
-                for(let i=0; i<table.rows[0].cells.length; i++) {
-                    const cell = row.insertCell(i);
-                    cell.style.border = '1px solid #cbd5e1'; cell.style.padding = '8px'; cell.innerHTML = '내용';
-                }
-            }
-        }
-
-        function toggleHtmlMode() {
-            isHtmlMode = !isHtmlMode;
-            const btn = document.getElementById('btn-html-mode');
-            const div = document.getElementById('draft-content');
-            const txt = document.getElementById('draft-html-content');
+        function renderRuleList() {
+            const container = document.getElementById('rules-container');
+            if (!container) return;
+            if (delegationRules.length === 0) { container.innerHTML = '<p class="text-sm text-slate-400 py-8 text-center col-span-2">등록된 규정이 없습니다.</p>'; return; }
             
-            if(isHtmlMode) {
-                txt.value = div.innerHTML;
-                div.classList.add('hidden'); txt.classList.remove('hidden');
-                btn.classList.replace('bg-slate-800', 'bg-blue-600');
-            } else {
-                div.innerHTML = txt.value;
-                txt.classList.add('hidden'); div.classList.remove('hidden');
-                btn.classList.replace('bg-blue-600', 'bg-slate-800');
-            }
+            container.innerHTML = delegationRules.map((rule, idx) => `
+                <div class="flex items-center justify-between p-6 bg-slate-50 border border-slate-200 rounded-3xl group hover:border-emerald-300 transition shadow-sm">
+                    <div class="flex items-center space-x-5">
+                        <div class="bg-white p-3 rounded-2xl shadow-sm text-center min-w-[100px] border border-slate-100">
+                            <p class="text-[10px] font-bold text-emerald-600 uppercase mb-1 whitespace-nowrap overflow-hidden text-ellipsis px-1">${rule.typeName}</p>
+                            <p class="text-[9px] text-slate-400 font-mono italic">ID: ${rule.id}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-black text-slate-800">₩${rule.min.toLocaleString()} ~ ${rule.max >= 999999999 ? '∞ 무제한' : '₩' + rule.max.toLocaleString()}</p>
+                            <div class="flex items-center mt-2 flex-wrap gap-1">
+                                ${rule.pathTemplate.map(p => `<span class="text-[10px] bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-600 font-medium shadow-sm">${p.trim()}</span>`).join('<span class="text-slate-300"><i class="fa-solid fa-angle-right text-[8px]"></i></span>')}
+                            </div>
+                        </div>
+                    </div>
+                    ${isAdminMode ? `<button onclick="deleteRule(${idx})" class="w-8 h-8 flex items-center justify-center rounded-full text-red-400 hover:bg-red-50 hover:text-red-600 transition"><i class="fa-solid fa-trash text-xs"></i></button>` : `<span class="text-slate-300"><i class="fa-solid fa-lock text-xs"></i></span>`}
+                </div>
+            `).join('');
         }
 
-        // --- STREAMING_CHUNK: Drafting & Forms ---
+        window.openRuleModal = function() {
+            if(!isAdminMode) return showToast('최고관리자 편집 모드를 활성화 해주세요.', 'fa-lock');
+            
+            const typeSelect = document.getElementById('rule-type');
+            const subCats = dbCategories.filter(c => c.parent_id);
+            typeSelect.innerHTML = subCats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            
+            document.getElementById('rule-min').value = '0';
+            document.getElementById('rule-max').value = '';
+            document.getElementById('rule-path').value = '';
+            
+            document.getElementById('modal-rule').classList.remove('hidden');
+        };
+
+        window.saveRule = function() {
+            const typeId = document.getElementById('rule-type').value;
+            const min = parseInt(document.getElementById('rule-min').value) || 0;
+            const maxVal = document.getElementById('rule-max').value;
+            const max = maxVal ? parseInt(maxVal) : 999999999999;
+            const pathStr = document.getElementById('rule-path').value;
+            
+            if(!pathStr) return showToast('결재선 템플릿을 입력하세요.', 'fa-triangle-exclamation');
+            
+            const cat = dbCategories.find(c => c.id === typeId);
+            delegationRules.push({
+                id: Date.now(), typeId: typeId, typeName: cat ? cat.name : 'Unknown',
+                min: min, max: max, pathTemplate: pathStr.split(',').map(s => s.trim())
+            });
+            
+            document.getElementById('modal-rule').classList.add('hidden');
+            renderRuleList();
+            showToast('신규 규정이 반영되었습니다.', 'fa-check');
+        };
+
+        window.deleteRule = function(idx) {
+            delegationRules.splice(idx, 1);
+            renderRuleList();
+            showToast('규정이 삭제되었습니다.', 'fa-trash');
+        };
+
+        window.openUserModal = function() {
+            document.getElementById('edit-user-id').value = '';
+            document.getElementById('edit-user-name').value = '';
+            document.getElementById('edit-user-rank').value = '';
+            document.getElementById('edit-user-dept').value = '';
+            
+            const bossSelect = document.getElementById('edit-user-boss');
+            bossSelect.innerHTML = '<option value="">-- 없음 (최상위) --</option>' + users.map(u => `<option value="${u.id}">${u.name} (${u.rank})</option>`).join('');
+            
+            document.getElementById('modal-user-title').innerHTML = '<i class="fa-solid fa-user-plus text-blue-500 mr-2"></i>신규 인원 등록';
+            document.getElementById('modal-user').classList.remove('hidden');
+        };
+
+        window.editUser = function(userId) {
+            if(!isAdminMode) return;
+            const u = users.find(x => x.id === userId);
+            if(!u) return;
+            document.getElementById('edit-user-id').value = u.id;
+            document.getElementById('edit-user-name').value = u.name;
+            document.getElementById('edit-user-rank').value = u.rank;
+            document.getElementById('edit-user-dept').value = u.dept;
+            
+            const bossSelect = document.getElementById('edit-user-boss');
+            bossSelect.innerHTML = '<option value="">-- 없음 (최상위) --</option>' + users.filter(x => x.id !== u.id).map(x => `<option value="${x.id}">${x.name} (${x.rank})</option>`).join('');
+            bossSelect.value = u.bossId || '';
+            
+            document.getElementById('modal-user-title').innerHTML = '<i class="fa-solid fa-user-pen text-amber-500 mr-2"></i>조직 구성원 수정';
+            document.getElementById('modal-user').classList.remove('hidden');
+        };
+
+        window.saveUser = function() {
+            const id = document.getElementById('edit-user-id').value;
+            const name = document.getElementById('edit-user-name').value;
+            const rank = document.getElementById('edit-user-rank').value;
+            const dept = document.getElementById('edit-user-dept').value;
+            const bossId = document.getElementById('edit-user-boss').value || null;
+
+            if(!name || !rank) return showToast('이름과 직급을 입력하세요.', 'fa-triangle-exclamation');
+
+            if(id) {
+                const user = users.find(u => u.id === id);
+                user.name = name; user.rank = rank; user.dept = dept; user.bossId = bossId;
+                showToast('정보가 수정되었습니다.', 'fa-check');
+            } else {
+                users.push({ id: 'u_' + Date.now(), name, rank, dept, bossId, role: 'user' });
+                showToast('신규 구성원이 등록되었습니다.', 'fa-check');
+            }
+            
+            document.getElementById('modal-user').classList.add('hidden');
+            renderOrgChart(); renderOrgList();
+        };
+
+        // --- STREAMING_CHUNK: Drafting & Smart Editor... ---
         function openDraftModal() {
             document.getElementById('draft-canvas').classList.remove('translate-x-full');
             
@@ -640,11 +807,14 @@
             const content = document.getElementById('draft-content');
             const cat = dbCategories.find(c => c.id === catId);
             
-            if(mode === 'smart' && cat) {
-                if(cat.template === 'table_expense') {
+            document.getElementById('btn-mode-smart').className = mode === 'smart' ? 'px-3 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-blue-600' : 'px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700';
+            document.getElementById('btn-mode-blank').className = mode === 'blank' ? 'px-3 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-blue-600' : 'px-3 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700';
+
+            if (mode === 'smart' && cat) {
+                if (cat.template === 'table_expense') {
                     content.innerHTML = `<h2 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">지 출 결 의 서</h2><table style="width:100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin-bottom: 1rem;"><tr><th style="border: 1px solid #cbd5e1; padding: 8px; background: #f8fafc; width: 20%;">사용 일자</th><td style="border: 1px solid #cbd5e1; padding: 8px;"><input type="date" class="smart-form-input"></td></tr><tr><th style="border: 1px solid #cbd5e1; padding: 8px; background: #f8fafc;">지출 금액</th><td style="border: 1px solid #cbd5e1; padding: 8px;"><input type="number" id="smart-amount" placeholder="금액 입력" class="smart-form-input" oninput="autoSetApprovalPath()"></td></tr><tr><th style="border: 1px solid #cbd5e1; padding: 8px; background: #f8fafc;">지출 내역</th><td style="border: 1px solid #cbd5e1; padding: 8px;"><input type="text" placeholder="상세 내역 입력" class="smart-form-input"></td></tr></table><p><br></p>`;
-                } else if(cat.template === 'table_hr') {
-                    content.innerHTML = `<h2 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">휴가 신청서</h2><table style="width:100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin-bottom: 1rem;"><tr><th style="border: 1px solid #cbd5e1; padding: 8px; background: #f8fafc; width: 20%;">휴가 종류</th><td style="border: 1px solid #cbd5e1; padding: 8px;"><select class="smart-form-input"><option>연차</option><option>반차</option></select></td></tr><tr><th style="border: 1px solid #cbd5e1; padding: 8px; background: #f8fafc;">사유</th><td style="border: 1px solid #cbd5e1; padding: 8px;"><textarea class="smart-form-input" rows="3"></textarea></td></tr></table>`;
+                } else if (cat.template === 'table_hr') {
+                    content.innerHTML = `<h2 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">업무 보고서</h2><table style="width:100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin-bottom: 1rem;"><tr><th style="border: 1px solid #cbd5e1; padding: 8px; background: #f8fafc; width: 20%;">보고 일자</th><td style="border: 1px solid #cbd5e1; padding: 8px;"><input type="date" class="smart-form-input"></td></tr><tr><th style="border: 1px solid #cbd5e1; padding: 8px; background: #f8fafc;">금일 실적</th><td style="border: 1px solid #cbd5e1; padding: 8px;"><textarea class="smart-form-input" rows="3"></textarea></td></tr></table>`;
                 } else {
                     content.innerHTML = `<p class="font-bold">[${cat.name}] 기안 작성</p><p><br></p>`;
                 }
@@ -653,7 +823,54 @@
             }
         }
 
-        // --- STREAMING_CHUNK: Drag & Drop Picker ---
+        // Editor Toolbar Functions
+        function execCmd(cmd, value=null) { document.execCommand(cmd, false, value); document.getElementById('draft-content').focus(); }
+        function insertSymbol(sym) { document.execCommand('insertText', false, sym); }
+        function insertTable() {
+            const tableHTML = `<table style="width:100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin-bottom: 1rem;"><tr><td style="border: 1px solid #cbd5e1; padding: 8px;">내용</td><td style="border: 1px solid #cbd5e1; padding: 8px;">내용</td></tr><tr><td style="border: 1px solid #cbd5e1; padding: 8px;">내용</td><td style="border: 1px solid #cbd5e1; padding: 8px;">내용</td></tr></table><p><br></p>`;
+            document.execCommand('insertHTML', false, tableHTML);
+        }
+        document.getElementById('draft-content').addEventListener('click', function(e) {
+            if(e.target.tagName === 'TD' || e.target.tagName === 'TH') {
+                currentFocusedTable = e.target.closest('table');
+                document.querySelectorAll('table').forEach(t => t.style.outline = 'none');
+                currentFocusedTable.style.outline = '2px dashed #3b82f6';
+            } else {
+                if(currentFocusedTable) currentFocusedTable.style.outline = 'none';
+                currentFocusedTable = null;
+            }
+        });
+        function handleTableTool(tool) {
+            if(!currentFocusedTable) return showToast('표 내부 셀을 먼저 클릭해주세요.', 'fa-info');
+            const table = currentFocusedTable;
+            if(tool === 'width_100') { table.style.width = '100%'; return; }
+            if(tool === 'width_even') { Array.from(table.rows[0].cells).forEach(c => c.style.width = (100 / table.rows[0].cells.length) + '%'); return; }
+            if(tool === 'add_row') {
+                const row = table.insertRow(-1);
+                for(let i=0; i<table.rows[0].cells.length; i++) {
+                    const cell = row.insertCell(i);
+                    cell.style.border = '1px solid #cbd5e1'; cell.style.padding = '8px'; cell.innerHTML = '내용';
+                }
+            }
+        }
+        function toggleHtmlMode() {
+            isHtmlMode = !isHtmlMode;
+            const btn = document.getElementById('btn-html-mode');
+            const div = document.getElementById('draft-content');
+            const txt = document.getElementById('draft-html-content');
+            
+            if(isHtmlMode) {
+                txt.value = div.innerHTML;
+                div.classList.add('hidden'); txt.classList.remove('hidden');
+                btn.classList.replace('bg-slate-800', 'bg-blue-600');
+            } else {
+                div.innerHTML = txt.value;
+                txt.classList.add('hidden'); div.classList.remove('hidden');
+                btn.classList.replace('bg-blue-600', 'bg-slate-800');
+            }
+        }
+
+        // --- STREAMING_CHUNK: Drag & Drop Picker... ---
         function initDragAndDropPicker() {
             dndLists = { path: [], agree: [], ref: [] };
             renderDndSource();
@@ -663,14 +880,18 @@
         function renderDndSource() {
             const container = document.getElementById('picker-source');
             const depts = [...new Set(users.map(u => u.dept))];
+            
+            // 그룹화된 부서별 렌더링
             container.innerHTML = depts.map(dept => `
                 <div class="mb-3">
-                    <p class="text-[10px] font-bold text-slate-400 mb-1 border-b border-slate-700 pb-1">${dept}</p>
-                    <div class="flex flex-wrap gap-2">
+                    <p class="text-[10px] font-bold text-slate-400 mb-1 border-b border-slate-700 pb-1"><i class="fa-solid fa-users mr-1"></i>${dept}</p>
+                    <div class="flex flex-wrap gap-2 pt-1">
                         ${users.filter(u => u.dept === dept).map(u => `
-                            <div class="draggable-item bg-slate-700 hover:bg-blue-600 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-600 transition flex items-center gap-2" draggable="true" ondragstart="handleDragStart(event, '${u.id}')">
-                                <div class="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center font-bold text-[10px]">${u.name.charAt(0)}</div>
-                                ${u.name} <span class="text-[10px] text-slate-300">${u.rank}</span>
+                            <div class="draggable-item bg-slate-700 hover:bg-blue-600 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-600 transition flex items-center gap-2 shadow-sm" draggable="true" ondragstart="handleDragStart(event, '${u.id}')">
+                                <div class="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center font-bold text-[10px] shadow-inner">${u.name.charAt(0)}</div>
+                                <div>
+                                    <span class="text-white">${u.name}</span> <span class="text-[9px] text-slate-300 ml-0.5">${u.rank}</span>
+                                </div>
                             </div>
                         `).join('')}
                     </div>
@@ -686,10 +907,10 @@
                     return;
                 }
                 container.innerHTML = dndLists[zone].map((user, idx) => `
-                    <div class="flex justify-between items-center bg-slate-700 p-2 rounded-lg border border-slate-600 draggable-item" draggable="true" ondragstart="handleDragStart(event, '${user.id}', '${zone}', ${idx})">
+                    <div class="flex justify-between items-center bg-slate-700 p-2 rounded-lg border border-slate-600 draggable-item shadow-sm" draggable="true" ondragstart="handleDragStart(event, '${user.id}', '${zone}', ${idx})">
                         <div class="flex items-center gap-2 text-xs font-medium">
-                            ${zone === 'path' ? `<span class="bg-blue-600 w-4 h-4 flex items-center justify-center rounded text-[10px]">${idx+1}</span>` : ''}
-                            ${user.name} <span class="text-[10px] text-slate-400">${user.rank}</span>
+                            ${zone === 'path' ? `<span class="bg-blue-600 text-white w-4 h-4 flex items-center justify-center rounded text-[10px] font-bold shadow-inner">${idx+1}</span>` : ''}
+                            <span class="text-white">${user.name}</span> <span class="text-[10px] text-slate-400">${user.rank}</span>
                         </div>
                         <button onclick="removeFromZone('${zone}', ${idx})" class="text-slate-400 hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>
                     </div>
@@ -710,13 +931,13 @@
             if(!user) return;
             
             if(data.sourceZone && data.sourceZone === targetZone) {
-                // Reorder within same zone (simplified: move to end)
+                // Remove from old pos
                 dndLists[targetZone].splice(data.sourceIdx, 1);
             } else if (data.sourceZone) {
-                dndLists[data.sourceZone].splice(data.sourceIdx, 1); // Remove from old
+                dndLists[data.sourceZone].splice(data.sourceIdx, 1); 
             }
             
-            // Prevent duplicates in same zone
+            // Re-insert at end (simplified reorder logic for demo)
             if(!dndLists[targetZone].find(u => u.id === user.id)) {
                 dndLists[targetZone].push({ ...user, status: '대기' });
             }
@@ -742,19 +963,18 @@
                     }
                 });
             } else {
-                // Fallback to Boss, then CEO
                 const me = users.find(u => u.id === activeUserId);
                 if (me.bossId) {
                     const boss = users.find(u => u.id === me.bossId);
                     if(boss) dndLists.path.push({ ...boss, status: '대기' });
                 }
-                const ceo = users.find(u => u.id === 'admin_1');
+                const ceo = users.find(u => u.id === 'admin_1'); // 신원종 CEO 매핑
                 if(ceo && me.id !== 'admin_1') dndLists.path.push({ ...ceo, status: '대기' });
             }
             renderDndZones();
         }
 
-        // --- STREAMING_CHUNK: Submit & List ---
+        // --- STREAMING_CHUNK: Submit & Detail View... ---
         function submitDraft() {
             const title = document.getElementById('draft-title').value;
             const sectorId = document.getElementById('draft-sector').value;
@@ -776,8 +996,8 @@
 
             documents.unshift(newDoc);
             closeDraftModal();
-            showToast('성공적으로 기안되었습니다.', 'fa-check');
-            logActivity(`[${newDoc.id}] ${me.name}님이 상신함`);
+            showToast('성공적으로 상신되었습니다.', 'fa-check');
+            logActivity(`[${newDoc.id}] ${me.name}님이 기안 상신함`);
             renderGlobalList();
             updateStats();
         }
@@ -800,7 +1020,6 @@
             }).join('');
         }
 
-        // --- STREAMING_CHUNK: Detail & Approvals ---
         function openDetailModal(docId) {
             const doc = documents.find(d => d.id === docId);
             const isMyTurn = doc.status === '진행중' && doc.path[doc.current_step] && doc.path[doc.current_step].id === activeUserId;
@@ -816,8 +1035,10 @@
                 
                 <div class="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-50/50">
                     <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <p class="text-xs font-bold text-slate-400 uppercase mb-4 flex justify-between">본문 내용 ${isMyTurn ? '<button onclick="toggleDetailEdit(this)" class="text-[10px] text-blue-500 bg-blue-50 px-2 rounded hover:bg-blue-100"><i class="fa-solid fa-pen"></i> 본문 수정 켜기</button>' : ''}</p>
-                        <div id="doc-view-content" class="text-sm text-slate-800 border p-4 rounded-xl border-slate-100 bg-slate-50 min-h-[200px]" ${isMyTurn ? 'contenteditable="false"' : ''}>${doc.content}</div>
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-4 flex justify-between">본문 내용 
+                            ${isMyTurn ? '<button onclick="toggleDetailEdit(this)" class="text-[10px] text-blue-500 bg-blue-50 px-2 rounded hover:bg-blue-100"><i class="fa-solid fa-pen"></i> 본문 수정 켜기</button>' : ''}
+                        </p>
+                        <div id="doc-view-content" class="text-sm text-slate-800 border p-4 rounded-xl border-slate-100 bg-slate-50 min-h-[200px]" contenteditable="false">${doc.content}</div>
                     </div>
 
                     <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -859,7 +1080,7 @@
             if (isEditing) {
                 div.contentEditable = "false"; div.classList.remove('ring-2', 'ring-blue-400', 'bg-white'); div.classList.add('bg-slate-50');
                 btn.innerHTML = '<i class="fa-solid fa-pen"></i> 본문 수정 켜기';
-                showToast('내용이 임시 반영되었습니다. 승인 시 최종 적용됩니다.', 'fa-info');
+                showToast('수정이 완료되었습니다. 승인 시 최종 저장됩니다.', 'fa-info');
             } else {
                 div.contentEditable = "true"; div.classList.add('ring-2', 'ring-blue-400', 'bg-white'); div.classList.remove('bg-slate-50');
                 btn.innerHTML = '<i class="fa-solid fa-check"></i> 편집 완료';
@@ -872,7 +1093,6 @@
             const comment = document.getElementById('approve-comment').value || (action === '승인' ? '확인했습니다.' : '반려합니다.');
             const me = users.find(u => u.id === activeUserId);
 
-            // Apply edited content
             const editedContent = document.getElementById('doc-view-content').innerHTML;
             if(editedContent !== doc.content) doc.content = editedContent;
 
@@ -901,16 +1121,17 @@
 
         function logActivity(text) {
             const logContainer = document.getElementById('recent-logs');
+            if(!logContainer) return;
             const div = document.createElement('div');
             div.className = 'text-xs bg-white p-3 rounded-lg border border-slate-100 flex gap-2 items-start';
             div.innerHTML = `<i class="fa-solid fa-circle-info text-blue-400 mt-0.5"></i> <div><span class="font-bold text-slate-700">${new Date().toLocaleTimeString()}</span> <p class="text-slate-500">${text}</p></div>`;
             logContainer.prepend(div);
         }
 
-        // Init
         window.onload = () => {
             generateMockUsers();
             generateMockCategories();
+            generateMockDocuments();
             initIdentitySelector();
             changeTab('dashboard');
             logActivity('시스템 초기화 완료. 신원종(CEO) 계정 접속.');
