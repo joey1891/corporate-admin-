@@ -129,7 +129,6 @@
                         <a href="https://www.hyminternational.com/" target="_blank" class="w-full py-1.5 px-3 bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold rounded flex items-center justify-center transition-all shadow-sm">
                             <i class="fa-solid fa-globe mr-1.5"></i> HYM 공식 홈페이지
                         </a>
-                        <!-- 전자결재시스템 연동 버튼 위치 변경 (공식 홈페이지 바로 아래) -->
                         <a href="https://joey1891.github.io/corporate-admin-/e-Approval%20System.html" target="_blank" class="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded flex items-center justify-center transition-all shadow-sm">
                             <i class="fa-solid fa-file-signature mr-1.5"></i> 전자결재시스템 (e-Approval)
                         </a>
@@ -237,7 +236,6 @@
                 </header>
 
                 <div class="flex-1 overflow-y-auto p-4 sm:p-8 relative">
-                    <!-- 카테고리 제목 및 뷰어 전환 영역 -->
                     <div class="mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                         <div>
                             <h1 class="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
@@ -269,9 +267,7 @@
                                 @drop="dragDrop($event, item)" 
                                 @dragend="dragEnd">
                                 <div class="p-4 flex items-center justify-between gap-4 cursor-pointer relative" @click="handleItemClick(item, $event)">
-                                    <!-- 트리 깊이에 따른 들여쓰기 적용 -->
                                     <div class="flex items-center gap-4 flex-1 min-w-0" :style="{ paddingLeft: (item._depth * 1.5) + 'rem' }">
-                                        <!-- 트리 구조 연결선 느낌의 아이콘 (깊이가 있을 때만) -->
                                         <i v-if="item._depth > 0" class="fa-solid fa-turn-up fa-rotate-90 text-gray-300 absolute" :style="{ left: `calc(1.2rem + ${(item._depth - 1) * 1.5}rem)` }"></i>
                                         
                                         <i v-if="isAdminMode" class="fa-solid fa-grip-vertical text-gray-300 hover:text-gray-500" @mousedown.stop></i>
@@ -280,14 +276,16 @@
                                             <i :class="getIcon(item.type, item.id)"></i>
                                         </div>
                                         <div class="min-w-0 flex-1">
-                                            <h3 class="text-base font-semibold text-gray-900 truncate">
+                                            <h3 class="text-base font-semibold text-gray-900 truncate flex items-center gap-2">
                                                 {{ item.name }} 
-                                                <i v-if="hasFiles(item)" class="fa-solid fa-paperclip text-xs text-blue-500 ml-1"></i>
-                                                <i v-if="['system','link'].includes(item.type)" class="fa-solid fa-arrow-up-right-from-square text-xs text-gray-400 ml-1"></i>
+                                                <span v-if="hasFiles(item)" class="flex gap-1">
+                                                    <i v-if="item._hasFile" class="fa-solid fa-paperclip text-xs text-blue-500" title="첨부파일 있음"></i>
+                                                    <i v-if="item._hasLink" class="fa-solid fa-arrow-up-right-from-square text-xs text-emerald-500" title="외부링크 있음"></i>
+                                                </span>
                                             </h3>
                                             <div class="flex items-center gap-2 mt-0.5">
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">{{ getTypeName(item.type) }}</span>
-                                                <span v-if="item.description && !['system', 'link'].includes(item.type)" @click.stop="toggleDescription(item)" class="text-xs text-gray-400 hover:text-primary transition-colors cursor-pointer flex items-center gap-1 z-10 relative px-1">
+                                                <span v-if="item.description" @click.stop="toggleDescription(item)" class="text-xs text-gray-400 hover:text-primary transition-colors cursor-pointer flex items-center gap-1 z-10 relative px-1">
                                                     <i :class="['fa-solid transition-transform', expandedItemIds.includes(item.id) ? 'fa-chevron-up text-primary' : 'fa-chevron-down']"></i> 
                                                     {{ expandedItemIds.includes(item.id) ? '설명 접기' : '설명 보기' }}
                                                 </span>
@@ -309,9 +307,8 @@
                                         </div>
                                     </div>
                                 </div>
-                                <!-- 토글되는 설명 영역 -->
                                 <transition name="slide-fade">
-                                    <div v-if="expandedItemIds.includes(item.id) && item.description && !['system','link'].includes(item.type)" 
+                                    <div v-if="expandedItemIds.includes(item.id) && item.description" 
                                          class="pb-5 pt-2 bg-gray-50/80 border-t border-dashed border-gray-200 relative"
                                          :style="{ paddingLeft: `calc(4.5rem + ${item._depth * 1.5}rem)`, paddingRight: '1rem' }">
                                         <div class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed html-content" v-html="item.description"></div>
@@ -334,7 +331,6 @@
                              @click="handleItemClick(item, $event)">
                             
                             <div class="p-5 flex flex-col h-full hover:bg-gray-50/50 rounded-t-xl transition-colors">
-                                <!-- 폴더 하위임을 시각적으로 보여주는 배지 (그리드뷰용) -->
                                 <div v-if="item._depth > 0" class="absolute top-3 right-3 text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold">
                                     <i class="fa-solid fa-level-up-alt fa-rotate-90 mr-0.5"></i> 폴더 내 항목
                                 </div>
@@ -351,11 +347,15 @@
                                 <div :class="['w-12 h-12 rounded-lg flex items-center justify-center text-xl mb-3 mt-2 mx-auto transition-transform', getIconClass(item.type)]">
                                     <i :class="getIcon(item.type, item.id)"></i>
                                 </div>
-                                <h3 class="text-base font-bold text-gray-900 mb-2 truncate text-center">
+                                <h3 class="text-base font-bold text-gray-900 mb-2 truncate text-center flex items-center justify-center gap-1">
                                     {{ item.name }}
+                                    <span v-if="hasFiles(item)" class="flex gap-1 ml-1">
+                                        <i v-if="item._hasFile" class="fa-solid fa-paperclip text-xs text-blue-500"></i>
+                                        <i v-if="item._hasLink" class="fa-solid fa-arrow-up-right-from-square text-xs text-emerald-500"></i>
+                                    </span>
                                 </h3>
                                 
-                                <div v-if="item.description && !['system', 'link'].includes(item.type)" @click.stop="toggleDescription(item)" class="text-center text-xs text-gray-400 mb-3 flex items-center justify-center gap-1 cursor-pointer hover:text-primary z-10 relative w-fit mx-auto px-2">
+                                <div v-if="item.description" @click.stop="toggleDescription(item)" class="text-center text-xs text-gray-400 mb-3 flex items-center justify-center gap-1 cursor-pointer hover:text-primary z-10 relative w-fit mx-auto px-2">
                                     <i :class="['fa-solid transition-transform', expandedItemIds.includes(item.id) ? 'fa-chevron-up text-primary' : 'fa-chevron-down']"></i> 설명 {{ expandedItemIds.includes(item.id) ? '닫기' : '보기' }}
                                 </div>
                                 <div v-else class="mb-3"></div>
@@ -368,9 +368,8 @@
                                 </div>
                             </div>
                             
-                            <!-- 그리드 뷰 하단 펼쳐지는 설명 영역 -->
                             <transition name="slide-fade">
-                                <div v-if="expandedItemIds.includes(item.id) && item.description && !['system','link'].includes(item.type)" class="px-5 pb-5 pt-3 border-t border-gray-100 bg-gray-50 rounded-b-xl overflow-hidden text-sm text-gray-700 whitespace-pre-wrap leading-relaxed html-content" v-html="item.description">
+                                <div v-if="expandedItemIds.includes(item.id) && item.description" class="px-5 pb-5 pt-3 border-t border-gray-100 bg-gray-50 rounded-b-xl overflow-hidden text-sm text-gray-700 whitespace-pre-wrap leading-relaxed html-content" v-html="item.description">
                                 </div>
                             </transition>
                         </div>
@@ -381,7 +380,6 @@
                     <i class="fa-solid fa-plus"></i>
                 </button>
 
-                <!-- 🌟 드래그 중 표시되는 화면 하단 고정 드롭존 (폴더 밖으로 꺼내기) -->
                 <transition name="slide-fade">
                     <div v-if="isAdminMode && dragItem && dragItem.parent_id" 
                          @dragover.prevent="dragTargetFolderId = 'root'" 
@@ -397,7 +395,6 @@
                         </div>
                     </div>
                 </transition>
-
             </main>
 
             <div v-if="showItemModal" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
@@ -408,7 +405,6 @@
                     </div>
                     
                     <div class="space-y-4">
-                        <!-- 부문 및 카테고리 선택 영역 추가 -->
                         <div v-if="isAdminMode" class="grid grid-cols-2 gap-3 mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                             <div>
                                 <label class="block text-xs font-bold text-gray-700 mb-1">위치 (부문)</label>
@@ -426,63 +422,133 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">항목명</label>
-                            <input type="text" v-model="modalForm.name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none">
+                            <input type="text" v-model="modalForm.name" placeholder="예) 영업신고증" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">유형</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">대표 유형 (UI 테마)</label>
                             <select v-model="modalForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none">
                                 <option value="folder">📁 폴더 생성 (분류용)</option>
                                 <option disabled>──────────</option>
-                                <option value="notice">공지사항 (게시글)</option>
-                                <option value="download">단순 파일 다운로드</option>
+                                <option value="notice">공지사항 (게시글 위주)</option>
+                                <option value="download">일반 파일 다운로드</option>
                                 <option value="document">내부 기안 양식</option>
                                 <option value="system">사내 시스템 연결</option>
                                 <option value="link">외부 링크 연결</option>
                                 <option value="proxy_form">스마트 폼 (위임장 등)</option>
                                 <option value="my_business_card">내 명함 (개인화)</option>
                             </select>
+                            <p class="text-[11px] text-gray-500 mt-1">* '대표 유형'은 아이콘과 뱃지 색상을 결정합니다. 파일과 링크는 유형에 관계없이 하단에서 모두 복합적으로 추가 가능합니다.</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">설명 / 내용</label>
-                            <textarea v-model="modalForm.description" rows="5" placeholder="내용을 입력하세요. 클릭 시 설명이 펼쳐집니다. (HTML 지원)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none"></textarea>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">설명 / 내용 (선택)</label>
+                            <textarea v-model="modalForm.description" rows="3" placeholder="간단한 안내사항이나 설명을 적어주세요. (HTML 지원)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none"></textarea>
                         </div>
                         
-                        <div v-if="['download', 'document', 'notice'].includes(modalForm.type)" class="pt-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">파일 첨부</label>
-                            <div @dragover.prevent="dragActive = true" @dragleave.prevent="dragActive = false" @drop.prevent="handleDrop" :class="['border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer', dragActive ? 'border-primary bg-blue-50' : 'border-gray-300 hover:bg-gray-50']" @click="$refs.fileInput.click()">
-                                <i class="fa-solid fa-cloud-arrow-up text-3xl text-gray-400 mb-2"></i>
-                                <p class="text-sm text-gray-600">클릭 또는 파일 드래그 앤 드롭</p>
-                                <input type="file" ref="fileInput" @change="handleFileSelect" multiple class="hidden">
+                        <!-- 복합 데이터 처리 영역 (파일 + 링크 동시 지원) -->
+                        <template v-if="!['folder', 'proxy_form', 'my_business_card'].includes(modalForm.type)">
+                            <div class="pt-3 border-t border-gray-100">
+                                <label class="block text-sm font-bold text-blue-700 mb-2"><i class="fa-solid fa-file-arrow-down"></i> 첨부 파일 (다운로드용)</label>
+                                <div @dragover.prevent="dragActive = true" @dragleave.prevent="dragActive = false" @drop.prevent="handleDrop" :class="['border-2 border-dashed rounded-lg p-5 flex flex-col items-center justify-center cursor-pointer transition-colors', dragActive ? 'border-primary bg-blue-50' : 'border-gray-300 hover:bg-gray-50']" @click="$refs.fileInput.click()">
+                                    <i class="fa-solid fa-cloud-arrow-up text-2xl text-gray-400 mb-1"></i>
+                                    <p class="text-xs text-gray-600">클릭 또는 파일 드래그 앤 드롭</p>
+                                    <input type="file" ref="fileInput" @change="handleFileSelect" multiple class="hidden">
+                                </div>
+                                <ul v-if="modalForm.files && modalForm.files.length > 0" class="space-y-2 mt-2">
+                                    <li v-for="(file, idx) in modalForm.files" :key="idx" class="flex items-center p-2 bg-gray-50 border border-gray-200 rounded-lg gap-2">
+                                        <i class="fa-solid fa-file text-blue-400"></i>
+                                        <input type="text" v-model="file.name" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:border-primary">
+                                        <button @click.prevent="removeFile(idx)" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-xmark"></i></button>
+                                    </li>
+                                </ul>
                             </div>
-                            <ul v-if="modalForm.files && modalForm.files.length > 0" class="space-y-2 mt-3">
-                                <li v-for="(file, idx) in modalForm.files" :key="idx" class="flex items-center p-2 bg-gray-50 border border-gray-200 rounded-lg gap-2">
-                                    <i class="fa-solid fa-file text-gray-400"></i>
-                                    <input type="text" v-model="file.name" class="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:border-primary">
-                                    <button @click.prevent="removeFile(idx)" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-xmark"></i></button>
+                            
+                            <div class="pt-4 border-t border-gray-100 mt-2">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="block text-sm font-bold text-emerald-700"><i class="fa-solid fa-link"></i> 연결 주소 (바로가기용)</label>
+                                    <button @click="addLinkField" class="px-2 py-1 bg-emerald-50 text-[10px] font-bold rounded text-emerald-700 border border-emerald-200 hover:bg-emerald-100"><i class="fa-solid fa-plus"></i> 링크 추가</button>
+                                </div>
+                                <div class="space-y-2">
+                                    <div v-for="(link, idx) in modalForm.links" :key="idx" class="flex gap-2">
+                                        <input type="text" v-model="link.name" placeholder="링크명 (예: 의료기기판매업)" class="w-1/3 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
+                                        <input type="text" v-model="link.url" placeholder="https://..." class="flex-1 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
+                                        <button v-if="modalForm.links.length > 1" @click="removeLinkField(idx)" class="px-2 text-red-400 hover:text-red-600 rounded"><i class="fa-solid fa-trash text-sm"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button @click="closeModal" class="px-5 py-2.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">취소</button>
+                        <button @click="saveItem" :disabled="isUploading" class="px-5 py-2.5 text-sm font-bold text-white bg-primary hover:bg-blue-800 rounded-lg flex items-center transition-colors shadow-md">
+                            <i v-if="isUploading" class="fa-solid fa-spinner fa-spin mr-2"></i> {{ isUploading ? '저장 중...' : '저장하기' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🌟 수정됨: 복합 데이터를 '첨부 파일'과 '연결 링크'로 분리해서 보여주는 미리보기 모달 -->
+            <div v-if="showPreviewModal" class="fixed inset-0 bg-black bg-opacity-60 z-[70] flex flex-col items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-full max-h-[85vh] flex flex-col overflow-hidden relative">
+                    <div class="flex justify-between items-center p-5 border-b bg-gray-50 flex-shrink-0">
+                        <div class="flex items-center gap-3">
+                            <div :class="['w-10 h-10 rounded flex items-center justify-center text-lg shadow-sm', getIconClass(previewItem?.type)]"><i :class="getIcon(previewItem?.type)"></i></div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">{{ previewItem?.name }}</h3>
+                                <p class="text-xs text-gray-500">{{ getTypeName(previewItem?.type) }}</p>
+                            </div>
+                        </div>
+                        <button @click="showPreviewModal = false" class="text-gray-400 hover:text-gray-600 bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto bg-gray-100 p-4 sm:p-8 flex flex-col items-center w-full">
+                        
+                        <!-- 설명 영역 -->
+                        <div v-if="previewItem?.description" class="w-full max-w-3xl bg-white p-6 sm:p-8 rounded-xl border border-gray-200 mb-6 shadow-sm">
+                            <div v-if="previewItem.type === 'notice'" class="html-content text-gray-800" v-html="previewItem.description"></div>
+                            <p v-else class="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{{ previewItem.description }}</p>
+                        </div>
+                        
+                        <!-- 📂 첨부 파일 (다운로드) 분리 영역 -->
+                        <div v-if="previewAttachments.length > 0" class="w-full max-w-3xl mb-6">
+                            <h4 class="text-sm font-bold text-gray-800 mb-3 flex items-center">
+                                <i class="fa-solid fa-file-arrow-down text-blue-500 mr-2 text-lg"></i> 첨부 파일 ({{ previewAttachments.length }}개)
+                            </h4>
+                            <ul class="space-y-3">
+                                <li v-for="(file, idx) in previewAttachments" :key="'file-'+idx" class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 text-lg"><i class="fa-solid fa-file"></i></div>
+                                        <span class="text-sm font-bold text-gray-800 truncate">{{ file.name }}</span>
+                                    </div>
+                                    <button @click="downloadActualFile(file.url, file.name)" class="w-full sm:w-auto px-4 py-2 bg-gray-800 text-white text-xs font-bold rounded-lg hover:bg-gray-900 shadow-sm flex items-center justify-center gap-2 transition-colors">
+                                        <i class="fa-solid fa-download"></i> 다운로드
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- 🔗 연결 링크 (바로가기) 분리 영역 -->
+                        <div v-if="previewLinks.length > 0" class="w-full max-w-3xl mb-6">
+                            <h4 class="text-sm font-bold text-gray-800 mb-3 flex items-center">
+                                <i class="fa-solid fa-link text-emerald-500 mr-2 text-lg"></i> 연결 링크 ({{ previewLinks.length }}개)
+                            </h4>
+                            <ul class="space-y-3">
+                                <li v-for="(link, idx) in previewLinks" :key="'link-'+idx" class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg"><i class="fa-solid fa-up-right-from-square"></i></div>
+                                        <div class="flex flex-col min-w-0">
+                                            <span class="text-sm font-bold text-gray-800 truncate">{{ link.name }}</span>
+                                            <span class="text-[10px] text-gray-400 truncate mt-0.5">{{ link.url }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2 w-full sm:w-auto">
+                                        <button @click="copyToClipboard(link.url)" class="flex-1 sm:flex-none px-3 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors flex justify-center items-center gap-1.5"><i class="fa-solid fa-copy"></i> 주소복사</button>
+                                        <button @click="window.open(link.url, '_blank')" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 shadow-sm transition-colors flex justify-center items-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> 바로가기</button>
+                                    </div>
                                 </li>
                             </ul>
                         </div>
                         
-                        <div v-if="['system', 'link'].includes(modalForm.type)">
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="block text-sm font-medium text-gray-700">연결 주소 (URL)</label>
-                                <button @click="addLinkField" class="px-2 py-1 bg-gray-100 text-xs font-bold rounded text-gray-700"><i class="fa-solid fa-plus"></i> 링크 추가</button>
-                            </div>
-                            <div class="space-y-2">
-                                <div v-for="(link, idx) in modalForm.links" :key="idx" class="flex gap-2">
-                                    <input type="text" v-model="link.name" placeholder="링크명" class="w-1/3 px-3 py-2 border border-gray-300 rounded focus:border-primary outline-none text-sm">
-                                    <input type="text" v-model="link.url" placeholder="https://" class="flex-1 px-3 py-2 border border-gray-300 rounded focus:border-primary outline-none text-sm">
-                                    <button v-if="modalForm.links.length > 1" @click="removeLinkField(idx)" class="px-2 text-red-500 rounded"><i class="fa-solid fa-trash"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-6 flex justify-end gap-2">
-                        <button @click="closeModal" class="px-5 py-2.5 text-sm font-medium bg-gray-100 rounded-lg">취소</button>
-                        <button @click="saveItem" :disabled="isUploading" class="px-5 py-2.5 text-sm font-bold text-white bg-primary rounded-lg flex items-center">
-                            <i v-if="isUploading" class="fa-solid fa-spinner fa-spin mr-2"></i> {{ isUploading ? '저장 중...' : '저장하기' }}
-                        </button>
                     </div>
                 </div>
             </div>
@@ -545,7 +611,6 @@
                             </ul>
                         </div>
                         <div class="w-2/3 flex flex-col bg-gray-50" v-if="editingUser">
-                            <!-- 유저 권한 수정 컨텐츠 (기존 동일) -->
                             <div class="p-6 overflow-y-auto flex-1">
                                 <div class="flex justify-between items-center mb-4">
                                     <h4 class="text-base font-bold text-gray-900">{{ editingUser.full_name }} 님의 권한</h4>
@@ -603,42 +668,6 @@
                 </div>
             </div>
 
-            <div v-if="showPreviewModal" class="fixed inset-0 bg-black bg-opacity-60 z-[70] flex flex-col items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-full max-h-[85vh] flex flex-col overflow-hidden relative">
-                    <div class="flex justify-between items-center p-5 border-b bg-gray-50">
-                        <div class="flex items-center gap-3">
-                            <div :class="['w-10 h-10 rounded flex items-center justify-center text-lg', getIconClass(previewItem?.type)]"><i :class="getIcon(previewItem?.type)"></i></div>
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-900">{{ previewItem?.name }}</h3>
-                                <p class="text-xs text-gray-500">{{ getTypeName(previewItem?.type) }}</p>
-                            </div>
-                        </div>
-                        <button @click="showPreviewModal = false" class="text-gray-400 hover:text-gray-600 bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
-                    <div class="flex-1 overflow-y-auto bg-gray-100 p-6 flex flex-col items-center">
-                        <div v-if="previewItem?.description" class="w-full max-w-2xl bg-white p-8 rounded-lg border border-gray-200 mb-6 shadow-sm">
-                            <div v-if="previewItem.type === 'notice'" class="html-content text-gray-800" v-html="previewItem.description"></div>
-                            <p v-else class="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{{ previewItem.description }}</p>
-                        </div>
-                        <div v-if="previewFiles.length > 0" class="w-full max-w-2xl">
-                            <h4 class="text-sm font-bold text-gray-800 mb-3"><i class="fa-solid fa-link text-blue-500"></i> {{ ['system', 'link'].includes(previewItem?.type) ? '연결된 링크' : '첨부 파일' }} ({{ previewFiles.length }}개)</h4>
-                            <ul class="space-y-2">
-                                <li v-for="(file, idx) in previewFiles" :key="idx" class="bg-white border border-gray-200 rounded-lg p-3 flex justify-between items-center shadow-sm">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 bg-blue-50 text-blue-500 rounded flex items-center justify-center"><i :class="['system', 'link'].includes(previewItem?.type) ? 'fa-solid fa-up-right-from-square' : 'fa-solid fa-file'"></i></div>
-                                        <span class="text-sm font-bold text-gray-800">{{ file.name }}</span>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <button v-if="['system', 'link'].includes(previewItem?.type)" @click="copyToClipboard(file.url)" class="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-bold rounded hover:bg-gray-300"><i class="fa-solid fa-copy mr-1"></i>복사</button>
-                                        <button @click="['system', 'link'].includes(previewItem?.type) ? window.open(file.url, '_blank') : downloadActualFile(file.url, file.name)" class="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded hover:bg-gray-900"><i :class="['system', 'link'].includes(previewItem?.type) ? 'fa-solid fa-arrow-right mr-1' : 'fa-solid fa-download mr-1'"></i>{{ ['system', 'link'].includes(previewItem?.type) ? '바로가기' : '다운로드' }}</button>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
             <div v-if="showAdminCardModal" class="fixed inset-0 bg-black bg-opacity-70 z-[120] flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden relative">
                     <div class="flex justify-between items-center p-5 border-b bg-gray-50">
@@ -716,7 +745,6 @@
                 </div>
             </div>
 
-            <!-- 스마트 폼 렌더링 (동일 유지) -->
             <div v-if="showProxyForm" class="fixed inset-0 bg-gray-900 bg-opacity-70 z-[130] flex flex-col md:flex-row overflow-hidden">
                 <button @click="showProxyForm = false" class="absolute top-4 right-4 z-50 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-100"><i class="fa-solid fa-xmark text-xl"></i></button>
                 <div class="w-full md:w-1/3 h-1/2 md:h-full bg-white overflow-y-auto border-r border-gray-200 p-6 shadow-xl z-10 flex flex-col">
@@ -868,7 +896,6 @@
                 const authForm = ref({ email: '', password: '', name: '' });
                 const userProfile = ref(null);
                 const isAuthLoading = ref(false);
-                
                 const rememberId = ref(false);
                 const keepLoggedIn = ref(false);
                 
@@ -880,8 +907,6 @@
                 const viewMode = ref('list');
                 const menuGroups = ref([]);
                 const activeCategoryId = ref('');
-                
-                // 트리 토글 관리용 상태
                 const openFolderIds = ref([]);
                 const expandedItemIds = ref([]);
                 
@@ -957,7 +982,7 @@
                 const newCompanyName = ref('');
                 const isCloning = ref(false);
                 const openAddCompanyModal = () => { newCompanyName.value = ''; showCompanyModal.value = true; };
-                const executeAddCompany = async () => { /* 이전과 동일 생략되지않음 */
+                const executeAddCompany = async () => { 
                     if(!newCompanyName.value) return;
                     isCloning.value = true;
                     try {
@@ -985,10 +1010,38 @@
                     } catch(e) { showToast('생성 실패', 'error', e.message); } finally { isCloning.value = false; }
                 };
 
+                // DB의 JSON 데이터를 파싱하면서 파일과 링크 종류를 구분해주는 헬퍼
+                const parseItemData = (item) => {
+                    let files = []; let links = [];
+                    if (item.file_path && item.file_path.startsWith('[')) {
+                        const parsed = JSON.parse(item.file_path);
+                        const isLegacyLinkType = ['system', 'link'].includes(item.type);
+                        
+                        parsed.forEach(p => {
+                            if (p.kind === 'file' || (!p.kind && !isLegacyLinkType)) files.push({ ...p, kind: 'file' });
+                            else if (p.kind === 'link' || (!p.kind && isLegacyLinkType)) links.push({ ...p, kind: 'link' });
+                        });
+                    } else if (item.file_path && !item.file_path.startsWith('[')) {
+                        if (['system', 'link'].includes(item.type)) links.push({ name: item.name || '바로가기', url: item.file_path, kind: 'link' });
+                    }
+                    return { files, links };
+                };
+
                 const loadData = async () => {
                     try {
                         const { data: cats } = await supabase.from('categories').select('*').eq('company_id', currentCompanyId.value).order('sort_order', {ascending: true});
                         const { data: itms } = await supabase.from('items').select('*').order('sort_order', {ascending: true});
+                        
+                        // 로드 시 추가 메타데이터 부여
+                        const enrichedItms = itms.map(item => {
+                            const parsed = parseItemData(item);
+                            return {
+                                ...item,
+                                _hasFile: parsed.files.length > 0,
+                                _hasLink: parsed.links.length > 0
+                            };
+                        });
+
                         const built = [];
                         const sectors = (cats||[]).filter(c => !c.parent_id).sort((a,b) => a.sort_order - b.sort_order);
                         for (const sector of sectors) {
@@ -997,7 +1050,7 @@
                             const group = { sectorName: sector.name, sectorId: sector.id, categories: [], isOpen };
                             const subCats = cats.filter(c => c.parent_id === sector.id).sort((a,b) => a.sort_order - b.sort_order);
                             for (const cat of subCats) {
-                                group.categories.push({ id: cat.id, name: cat.name, icon: cat.icon, items: itms.filter(i => i.category_id === cat.id).sort((a,b) => a.sort_order - b.sort_order) });
+                                group.categories.push({ id: cat.id, name: cat.name, icon: cat.icon, items: enrichedItms.filter(i => i.category_id === cat.id).sort((a,b) => a.sort_order - b.sort_order) });
                             }
                             built.push(group);
                         }
@@ -1022,7 +1075,6 @@
                     }).filter(group => group !== null && group.categories.length > 0);
                 });
 
-                // 사용자 관리 로직
                 const showUserModal = ref(false);
                 const usersList = ref([]);
                 const editingUser = ref(null);
@@ -1058,7 +1110,6 @@
                 const saveUserPermissions = async () => { await supabase.from('profiles').update({ role: editingUser.value.role, company_id: editingUser.value.company_id, allowed_menus: editingUser.value.allowed_menus }).eq('id', editingUser.value.id); showToast(`저장 완료`); openUserManagement(); };
                 const getCompanyName = (id) => { const c = companies.value.find(x => x.id === id); return c ? c.name : ''; };
 
-                // 카테고리 관리 로직
                 const showCatModal = ref(false);
                 const catModalData = ref({ id: null, name: '', parent_id: null, mode: 'add', title: '' });
                 const openCatModal = (id, mode, name = '', icon = '', parent_id = null) => {
@@ -1096,12 +1147,12 @@
                     showToast('삭제됨'); showDeleteModal.value = false; await loadData();
                 };
 
-                // 아이템 및 폴더 관리
                 const showItemModal = ref(false);
                 const isEditing = ref(false);
                 const isUploading = ref(false);
                 const dragActive = ref(false);
-                const dragOverCategory = ref(null); // 좌측 사이드바 드래그 호버 상태
+                const dragOverCategory = ref(null);
+                
                 const modalForm = ref({ id: '', name: '', type: 'download', description: '', files: [], links: [{name: '', url: ''}], sector_id: '', category_id: '', original_category_id: '' });
                 
                 const modalAvailableCategories = computed(() => {
@@ -1116,36 +1167,35 @@
                 };
                 
                 const openAddModal = () => { 
-                    isEditing.value=false; 
+                    isEditing.value = false; 
                     let currentSectorId = '';
                     for (const g of menuGroups.value) { if (g.categories.some(c => c.id === activeCategoryId.value)) { currentSectorId = g.sectorId; break; } }
-                    
-                    modalForm.value={type:'download', name:'', description:'', files:[], links:[{name:'', url:''}], sector_id: currentSectorId, category_id: activeCategoryId.value, original_category_id: activeCategoryId.value}; 
-                    showItemModal.value=true; 
+                    modalForm.value = { type: 'download', name: '', description: '', files: [], links: [{name: '', url: ''}], sector_id: currentSectorId, category_id: activeCategoryId.value, original_category_id: activeCategoryId.value }; 
+                    showItemModal.value = true; 
                 };
                 
                 const openEditModal = (i) => {
-                    isEditing.value=true; 
-                    let parsedLinks = [{name: '', url: ''}];
-                    if (['system', 'link'].includes(i.type)) {
-                        if (hasFiles(i)) parsedLinks = JSON.parse(i.file_path);
-                        else if (i.file_path) parsedLinks = [{name: i.name || '기본 링크', url: i.file_path}];
-                    }
+                    isEditing.value = true; 
                     
+                    const parsed = parseItemData(i);
+                    let initialLinks = parsed.links;
+                    if (initialLinks.length === 0) initialLinks = [{name: '', url: ''}];
+
                     let itemSectorId = '';
                     for (const g of menuGroups.value) { if (g.categories.some(c => c.id === i.category_id)) { itemSectorId = g.sectorId; break; } }
 
                     modalForm.value={
                         ...i, 
-                        files: ['download', 'document', 'notice'].includes(i.type) ? (hasFiles(i) ? JSON.parse(i.file_path) : []) : [], 
-                        links: parsedLinks,
+                        files: parsed.files, 
+                        links: initialLinks,
                         sector_id: itemSectorId,
                         category_id: i.category_id,
                         original_category_id: i.category_id
-                    }; showItemModal.value=true; 
+                    }; 
+                    showItemModal.value = true; 
                 };
                 
-                const closeModal = () => showItemModal.value=false;
+                const closeModal = () => showItemModal.value = false;
                 const addLinkField = () => modalForm.value.links.push({name: '', url: ''});
                 const removeLinkField = (idx) => { if(modalForm.value.links.length > 1) modalForm.value.links.splice(idx, 1); };
                 const handleFileSelect = (e) => { const files = e.target.files; if(!files) return; for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true }); dragActive.value = false; };
@@ -1155,24 +1205,31 @@
                 const saveItem = async () => {
                     isUploading.value = true;
                     try {
-                        let finalData = '';
-                        if (['download', 'document', 'notice'].includes(modalForm.value.type)) {
-                            let finalFiles = [];
+                        let finalCombinedData = [];
+                        
+                        if (!['folder', 'proxy_form', 'my_business_card'].includes(modalForm.value.type)) {
+                            // 1. 파일 업로드 및 데이터 생성
                             for (let fData of modalForm.value.files) {
                                 if (fData.isNew) {
                                     const extMatch = fData.fileObj.name.match(/\.[^.]+$/);
                                     const safeName = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}${extMatch ? extMatch[0] : ''}`;
                                     await supabase.storage.from('documents').upload(safeName, fData.fileObj);
                                     const { data: urlData } = supabase.storage.from('documents').getPublicUrl(safeName);
-                                    finalFiles.push({ name: fData.name, url: urlData.publicUrl });
-                                } else { finalFiles.push(fData); }
+                                    finalCombinedData.push({ name: fData.name, url: urlData.publicUrl, kind: 'file' });
+                                } else { 
+                                    finalCombinedData.push({ name: fData.name, url: fData.url, kind: 'file' }); 
+                                }
                             }
-                            finalData = finalFiles.length > 0 ? JSON.stringify(finalFiles) : null;
-                        } else if (['system', 'link'].includes(modalForm.value.type)) {
+                            
+                            // 2. 링크 데이터 추가
                             const validLinks = modalForm.value.links.filter(l => l.url.trim() !== '');
-                            finalData = validLinks.length > 0 ? JSON.stringify(validLinks) : null;
+                            for (let lData of validLinks) {
+                                finalCombinedData.push({ name: lData.name, url: lData.url, kind: 'link' });
+                            }
                         }
-                        const payload = { name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.description, file_path: finalData, category_id: modalForm.value.category_id };
+                        
+                        const finalDataStr = finalCombinedData.length > 0 ? JSON.stringify(finalCombinedData) : null;
+                        const payload = { name: modalForm.value.name, type: modalForm.value.type, description: modalForm.value.description, file_path: finalDataStr, category_id: modalForm.value.category_id };
                         
                         if (isEditing.value) {
                             if (modalForm.value.original_category_id !== modalForm.value.category_id) {
@@ -1184,7 +1241,7 @@
                             }
                             await supabase.from('items').update(payload).eq('id', modalForm.value.id);
                         } else {
-                            payload.parent_id = null; // 새 항목은 기본적으로 최상위(Root)에 생성됨
+                            payload.parent_id = null; 
                             const group = menuGroups.value.find(g => g.sectorId === modalForm.value.sector_id);
                             const cat = group?.categories.find(c => c.id === modalForm.value.category_id);
                             const maxSort = (cat && cat.items.length > 0) ? Math.max(...cat.items.map(x => x.sort_order || 0)) : 0;
@@ -1195,7 +1252,6 @@
                     } catch(e) { showToast('저장 실패', 'error', e.message); } finally { isUploading.value = false; }
                 };
 
-                // 아이템 필터링 및 폴더 트리 네비게이션
                 const selectedItems = ref([]);
                 const allCategoryItems = computed(() => {
                     let activeCat = null;
@@ -1205,72 +1261,50 @@
                     return activeCat ? activeCat.items : [];
                 });
 
-                // 트리를 순회하며 들여쓰기 뎁스(_depth)를 포함해 평탄화(Flatten)한 리스트 생성
-                const buildTree = (parentId, depth) => {
-                    const children = allCategoryItems.value
-                        .filter(i => (i.parent_id || null) === parentId)
-                        .sort((a,b) => (a.sort_order || 0) - (b.sort_order || 0));
-                    
+                const buildTree = (parentId, depth) => { 
+                    const children = allCategoryItems.value.filter(i => (i.parent_id || null) === parentId).sort((a,b) => (a.sort_order || 0) - (b.sort_order || 0));
                     let result = [];
                     for (const child of children) {
                         result.push({ ...child, _depth: depth });
-                        // 폴더이고, 토글이 열려 있다면 하위 아이템 재귀 호출
-                        if (child.type === 'folder' && openFolderIds.value.includes(child.id)) {
-                            result = result.concat(buildTree(child.id, depth + 1));
-                        }
-                    }
-                    return result;
+                        if (child.type === 'folder' && openFolderIds.value.includes(child.id)) { result = result.concat(buildTree(child.id, depth + 1)); }
+                    } return result;
                 };
 
                 const displayItems = computed(() => buildTree(null, 0));
-
-                const activeCategoryName = computed(() => {
+                const activeCategoryName = computed(() => { 
                     for (const group of menuGroups.value) {
                         for (const cat of group.categories) {
                             if (cat.id === activeCategoryId.value) return `${group.sectorName} > ${cat.name}`;
                         }
-                    } return '';
+                    } return ''; 
                 });
 
                 const toggleFolder = (item) => {
                     if (item.type !== 'folder') return;
                     const idx = openFolderIds.value.indexOf(item.id);
-                    if (idx > -1) {
-                        openFolderIds.value.splice(idx, 1); // 폴더 닫기
-                    } else {
-                        openFolderIds.value.push(item.id); // 폴더 열기
-                        // 🌟 폴더가 열릴 때 설명도 함께 펼치기
-                        if (item.description && !expandedItemIds.value.includes(item.id)) {
-                            expandedItemIds.value.push(item.id);
-                        }
+                    if (idx > -1) openFolderIds.value.splice(idx, 1);
+                    else {
+                        openFolderIds.value.push(item.id);
+                        if (item.description && !expandedItemIds.value.includes(item.id)) expandedItemIds.value.push(item.id);
                     }
                 };
 
                 const toggleDescription = (item) => {
-                    if (!item.description) return;
+                    if (!item.description && !item._hasFile && !item._hasLink) return;
                     const idx = expandedItemIds.value.indexOf(item.id);
                     if (idx > -1) expandedItemIds.value.splice(idx, 1);
                     else expandedItemIds.value.push(item.id);
                 };
 
-                // 아이템 토글 및 액션 처리
                 const handleItemClick = (item, event) => {
-                    if (['system', 'link'].includes(item.type)) {
-                        handleAction(item);
-                    } else if (item.type === 'folder') {
-                        toggleFolder(item);
-                    } else {
-                        toggleDescription(item);
-                    }
+                    if (item.type === 'folder') toggleFolder(item);
+                    else toggleDescription(item);
                 };
 
-                // 드래그 앤 드롭 트리 이동 관련 상태
                 const dragTargetFolderId = ref(null);
                 const dragItem = ref(null);
-                
                 const dragStart = (e, item) => { if(isAdminMode.value) dragItem.value = item; };
                 
-                // 마우스 위치(위, 가운데, 아래)를 계산하여 동작(순서변경 vs 폴더삽입) 세분화
                 const dragOverItem = (e, item) => {
                     if (!isAdminMode.value || !dragItem.value || dragItem.value.id === item.id) return;
                     e.preventDefault(); 
@@ -1282,14 +1316,14 @@
                     if (viewMode.value === 'list') {
                         const y = e.clientY - rect.top;
                         if (item.type === 'folder') {
-                            if (y < rect.height * 0.25) isBefore = true;       // 상단 25% -> 위로 이동
-                            else if (y > rect.height * 0.75) isAfter = true;   // 하단 25% -> 아래로 이동
-                            else isInside = true;                              // 중앙 50% -> 폴더 안으로
+                            if (y < rect.height * 0.25) isBefore = true;
+                            else if (y > rect.height * 0.75) isAfter = true;
+                            else isInside = true;
                         } else {
                             if (y < rect.height * 0.5) isBefore = true;
                             else isAfter = true;
                         }
-                    } else { // 그리드 뷰일 경우 좌/우를 기준으로 정렬
+                    } else { 
                         const x = e.clientX - rect.left;
                         if (item.type === 'folder') {
                             if (x < rect.width * 0.25) isBefore = true;
@@ -1307,13 +1341,11 @@
                 };
 
                 const dragLeaveItem = (e) => {
-                    // 항목 바깥으로 마우스가 나갔을 때만 타겟을 초기화하여 화면 깜빡임 방지
                     if (!e.currentTarget.contains(e.relatedTarget)) {
                         dragTargetFolderId.value = null;
                     }
                 };
 
-                // 하위 폴더 여부 검사 (자기 자신을 자기 하위로 넣는 무한루프 방지)
                 const isDescendant = (parentId, childId) => {
                     let current = allCategoryItems.value.find(i => i.id === childId);
                     while (current && current.parent_id) {
@@ -1323,104 +1355,55 @@
                     return false;
                 };
 
-                // 상단 영역으로 드롭하여 폴더 밖(최상위)으로 빼내거나 특정 폴더로 다이렉트 드롭
                 const dragDropToFolder = async (e, folderId) => {
                     dragTargetFolderId.value = null;
                     if (!isAdminMode.value || !dragItem.value) return;
                     if (folderId !== null && dragItem.value.id === folderId) return;
-                    
-                    if (folderId !== null && isDescendant(dragItem.value.id, folderId)) {
-                        showToast('하위 폴더 안으로 이동할 수 없습니다.', 'error');
-                        return;
-                    }
-
-                    if (dragItem.value.parent_id === folderId || (!dragItem.value.parent_id && folderId === null)) { 
-                        dragItem.value = null; return; 
-                    }
+                    if (folderId !== null && isDescendant(dragItem.value.id, folderId)) { showToast('하위 폴더 안으로 이동할 수 없습니다.', 'error'); return; }
+                    if (dragItem.value.parent_id === folderId || (!dragItem.value.parent_id && folderId === null)) { dragItem.value = null; return; }
 
                     try {
                         const siblings = allCategoryItems.value.filter(i => (i.parent_id || null) === folderId);
                         const maxSort = siblings.length > 0 ? Math.max(...siblings.map(i => i.sort_order || 0)) : 0;
-
                         await supabase.from('items').update({ parent_id: folderId, sort_order: maxSort + 1 }).eq('id', dragItem.value.id);
                         showToast(folderId ? '항목이 폴더 안으로 이동되었습니다.' : '항목이 최상위 위치로 이동되었습니다.');
-                        if (folderId && !openFolderIds.value.includes(folderId)) openFolderIds.value.push(folderId); // 드롭한 폴더 자동 열기
+                        if (folderId && !openFolderIds.value.includes(folderId)) openFolderIds.value.push(folderId); 
                         await loadData();
-                    } catch(err) {
-                        showToast('이동 실패', 'error', err.message);
-                    }
+                    } catch(err) { showToast('이동 실패', 'error', err.message); }
                     dragItem.value = null;
                 };
 
                 const dragDrop = async (e, targetItem) => {
-                    if (!isAdminMode.value || !dragItem.value || dragItem.value.id === targetItem.id) {
-                        dragTargetFolderId.value = null; dragItem.value = null; return;
-                    }
-
-                    const state = dragTargetFolderId.value;
-                    dragTargetFolderId.value = null;
-
+                    if (!isAdminMode.value || !dragItem.value || dragItem.value.id === targetItem.id) { dragTargetFolderId.value = null; dragItem.value = null; return; }
+                    const state = dragTargetFolderId.value; dragTargetFolderId.value = null;
                     if (!state || !state.startsWith(targetItem.id)) { dragItem.value = null; return; }
-
-                    const action = state.split('_')[1]; // 'inside', 'before', 'after'
-
-                    // 폴더 안으로 삽입 액션 처리
-                    if (action === 'inside' && targetItem.type === 'folder') {
-                        await dragDropToFolder(e, targetItem.id);
-                        return;
-                    }
-
-                    // 순서 재배치 (Before / After) 로직
-                    if (isDescendant(dragItem.value.id, targetItem.id)) {
-                        showToast('하위 폴더와 동일한 레벨로 이동할 수 없습니다.', 'error');
-                        dragItem.value = null; return;
-                    }
+                    const action = state.split('_')[1]; 
+                    if (action === 'inside' && targetItem.type === 'folder') { await dragDropToFolder(e, targetItem.id); return; }
+                    if (isDescendant(dragItem.value.id, targetItem.id)) { showToast('하위 폴더와 동일한 레벨로 이동할 수 없습니다.', 'error'); dragItem.value = null; return; }
 
                     const targetParentId = targetItem.parent_id || null;
                     let siblings = allCategoryItems.value.filter(i => (i.parent_id || null) === targetParentId);
-                    
-                    // 드래그 중인 아이템 제외 후 다시 끼워넣어 순서 계산
                     siblings = siblings.filter(i => i.id !== dragItem.value.id);
                     let toIdx = siblings.findIndex(i => i.id === targetItem.id);
+                    if (action === 'after') toIdx += 1; 
                     
-                    if (action === 'after') toIdx += 1; // 타겟의 아래(우측)에 삽입
-                    
-                    const itemToMove = dragItem.value;
-                    itemToMove.parent_id = targetParentId; // 부모 ID 동기화
+                    const itemToMove = dragItem.value; itemToMove.parent_id = targetParentId;
                     siblings.splice(toIdx, 0, itemToMove);
-                    
                     const updates = siblings.map((i, idx) => supabase.from('items').update({sort_order: idx + 1, parent_id: i.parent_id}).eq('id', i.id));
-                    await Promise.all(updates); 
-                    await loadData();
-                    dragItem.value = null;
+                    await Promise.all(updates); await loadData(); dragItem.value = null;
                 };
                 
-                // 사이드바 카테고리로 항목 드롭 시 이동 처리
                 const dragDropToCategory = async (e, targetCategoryId) => {
                     dragOverCategory.value = null;
                     if (!isAdminMode.value || !dragItem.value) return;
-                    if (dragItem.value.category_id === targetCategoryId) return; // 이미 같은 카테고리면 무시
-                    
+                    if (dragItem.value.category_id === targetCategoryId) return; 
                     try {
                         let targetItems = [];
-                        for(const g of menuGroups.value) {
-                            const c = g.categories.find(cat => cat.id === targetCategoryId);
-                            if (c) { targetItems = c.items; break; }
-                        }
+                        for(const g of menuGroups.value) { const c = g.categories.find(cat => cat.id === targetCategoryId); if (c) { targetItems = c.items; break; } }
                         const maxSort = targetItems.length > 0 ? Math.max(...targetItems.map(i => i.sort_order || 0)) : 0;
-
-                        await supabase.from('items').update({ 
-                            category_id: targetCategoryId, 
-                            parent_id: null, // 다른 카테고리로 갈 때는 최상위로 초기화
-                            sort_order: maxSort + 1 
-                        }).eq('id', dragItem.value.id);
-                        
-                        showToast('항목이 다른 메뉴로 이동되었습니다.');
-                        dragItem.value = null;
-                        await loadData();
-                    } catch(err) {
-                        showToast('이동 실패', 'error', err.message);
-                    }
+                        await supabase.from('items').update({ category_id: targetCategoryId, parent_id: null, sort_order: maxSort + 1 }).eq('id', dragItem.value.id);
+                        showToast('항목이 다른 메뉴로 이동되었습니다.'); dragItem.value = null; await loadData();
+                    } catch(err) { showToast('이동 실패', 'error', err.message); }
                 };
 
                 const dragEnd = () => { dragItem.value = null; dragTargetFolderId.value = null; dragOverCategory.value = null; };
@@ -1428,11 +1411,16 @@
                 const showPreviewModal = ref(false);
                 const previewItem = ref(null);
                 const previewFiles = ref([]);
+                
+                // 미리보기 모달을 위한 분리된 computed 속성
+                const previewAttachments = computed(() => previewFiles.value.filter(f => f.kind === 'file'));
+                const previewLinks = computed(() => previewFiles.value.filter(f => f.kind === 'link'));
+
                 const hasFiles = (item) => item.file_path && item.file_path.startsWith('[');
                 
                 const handleAction = async (item) => {
                     if (item.type === 'folder') {
-                        goToFolder(item.id);
+                        toggleFolder(item);
                     } else if (item.type === 'my_business_card') {
                         if (isAdminMode.value) { openAdminCardManager(); } 
                         else {
@@ -1444,23 +1432,28 @@
                             showBusinessCardModal.value = true;
                         }
                     } else if (item.type === 'proxy_form') {
-                        loadProxyDraft();
-                        showProxyForm.value = true;
-                    } else if (['download', 'document', 'notice'].includes(item.type)) {
+                        loadProxyDraft(); showProxyForm.value = true;
+                    } else {
+                        // 복합 데이터(일반, 공지, 링크 등) 처리
+                        const parsed = parseItemData(item);
+                        const combinedFiles = [...parsed.files, ...parsed.links];
+                        
                         previewItem.value = item;
-                        previewFiles.value = hasFiles(item) ? JSON.parse(item.file_path) : [];
-                        showPreviewModal.value = true;
-                    } else if (['system', 'link'].includes(item.type)) {
-                        const parsedLinks = item.file_path ? (hasFiles(item) ? JSON.parse(item.file_path) : [{name: '바로가기', url: item.file_path}]) : [];
-                        if (parsedLinks.length > 1) { previewItem.value = item; previewFiles.value = parsedLinks; showPreviewModal.value = true; } 
-                        else if (parsedLinks.length === 1) { window.open(parsedLinks[0].url, '_blank'); }
-                    } else if (item.file_path) { window.open(item.file_path, '_blank'); }
+                        previewFiles.value = combinedFiles;
+                        
+                        // 외부 링크가 단 1개만 존재하고, 본문 설명도 없고 첨부파일도 없는 순수 링크 항목일 경우엔 다이렉트 새창 이동
+                        if (parsed.links.length === 1 && parsed.files.length === 0 && !item.description) {
+                            window.open(parsed.links[0].url, '_blank');
+                        } 
+                        // 그 외의 경우(파일이 있거나 링크가 다수거나 설명이 있는 경우) 모달 띄우기
+                        else if (combinedFiles.length > 0 || item.description) {
+                            showPreviewModal.value = true;
+                        }
+                    }
                 };
 
-                // 명함 관리
                 const showBusinessCardModal = ref(false);
                 const businessCardData = ref({ front: null, back: null });
-                
                 const showAdminCardModal = ref(false);
                 const cardManagerUsers = ref([]);
                 const selectedCardUserId = ref('');
@@ -1521,7 +1514,6 @@
                     } catch(err) { showToast('캡처 실패', 'error'); }
                 };
 
-                // 스마트 위임장
                 const showProxyForm = ref(false);
                 const stampImage = ref("https://zpzaiuqcoltshtsrllxx.supabase.co/storage/v1/object/sign/company_assets/Registered%20Corporate%20Seal.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81ZjA5NThjMi1lOWM5LTQ0NjYtOTZiMC04YWIyMzc1M2ViMzQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJjb21wYW55X2Fzc2V0cy9SZWdpc3RlcmVkIENvcnBvcmF0ZSBTZWFsLmpwZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODYxNjcyNzUsImV4cCI6MTc4NzAzMTI3NX0.pEQVTrUhTaOrrJD8APePljI0ZTYjRAstSZN2UHEtbSI");
                 const proxyData = ref({
@@ -1554,7 +1546,6 @@
                     html2pdf().set({ margin: 0, filename: '위임장.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save();
                 };
                 const printForm = () => { window.print(); };
-
                 const downloadCEOID = () => { window.open("https://zpzaiuqcoltshtsrllxx.supabase.co/storage/v1/object/sign/company_assets/Representative's%20ID%20Card.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81ZjA5NThjMi1lOWM5LTQ0NjYtOTZiMC04YWIyMzc1M2ViMzQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJjb21wYW55X2Fzc2V0cy9SZXByZXNlbnRhdGl2ZSdzIElEIENhcmQuanBnIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NjE2NzIzNCwiZXhwIjoyMTAxNTI3MjM0fQ.ZYsgDOTW71Fo3C0tnoJAZcyzH6BQ4rzHl-i4Pmnwivw", '_blank'); };
                 
                 const downloadActualFile = async (url, fileName) => { saveAs(url, fileName); };
@@ -1562,11 +1553,18 @@
                     if (selectedItems.value.length === 0) return; showToast('압축 시작...');
                     const zip = new JSZip();
                     for (const itemId of selectedItems.value) {
-                        const item = filteredItems.value.find(i => i.id === itemId);
-                        if (item && ['download', 'document', 'notice'].includes(item.type) && hasFiles(item)) {
-                            const files = JSON.parse(item.file_path);
-                            const folder = zip.folder(item.name);
-                            for (const file of files) { const response = await fetch(file.url); folder.file(file.name, await response.blob()); }
+                        const item = allCategoryItems.value.find(i => i.id === itemId);
+                        if (item && hasFiles(item)) {
+                            const parsed = parseItemData(item);
+                            if (parsed.files.length > 0) {
+                                const folder = zip.folder(item.name);
+                                for (const file of parsed.files) { 
+                                    try {
+                                        const response = await fetch(file.url); 
+                                        folder.file(file.name, await response.blob()); 
+                                    } catch(e) {}
+                                }
+                            }
                         }
                     }
                     zip.generateAsync({type:"blob"}).then(content => saveAs(content, `다운로드_${Date.now()}.zip`));
@@ -1587,7 +1585,6 @@
                     authState, authForm, userProfile, isAuthLoading, handleLogin, handleRegister, handleLogout, rememberId, keepLoggedIn,
                     companies, currentCompanyId, currentCompanyName, loadCompanies, loadData,
                     showCompanyModal, newCompanyName, isCloning, openAddCompanyModal, executeAddCompany,
-                    showUserModal, usersList, editingUser, menuGroupsForEditingUser, openUserManagement, selectUserForEdit, updateUserStatus, saveUserPermissions, getCompanyName, isSectorFullyChecked, toggleSectorPermission,
                     isAdminMode, toggleAdminMode: () => isAdminMode.value = !isAdminMode.value, isSidebarOpen, toggleSidebar: () => isSidebarOpen.value = !isSidebarOpen.value,
                     viewMode, menuGroups, visibleMenuGroups, activeCategoryId, activeCategoryName, 
                     selectCategory: (c) => { activeCategoryId.value = c.id; openFolderIds.value = []; expandedItemIds.value = []; selectedItems.value = []; },
@@ -1596,20 +1593,17 @@
                     showCatModal, catModalData, openCatModal, saveCategory, moveCategory, showDeleteModal, deleteTarget, confirmDeleteCategory, confirmDelete, executeDelete,
                     showItemModal, isEditing, isUploading, dragActive, dragOverCategory, modalForm, modalAvailableCategories, handleModalSectorChange, openAddModal, openEditModal, closeModal, saveItem, handleFileSelect, handleDrop, removeFile, addLinkField, removeLinkField,
                     dragStart, dragOverItem, dragLeaveItem, dragDropToFolder, dragDrop, dragDropToCategory, dragEnd, dragTargetFolderId, dragItem,
-                    showPreviewModal, previewItem, previewFiles, handleAction, downloadActualFile, hasFiles, selectedItems, downloadSelectedZip, copyToClipboard, window,
-                    showBusinessCardModal, businessCardData, captureAndShare,
-                    showAdminCardModal, cardManagerUsers, selectedCardUserId, adminCardData, adminCardDrag, isMgrCardUploading, openAdminCardManager, loadSelectedUserCard, handleCardFileSelect, handleCardDrop, handleCardPaste, saveAdminCard,
-                    showProxyForm, proxyData, formattedDate, stampImage, applyTemplate, generatePDF, printForm, downloadCEOID,
+                    showPreviewModal, previewItem, previewFiles, previewAttachments, previewLinks, handleAction, downloadActualFile, hasFiles, selectedItems, downloadSelectedZip, copyToClipboard, window,
                     toast, 
                     getIcon: (t, id) => {
                         if (t === 'folder') return openFolderIds.value.includes(id) ? 'fa-solid fa-folder-open text-amber-600' : 'fa-solid fa-folder';
                         return {notice:'fa-solid fa-bullhorn', download:'fa-solid fa-file-arrow-down', document:'fa-solid fa-file-signature', system:'fa-solid fa-laptop-code', link:'fa-solid fa-link', proxy_form:'fa-solid fa-id-card', my_business_card:'fa-solid fa-address-card'}[t]||'fa-solid fa-file';
                     },
-                    getIconClass: (t) => ({notice:'bg-red-50 text-red-600', download:'bg-blue-50 text-blue-600', my_business_card:'bg-indigo-50 text-indigo-600', folder:'bg-amber-50 text-amber-500'}[t]||'bg-gray-50 text-gray-600'),
-                    getTypeBorderClass: (t) => ({notice:'border-red-100', download:'border-blue-100', my_business_card:'border-indigo-100', folder:'border-amber-100'}[t]||'border-gray-200'),
-                    getTypeName: (t) => ({notice:'공지사항', download:'일반파일', document:'사내기안', system:'시스템', link:'외부링크', proxy_form:'스마트폼', my_business_card:'개인명함', folder:'폴더'}[t]||'기타'),
-                    getActionText: (t,i, isAdmin) => t === 'folder' ? '열람' : (t === 'my_business_card' ? (isAdmin ? '명함 일괄등록' : '내 명함 열기') : (t === 'proxy_form' ? '스마트폼 작성' : (hasFiles(i) || (['system','link'].includes(t) && i.file_path && i.file_path.startsWith('[')) ? '열람/실행' : ({notice:'내용확인', download:'다운로드', link:'바로가기', system:'접속하기'}[t]||'실행')))),
-                    getActionIcon: (t, isAdmin) => t === 'folder' ? 'fa-solid fa-folder-open' : (t === 'my_business_card' ? (isAdmin ? 'fa-solid fa-users-gear' : 'fa-solid fa-image-portrait') : (t === 'proxy_form' ? 'fa-solid fa-pen-to-square' : (['system','link'].includes(t) ? 'fa-solid fa-arrow-up-right-from-square' : 'fa-solid fa-folder-open')))
+                    getIconClass: (t) => ({notice:'bg-red-50 text-red-600', download:'bg-blue-50 text-blue-600', my_business_card:'bg-indigo-50 text-indigo-600', folder:'bg-amber-50 text-amber-500', link:'bg-emerald-50 text-emerald-600'}[t]||'bg-gray-50 text-gray-600'),
+                    getTypeBorderClass: (t) => ({notice:'border-red-100', download:'border-blue-100', my_business_card:'border-indigo-100', folder:'border-amber-100', link:'border-emerald-100'}[t]||'border-gray-200'),
+                    getTypeName: (t) => ({notice:'공지사항', download:'일반파일', document:'사내기안', system:'시스템', link:'외부링크', proxy_form:'스마트폼', my_business_card:'개인명함', folder:'폴더'}[t]||'일반항목'),
+                    getActionText: (t,i, isAdmin) => t === 'folder' ? '열람' : (t === 'my_business_card' ? (isAdmin ? '명함 일괄등록' : '내 명함 열기') : (t === 'proxy_form' ? '스마트폼 작성' : (hasFiles(i) || i.description ? '상세보기' : '실행'))),
+                    getActionIcon: (t, isAdmin) => t === 'folder' ? 'fa-solid fa-folder-open' : (t === 'my_business_card' ? (isAdmin ? 'fa-solid fa-users-gear' : 'fa-solid fa-image-portrait') : (t === 'proxy_form' ? 'fa-solid fa-pen-to-square' : 'fa-solid fa-up-right-and-down-left-from-center'))
                 };
             }
         }).mount('#app');
