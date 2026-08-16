@@ -1741,7 +1741,6 @@
                     isAdminMode, toggleAdminMode: () => isAdminMode.value = !isAdminMode.value, isSidebarOpen, toggleSidebar: () => isSidebarOpen.value = !isSidebarOpen.value,
                     viewMode, menuGroups, visibleMenuGroups, activeCategoryId, activeCategoryName, 
                     
-                    // 새롭게 반환하는 퀵링크 데이터 및 함수
                     quickLinks, showQuickLinkModal, editingQuickLink, quickLinkForm, quickLinkPresetColors,
                     openQuickLinkModal, saveQuickLink, deleteQuickLink, qlDragStart, qlDragEnter, qlDragLeave, qlDrop, qlDragOverId,
 
@@ -1753,6 +1752,33 @@
                     dragStart, dragOverItem, dragLeaveItem, dragDropToFolder, dragDrop, dragDropToCategory, dragEnd, dragTargetFolderId, dragItem,
                     showPreviewModal, previewItem, previewFiles, previewAttachments, previewLinks, handleAction, downloadActualFile, hasFiles, selectedItems, downloadSelectedZip, copyToClipboard, window,
                     toast, 
+
+                    // --- 복구된 변수 및 함수 ---
+                    downloadCEOID,
+                    showProxyForm,
+                    showBusinessCardModal,
+                    showAdminCardModal,
+                    businessCardData,
+                    proxyData,
+                    formattedDate,
+                    generatePDF,
+                    printForm,
+                    stampImage,
+                    applyTemplate,
+                    cardManagerUsers,
+                    selectedCardUserId,
+                    adminCardData,
+                    adminCardDrag,
+                    isMgrCardUploading,
+                    openAdminCardManager,
+                    loadSelectedUserCard,
+                    handleCardFileSelect,
+                    handleCardDrop,
+                    handleCardPaste,
+                    saveAdminCard,
+                    captureAndShare,
+                    // ---------------------------
+
                     getIcon: (t, id) => {
                         if (t === 'folder') return openFolderIds.value.includes(id) ? 'fa-solid fa-folder-open text-amber-600' : 'fa-solid fa-folder';
                         return {notice:'fa-solid fa-bullhorn', download:'fa-solid fa-file-arrow-down', document:'fa-solid fa-file-signature', system:'fa-solid fa-laptop-code', link:'fa-solid fa-link', proxy_form:'fa-solid fa-id-card', my_business_card:'fa-solid fa-address-card'}[t]||'fa-solid fa-file';
