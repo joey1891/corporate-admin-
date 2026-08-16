@@ -51,6 +51,9 @@
         .slide-fade-enter-active { transition: all 0.3s ease-out; }
         .slide-fade-leave-active { transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1); }
         .slide-fade-enter-from, .slide-fade-leave-to { transform: translateY(-10px); opacity: 0; }
+        
+        /* 퀵 링크 드래그 오버 효과 */
+        .ql-drag-over { opacity: 0.4; border: 2px dashed #3b82f6; border-radius: 0.25rem; }
     </style>
 </head>
 <body class="text-gray-800 h-screen overflow-hidden">
@@ -118,28 +121,41 @@
 
             <aside :class="['fixed md:static inset-y-0 left-0 z-30 w-72 bg-surface border-r border-gray-200 transform transition-transform duration-300 flex flex-col', isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
                 <div class="px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gray-50">
-                    <div class="flex items-center mb-3">
+                    <div class="flex items-center mb-4">
                         <i class="fa-solid fa-building text-primary text-xl mr-3"></i>
                         <div class="flex flex-col min-w-0">
                             <span class="text-xs text-gray-500 font-bold tracking-wider uppercase">Workspace</span>
                             <span class="text-sm font-black text-gray-900 truncate">{{ currentCompanyName || '통합 포털' }}</span>
                         </div>
                     </div>
-                    <div class="flex flex-col gap-1.5">
-                        <a href="https://www.hyminternational.com/" target="_blank" class="w-full py-1.5 px-3 bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold rounded flex items-center justify-center transition-all shadow-sm">
-                            <i class="fa-solid fa-globe mr-1.5"></i> HYM 공식 홈페이지
-                        </a>
-                        <a href="https://joey1891.github.io/corporate-admin-/e-Approval%20System.html" target="_blank" class="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded flex items-center justify-center transition-all shadow-sm">
-                            <i class="fa-solid fa-file-signature mr-1.5"></i> 전자결재시스템 (e-Approval)
-                        </a>
-                        <div class="flex gap-1.5">
-                            <a href="https://www.exov.store/" target="_blank" class="flex-1 py-1.5 px-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold rounded flex items-center justify-center transition-all shadow-sm">
-                                <i class="fa-solid fa-cart-shopping mr-1"></i> 글로벌몰 (EXOV)
+                    
+                    <!-- 커스텀 편집 가능한 퀵 링크 영역 -->
+                    <div class="flex flex-wrap gap-1.5 w-full relative">
+                        <div v-for="(link, index) in quickLinks" :key="link.id" 
+                             :class="[link.width === 'half' ? 'w-[calc(50%-0.1875rem)]' : 'w-full', 'relative group transition-all duration-200', qlDragOverId === link.id ? 'ql-drag-over' : '']"
+                             :draggable="isAdminMode"
+                             @dragstart="qlDragStart($event, link)"
+                             @dragenter.prevent="qlDragEnter($event, link)"
+                             @dragover.prevent
+                             @dragleave="qlDragLeave($event, link)"
+                             @drop="qlDrop($event, link)">
+                             
+                            <a :href="link.url" target="_blank" :class="['w-full py-1.5 px-2 text-white text-[11px] font-bold rounded flex items-center justify-center shadow-sm h-full truncate', link.bgColor, isAdminMode ? 'cursor-move opacity-90 hover:opacity-100 ring-1 ring-black/10' : 'hover:brightness-110']" @click.prevent="isAdminMode ? null : window.open(link.url, '_blank')">
+                                <i :class="['fa-solid mr-1.5 flex-shrink-0', link.icon]"></i> 
+                                <span class="truncate">{{ link.name }}</span>
                             </a>
-                            <a href="https://smartstore.naver.com/exov" target="_blank" class="flex-1 py-1.5 px-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold rounded flex items-center justify-center transition-all shadow-sm">
-                                <i class="fa-solid fa-store mr-1"></i> 국내 스마트스토어
-                            </a>
+                            
+                            <!-- 관리자 편집/삭제 버튼 (호버 시 표시) -->
+                            <div v-if="isAdminMode" class="absolute -top-2 -right-2 hidden group-hover:flex gap-1 z-10">
+                                <button @click.prevent="openQuickLinkModal(link)" class="w-6 h-6 bg-white border border-gray-200 text-blue-600 rounded-full shadow-md hover:bg-blue-50 flex items-center justify-center text-[10px]"><i class="fa-solid fa-pen"></i></button>
+                                <button @click.prevent="deleteQuickLink(link.id)" class="w-6 h-6 bg-white border border-gray-200 text-red-600 rounded-full shadow-md hover:bg-red-50 flex items-center justify-center text-[10px]"><i class="fa-solid fa-trash"></i></button>
+                            </div>
                         </div>
+                        
+                        <!-- 링크 추가 버튼 -->
+                        <button v-if="isAdminMode" @click="openQuickLinkModal()" class="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 hover:text-primary hover:border-primary hover:bg-blue-50 rounded text-xs font-bold transition-colors flex items-center justify-center gap-1 mt-1">
+                            <i class="fa-solid fa-plus"></i> 바로가기 링크 추가
+                        </button>
                     </div>
                 </div>
 
@@ -397,6 +413,60 @@
                 </transition>
             </main>
 
+            
+            <!-- Quick Link Edit Modal -->
+            <div v-if="showQuickLinkModal" class="fixed inset-0 bg-black bg-opacity-50 z-[150] flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 relative">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">{{ editingQuickLink ? '바로가기 링크 수정' : '새 바로가기 링크 추가' }}</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">링크 이름</label>
+                            <input type="text" v-model="quickLinkForm.name" placeholder="예) 공식 홈페이지" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">URL 주소</label>
+                            <input type="text" v-model="quickLinkForm.url" placeholder="https://" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:border-primary outline-none">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">아이콘 클래스</label>
+                                <div class="relative">
+                                    <i :class="['fa-solid absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400', quickLinkForm.icon]"></i>
+                                    <input type="text" v-model="quickLinkForm.icon" placeholder="fa-globe" class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded text-sm focus:border-primary outline-none">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">크기 (너비)</label>
+                                <div class="flex gap-2">
+                                    <label class="flex-1 text-center py-2 border rounded cursor-pointer text-xs font-bold transition-colors" :class="quickLinkForm.width === 'full' ? 'bg-blue-50 border-blue-400 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'">
+                                        <input type="radio" v-model="quickLinkForm.width" value="full" class="hidden"> 100%
+                                    </label>
+                                    <label class="flex-1 text-center py-2 border rounded cursor-pointer text-xs font-bold transition-colors" :class="quickLinkForm.width === 'half' ? 'bg-blue-50 border-blue-400 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'">
+                                        <input type="radio" v-model="quickLinkForm.width" value="half" class="hidden"> 50%
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-2">배경 색상</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button v-for="color in quickLinkPresetColors" :key="color" 
+                                        @click="quickLinkForm.bgColor = color"
+                                        :class="['w-8 h-8 rounded-full border-2 transition-transform', color, quickLinkForm.bgColor === color ? 'border-gray-900 scale-110 shadow-md' : 'border-transparent opacity-80 hover:opacity-100']">
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button @click="showQuickLinkModal = false" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">취소</button>
+                        <button @click="saveQuickLink" class="px-4 py-2 bg-primary text-white hover:bg-blue-800 rounded-lg text-sm font-bold shadow-sm transition-colors">저장하기</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item Edit Modal -->
             <div v-if="showItemModal" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
                     <div class="flex justify-between items-center mb-5 border-b pb-3">
@@ -487,7 +557,6 @@
                 </div>
             </div>
 
-            <!-- 🌟 수정됨: 복합 데이터를 '첨부 파일'과 '연결 링크'로 분리해서 보여주는 미리보기 모달 -->
             <div v-if="showPreviewModal" class="fixed inset-0 bg-black bg-opacity-60 z-[70] flex flex-col items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-full max-h-[85vh] flex flex-col overflow-hidden relative">
                     <div class="flex justify-between items-center p-5 border-b bg-gray-50 flex-shrink-0">
@@ -503,13 +572,11 @@
                     
                     <div class="flex-1 overflow-y-auto bg-gray-100 p-4 sm:p-8 flex flex-col items-center w-full">
                         
-                        <!-- 설명 영역 -->
                         <div v-if="previewItem?.description" class="w-full max-w-3xl bg-white p-6 sm:p-8 rounded-xl border border-gray-200 mb-6 shadow-sm">
                             <div v-if="previewItem.type === 'notice'" class="html-content text-gray-800" v-html="previewItem.description"></div>
                             <p v-else class="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{{ previewItem.description }}</p>
                         </div>
                         
-                        <!-- 📂 첨부 파일 (다운로드) 분리 영역 -->
                         <div v-if="previewAttachments.length > 0" class="w-full max-w-3xl mb-6">
                             <h4 class="text-sm font-bold text-gray-800 mb-3 flex items-center">
                                 <i class="fa-solid fa-file-arrow-down text-blue-500 mr-2 text-lg"></i> 첨부 파일 ({{ previewAttachments.length }}개)
@@ -527,7 +594,6 @@
                             </ul>
                         </div>
 
-                        <!-- 🔗 연결 링크 (바로가기) 분리 영역 -->
                         <div v-if="previewLinks.length > 0" class="w-full max-w-3xl mb-6">
                             <h4 class="text-sm font-bold text-gray-800 mb-3 flex items-center">
                                 <i class="fa-solid fa-link text-emerald-500 mr-2 text-lg"></i> 연결 링크 ({{ previewLinks.length }}개)
@@ -916,6 +982,104 @@
                     setTimeout(() => { toast.value.show = false; }, 4000);
                 };
 
+                // --- 🌟 새롭게 추가된 퀵 링크 (Quick Links) 관리 로직 ---
+                const defaultQuickLinks = [
+                    { id: '1', name: 'HYM 공식 홈페이지', url: 'https://www.hyminternational.com/', icon: 'fa-globe', bgColor: 'bg-gray-800', width: 'full', order: 1 },
+                    { id: '2', name: '전자결재시스템 (e-Approval)', url: 'https://joey1891.github.io/corporate-admin-/e-Approval%20System.html', icon: 'fa-file-signature', bgColor: 'bg-blue-600', width: 'full', order: 2 },
+                    { id: '3', name: '글로벌몰 (EXOV)', url: 'https://www.exov.store/', icon: 'fa-cart-shopping', bgColor: 'bg-indigo-600', width: 'half', order: 3 },
+                    { id: '4', name: '국내 스마트스토어', url: 'https://smartstore.naver.com/exov', icon: 'fa-store', bgColor: 'bg-emerald-500', width: 'half', order: 4 },
+                ];
+                const quickLinks = ref([]);
+                const showQuickLinkModal = ref(false);
+                const editingQuickLink = ref(null);
+                const quickLinkForm = ref({ id: '', name: '', url: '', icon: 'fa-link', bgColor: 'bg-blue-600', width: 'full', order: 0 });
+                const quickLinkPresetColors = [
+                    'bg-gray-800', 'bg-red-500', 'bg-orange-500', 'bg-amber-500',
+                    'bg-green-500', 'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500',
+                    'bg-blue-500', 'bg-blue-600', 'bg-indigo-500', 'bg-indigo-600',
+                    'bg-purple-500', 'bg-pink-500'
+                ];
+                
+                const loadQuickLinks = () => {
+                    if (!currentCompanyId.value) return;
+                    const stored = localStorage.getItem(`quickLinks_${currentCompanyId.value}`);
+                    if (stored) quickLinks.value = JSON.parse(stored).sort((a,b) => a.order - b.order);
+                    else quickLinks.value = JSON.parse(JSON.stringify(defaultQuickLinks)); // Deep copy defaults
+                };
+
+                const saveQuickLinksToStorage = () => {
+                    if (currentCompanyId.value) {
+                        localStorage.setItem(`quickLinks_${currentCompanyId.value}`, JSON.stringify(quickLinks.value));
+                    }
+                };
+
+                const openQuickLinkModal = (link = null) => {
+                    if (link) {
+                        quickLinkForm.value = { ...link };
+                        editingQuickLink.value = link;
+                    } else {
+                        quickLinkForm.value = { id: Date.now().toString(), name: '', url: '', icon: 'fa-link', bgColor: 'bg-blue-600', width: 'full', order: quickLinks.value.length + 1 };
+                        editingQuickLink.value = null;
+                    }
+                    showQuickLinkModal.value = true;
+                };
+
+                const saveQuickLink = () => {
+                    if (editingQuickLink.value) {
+                        const idx = quickLinks.value.findIndex(l => l.id === editingQuickLink.value.id);
+                        if (idx !== -1) quickLinks.value[idx] = { ...quickLinkForm.value };
+                    } else {
+                        quickLinks.value.push({ ...quickLinkForm.value });
+                    }
+                    saveQuickLinksToStorage();
+                    showQuickLinkModal.value = false;
+                    showToast('바로가기 링크가 저장되었습니다.');
+                };
+
+                const deleteQuickLink = (id) => {
+                    if (confirm('이 바로가기 링크를 삭제하시겠습니까?')) {
+                        quickLinks.value = quickLinks.value.filter(l => l.id !== id);
+                        quickLinks.value.forEach((l, i) => l.order = i + 1); // 재정렬
+                        saveQuickLinksToStorage();
+                        showToast('삭제되었습니다.');
+                    }
+                };
+
+                // 퀵 링크 드래그 앤 드롭 구현
+                const draggedQuickLinkId = ref(null);
+                const qlDragOverId = ref(null);
+
+                const qlDragStart = (e, link) => {
+                    if(!isAdminMode.value) return;
+                    draggedQuickLinkId.value = link.id;
+                    e.dataTransfer.effectAllowed = 'move';
+                };
+                
+                const qlDragEnter = (e, targetLink) => {
+                    if(!isAdminMode.value || !draggedQuickLinkId.value || draggedQuickLinkId.value === targetLink.id) return;
+                    qlDragOverId.value = targetLink.id;
+                };
+                
+                const qlDragLeave = (e, targetLink) => {
+                    if (qlDragOverId.value === targetLink.id) qlDragOverId.value = null;
+                };
+
+                const qlDrop = (e, targetLink) => {
+                    qlDragOverId.value = null;
+                    if(!isAdminMode.value || !draggedQuickLinkId.value || draggedQuickLinkId.value === targetLink.id) return;
+
+                    const draggedIndex = quickLinks.value.findIndex(l => l.id === draggedQuickLinkId.value);
+                    const targetIndex = quickLinks.value.findIndex(l => l.id === targetLink.id);
+
+                    const item = quickLinks.value.splice(draggedIndex, 1)[0];
+                    quickLinks.value.splice(targetIndex, 0, item);
+
+                    quickLinks.value.forEach((l, idx) => l.order = idx + 1);
+                    saveQuickLinksToStorage();
+                    draggedQuickLinkId.value = null;
+                };
+                // -------------------------------------------------------------
+
                 const checkSession = async () => {
                     if (localStorage.getItem('keepLoggedIn') === 'false') {
                         await supabase.auth.signOut();
@@ -1010,7 +1174,6 @@
                     } catch(e) { showToast('생성 실패', 'error', e.message); } finally { isCloning.value = false; }
                 };
 
-                // DB의 JSON 데이터를 파싱하면서 파일과 링크 종류를 구분해주는 헬퍼
                 const parseItemData = (item) => {
                     let files = []; let links = [];
                     if (item.file_path && item.file_path.startsWith('[')) {
@@ -1029,17 +1192,14 @@
 
                 const loadData = async () => {
                     try {
+                        loadQuickLinks(); // 회사 변경이나 초기 로드 시 퀵 링크도 새로 불러오기
+
                         const { data: cats } = await supabase.from('categories').select('*').eq('company_id', currentCompanyId.value).order('sort_order', {ascending: true});
                         const { data: itms } = await supabase.from('items').select('*').order('sort_order', {ascending: true});
                         
-                        // 로드 시 추가 메타데이터 부여
                         const enrichedItms = itms.map(item => {
                             const parsed = parseItemData(item);
-                            return {
-                                ...item,
-                                _hasFile: parsed.files.length > 0,
-                                _hasLink: parsed.links.length > 0
-                            };
+                            return { ...item, _hasFile: parsed.files.length > 0, _hasLink: parsed.links.length > 0 };
                         });
 
                         const built = [];
@@ -1208,7 +1368,6 @@
                         let finalCombinedData = [];
                         
                         if (!['folder', 'proxy_form', 'my_business_card'].includes(modalForm.value.type)) {
-                            // 1. 파일 업로드 및 데이터 생성
                             for (let fData of modalForm.value.files) {
                                 if (fData.isNew) {
                                     const extMatch = fData.fileObj.name.match(/\.[^.]+$/);
@@ -1220,8 +1379,6 @@
                                     finalCombinedData.push({ name: fData.name, url: fData.url, kind: 'file' }); 
                                 }
                             }
-                            
-                            // 2. 링크 데이터 추가
                             const validLinks = modalForm.value.links.filter(l => l.url.trim() !== '');
                             for (let lData of validLinks) {
                                 finalCombinedData.push({ name: lData.name, url: lData.url, kind: 'link' });
@@ -1233,7 +1390,7 @@
                         
                         if (isEditing.value) {
                             if (modalForm.value.original_category_id !== modalForm.value.category_id) {
-                                payload.parent_id = null; // 다른 카테고리로 이동 시 최상위로 빠짐
+                                payload.parent_id = null; 
                                 const group = menuGroups.value.find(g => g.sectorId === modalForm.value.sector_id);
                                 const cat = group?.categories.find(c => c.id === modalForm.value.category_id);
                                 const maxSort = (cat && cat.items.length > 0) ? Math.max(...cat.items.map(x => x.sort_order || 0)) : 0;
@@ -1412,7 +1569,6 @@
                 const previewItem = ref(null);
                 const previewFiles = ref([]);
                 
-                // 미리보기 모달을 위한 분리된 computed 속성
                 const previewAttachments = computed(() => previewFiles.value.filter(f => f.kind === 'file'));
                 const previewLinks = computed(() => previewFiles.value.filter(f => f.kind === 'link'));
 
@@ -1434,18 +1590,15 @@
                     } else if (item.type === 'proxy_form') {
                         loadProxyDraft(); showProxyForm.value = true;
                     } else {
-                        // 복합 데이터(일반, 공지, 링크 등) 처리
                         const parsed = parseItemData(item);
                         const combinedFiles = [...parsed.files, ...parsed.links];
                         
                         previewItem.value = item;
                         previewFiles.value = combinedFiles;
                         
-                        // 외부 링크가 단 1개만 존재하고, 본문 설명도 없고 첨부파일도 없는 순수 링크 항목일 경우엔 다이렉트 새창 이동
                         if (parsed.links.length === 1 && parsed.files.length === 0 && !item.description) {
                             window.open(parsed.links[0].url, '_blank');
                         } 
-                        // 그 외의 경우(파일이 있거나 링크가 다수거나 설명이 있는 경우) 모달 띄우기
                         else if (combinedFiles.length > 0 || item.description) {
                             showPreviewModal.value = true;
                         }
@@ -1587,6 +1740,11 @@
                     showCompanyModal, newCompanyName, isCloning, openAddCompanyModal, executeAddCompany,
                     isAdminMode, toggleAdminMode: () => isAdminMode.value = !isAdminMode.value, isSidebarOpen, toggleSidebar: () => isSidebarOpen.value = !isSidebarOpen.value,
                     viewMode, menuGroups, visibleMenuGroups, activeCategoryId, activeCategoryName, 
+                    
+                    // 새롭게 반환하는 퀵링크 데이터 및 함수
+                    quickLinks, showQuickLinkModal, editingQuickLink, quickLinkForm, quickLinkPresetColors,
+                    openQuickLinkModal, saveQuickLink, deleteQuickLink, qlDragStart, qlDragEnter, qlDragLeave, qlDrop, qlDragOverId,
+
                     selectCategory: (c) => { activeCategoryId.value = c.id; openFolderIds.value = []; expandedItemIds.value = []; selectedItems.value = []; },
                     toggleSector: (group) => group.isOpen = !group.isOpen,
                     openFolderIds, expandedItemIds, displayItems, toggleFolder, toggleDescription, handleItemClick,
