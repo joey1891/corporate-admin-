@@ -39,6 +39,7 @@
         .html-content h1 { font-size: 1.75rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; }
         .html-content p { margin-bottom: 0.75rem; line-height: 1.6; }
         .html-content a { color: #2563eb; text-decoration: underline; }
+        .html-content img { max-width: 100%; height: auto; border-radius: 0.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; display: inline-block; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb; }
         
         .a4-preview { width: 210mm; height: 297mm; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 0 auto; padding: 12mm; position: relative; transform-origin: top center; overflow: hidden; box-sizing: border-box; }
         @media print { 
@@ -52,13 +53,27 @@
         .slide-fade-leave-active { transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1); }
         .slide-fade-enter-from, .slide-fade-leave-to { transform: translateY(-10px); opacity: 0; }
         
-        /* 퀵 링크 드래그 오버 효과 */
         .ql-drag-over { opacity: 0.4; border: 2px dashed #3b82f6; border-radius: 0.25rem; }
     </style>
 </head>
 <body class="text-gray-800 h-screen overflow-hidden">
     <div id="app" class="flex h-full w-full relative">
         
+        <!-- 설명란용 공통 이미지 업로더 (숨김) -->
+        <input type="file" ref="globalImageInput" @change="handleGlobalImageUpload" accept="image/*" class="hidden">
+        
+        <!-- 전역 이미지 업로드 로딩 오버레이 -->
+        <div v-if="isUploadingImage" class="fixed inset-0 bg-black/40 z-[300] flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white p-5 rounded-xl shadow-2xl flex items-center gap-4">
+                <i class="fa-solid fa-spinner fa-spin text-primary text-2xl"></i>
+                <div class="flex flex-col">
+                    <span class="text-sm font-bold text-gray-800">이미지 업로드 중...</span>
+                    <span class="text-xs text-gray-500">서버에 이미지를 저장하고 있습니다.</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 인증 화면 (기존 동일) -->
         <transition name="fade">
             <div v-if="authState !== 'authenticated'" class="fixed inset-0 z-[100] bg-gray-100 flex items-center justify-center p-4">
                 <div v-if="authState === 'loading'" class="flex flex-col items-center">
@@ -120,6 +135,7 @@
             <div v-if="isSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"></div>
 
             <aside :class="['fixed md:static inset-y-0 left-0 z-30 w-72 bg-surface border-r border-gray-200 transform transition-transform duration-300 flex flex-col', isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
+                <!-- 퀵 링크 영역 (기존 유지) -->
                 <div class="px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gray-50">
                     <div class="flex items-center mb-4">
                         <i class="fa-solid fa-building text-primary text-xl mr-3"></i>
@@ -129,7 +145,6 @@
                         </div>
                     </div>
                     
-                    <!-- 커스텀 편집 가능한 퀵 링크 영역 -->
                     <div class="flex flex-wrap gap-1.5 w-full relative">
                         <div v-for="(link, index) in quickLinks" :key="link.id" 
                              :class="[link.width === 'half' ? 'w-[calc(50%-0.1875rem)]' : 'w-full', 'relative group transition-all duration-200', qlDragOverId === link.id ? 'ql-drag-over' : '']"
@@ -145,20 +160,19 @@
                                 <span class="truncate">{{ link.name }}</span>
                             </a>
                             
-                            <!-- 관리자 편집/삭제 버튼 (호버 시 표시) -->
                             <div v-if="isAdminMode" class="absolute -top-2 -right-2 hidden group-hover:flex gap-1 z-10">
                                 <button @click.prevent="openQuickLinkModal(link)" class="w-6 h-6 bg-white border border-gray-200 text-blue-600 rounded-full shadow-md hover:bg-blue-50 flex items-center justify-center text-[10px]"><i class="fa-solid fa-pen"></i></button>
                                 <button @click.prevent="deleteQuickLink(link.id)" class="w-6 h-6 bg-white border border-gray-200 text-red-600 rounded-full shadow-md hover:bg-red-50 flex items-center justify-center text-[10px]"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </div>
                         
-                        <!-- 링크 추가 버튼 -->
                         <button v-if="isAdminMode" @click="openQuickLinkModal()" class="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 hover:text-primary hover:border-primary hover:bg-blue-50 rounded text-xs font-bold transition-colors flex items-center justify-center gap-1 mt-1">
                             <i class="fa-solid fa-plus"></i> 바로가기 링크 추가
                         </button>
                     </div>
                 </div>
 
+                <!-- 메뉴 영역 (기존 유지) -->
                 <div class="overflow-y-auto flex-grow py-4">
                     <div v-for="group in visibleMenuGroups" :key="group.sectorId" class="mb-4">
                         <div class="bg-gray-100 border-l-4 border-primary px-4 py-2 mb-1 flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-colors" @click="toggleSector(group)">
@@ -396,6 +410,7 @@
                     <i class="fa-solid fa-plus"></i>
                 </button>
 
+                <!-- 폴더 밖으로 꺼내기 드롭존 -->
                 <transition name="slide-fade">
                     <div v-if="isAdminMode && dragItem && dragItem.parent_id" 
                          @dragover.prevent="dragTargetFolderId = 'root'" 
@@ -413,7 +428,6 @@
                 </transition>
             </main>
 
-            
             <!-- Quick Link Edit Modal -->
             <div v-if="showQuickLinkModal" class="fixed inset-0 bg-black bg-opacity-50 z-[150] flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 relative">
@@ -468,7 +482,7 @@
 
             <!-- Item Edit Modal -->
             <div v-if="showItemModal" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
+                <div class="bg-white rounded-xl shadow-xl w-full max-w-xl p-6 relative max-h-[90vh] overflow-y-auto">
                     <div class="flex justify-between items-center mb-5 border-b pb-3">
                         <h3 class="text-lg font-bold text-gray-900">{{ isEditing ? '항목 수정' : '새 항목 추가' }}</h3>
                         <button @click="closeModal" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
@@ -509,9 +523,16 @@
                             </select>
                             <p class="text-[11px] text-gray-500 mt-1">* '대표 유형'은 아이콘과 뱃지 색상을 결정합니다. 파일과 링크는 유형에 관계없이 하단에서 모두 복합적으로 추가 가능합니다.</p>
                         </div>
+                        
+                        <!-- 항목 상세 설명 & 이미지 업로드 버튼 -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">설명 / 내용 (선택)</label>
-                            <textarea v-model="modalForm.description" rows="3" placeholder="간단한 안내사항이나 설명을 적어주세요. (HTML 지원)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none"></textarea>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-sm font-medium text-gray-700">설명 / 내용 (선택)</label>
+                                <button type="button" @click.prevent="triggerImageUpload(modalForm, 'description')" class="text-[11px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded border border-blue-200 flex items-center gap-1.5 transition-colors">
+                                    <i class="fa-regular fa-image"></i> 설명에 이미지 삽입
+                                </button>
+                            </div>
+                            <textarea v-model="modalForm.description" rows="3" placeholder="간단한 안내사항이나 설명을 적어주세요. (이미지를 첨부하면 이곳에 HTML로 삽입됩니다)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none"></textarea>
                         </div>
                         
                         <!-- 복합 데이터 처리 영역 (파일 + 링크 동시 지원) -->
@@ -530,7 +551,11 @@
                                             <input type="text" v-model="file.name" placeholder="파일명" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:border-primary outline-none">
                                             <button @click.prevent="removeFile(idx)" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-xmark"></i></button>
                                         </div>
-                                        <input type="text" v-model="file.description" placeholder="파일 부연 설명 (선택)" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-primary bg-white outline-none">
+                                        <!-- 파일 설명란 + 이미지 업로드 -->
+                                        <div class="flex gap-1 w-full items-start">
+                                            <textarea v-model="file.description" rows="2" placeholder="파일 부연 설명 (선택)" class="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-primary bg-white outline-none resize-y min-h-[40px]"></textarea>
+                                            <button type="button" @click.prevent="triggerImageUpload(file, 'description')" class="px-2 py-2 bg-white border border-gray-300 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0" title="설명에 이미지 추가"><i class="fa-regular fa-image"></i></button>
+                                        </div>
                                     </li>
                                 </ul>
                             </div>
@@ -556,7 +581,11 @@
                                                 <input type="text" v-model="link.name" placeholder="링크명 (예: 공식홈페이지)" class="w-1/3 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
                                                 <input type="text" v-model="link.url" placeholder="https://..." class="flex-1 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
                                             </div>
-                                            <input type="text" v-model="link.description" placeholder="링크 설명 (선택)" class="w-full px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
+                                            <!-- 링크 설명란 + 이미지 업로드 -->
+                                            <div class="flex gap-1 w-full items-start">
+                                                <textarea v-model="link.description" rows="2" placeholder="링크 설명 (선택)" class="flex-1 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs resize-y min-h-[40px]"></textarea>
+                                                <button type="button" @click.prevent="triggerImageUpload(link, 'description')" class="px-2 py-2 bg-gray-50 border border-gray-300 rounded text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors flex-shrink-0" title="설명에 이미지 추가"><i class="fa-regular fa-image"></i></button>
+                                            </div>
                                             <div class="flex gap-2">
                                                 <input type="text" v-model="link.login_id" placeholder="접속 ID (선택)" class="w-1/2 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
                                                 <input type="text" v-model="link.login_pw" placeholder="접속 PW (선택)" class="w-1/2 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
@@ -594,8 +623,7 @@
                     <div class="flex-1 overflow-y-auto bg-gray-100 p-4 sm:p-8 flex flex-col items-center w-full">
                         
                         <div v-if="previewItem?.description" class="w-full max-w-3xl bg-white p-6 sm:p-8 rounded-xl border border-gray-200 mb-6 shadow-sm">
-                            <div v-if="previewItem.type === 'notice'" class="html-content text-gray-800" v-html="previewItem.description"></div>
-                            <p v-else class="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{{ previewItem.description }}</p>
+                            <div class="html-content text-gray-800" v-html="previewItem.description"></div>
                         </div>
                         
                         <div v-if="previewAttachments.length > 0" class="w-full max-w-3xl mb-6">
@@ -609,9 +637,10 @@
                                             <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 text-lg"><i class="fa-solid fa-file"></i></div>
                                             <span class="text-sm font-bold text-gray-800 truncate">{{ file.name }}</span>
                                         </div>
-                                        <p v-if="file.description" class="text-xs text-gray-600 mt-2 bg-gray-50 border border-gray-100 p-2 rounded ml-[3.25rem]">{{ file.description }}</p>
+                                        <!-- HTML 지원되도록 v-html 적용 -->
+                                        <div v-if="file.description" class="text-xs text-gray-600 mt-3 bg-gray-50 border border-gray-100 p-3 rounded-lg sm:ml-[3.25rem] html-content" v-html="file.description"></div>
                                     </div>
-                                    <button @click="downloadActualFile(file.url, file.name)" class="w-full sm:w-auto px-4 py-2 bg-gray-800 text-white text-xs font-bold rounded-lg hover:bg-gray-900 shadow-sm flex items-center justify-center gap-2 transition-colors mt-1 sm:mt-0">
+                                    <button @click="downloadActualFile(file.url, file.name)" class="w-full sm:w-auto px-4 py-2 bg-gray-800 text-white text-xs font-bold rounded-lg hover:bg-gray-900 shadow-sm flex items-center justify-center gap-2 transition-colors mt-1 sm:mt-0 flex-shrink-0">
                                         <i class="fa-solid fa-download"></i> 다운로드
                                     </button>
                                 </li>
@@ -624,19 +653,22 @@
                             </h4>
                             <ul class="space-y-3">
                                 <li v-for="(link, idx) in previewLinks" :key="'link-'+idx" class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 shadow-sm hover:shadow-md transition-shadow">
-                                    <div class="flex items-start gap-3 min-w-0 flex-1">
+                                    <div class="flex items-start gap-3 min-w-0 flex-1 w-full">
                                         <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg"><i class="fa-solid fa-up-right-from-square"></i></div>
                                         <div class="flex flex-col min-w-0 w-full">
                                             <span class="text-sm font-bold text-gray-800 truncate">{{ link.name }}</span>
                                             <span class="text-[10px] text-gray-400 mt-0.5 break-all">{{ link.url }}</span>
-                                            <p v-if="link.description" class="text-xs text-gray-600 mt-2 bg-gray-50 border border-gray-100 p-2.5 rounded">{{ link.description }}</p>
-                                            <div v-if="link.login_id || link.login_pw" class="flex flex-wrap items-center gap-x-5 gap-y-2 mt-2 text-xs font-mono bg-amber-50/50 text-amber-900 p-2.5 rounded border border-amber-100/60">
+                                            
+                                            <!-- HTML 지원되도록 v-html 적용 -->
+                                            <div v-if="link.description" class="text-xs text-gray-600 mt-3 bg-gray-50 border border-gray-100 p-3 rounded-lg html-content" v-html="link.description"></div>
+                                            
+                                            <div v-if="link.login_id || link.login_pw" class="flex flex-wrap items-center gap-x-5 gap-y-2 mt-2 text-xs font-mono bg-amber-50/50 text-amber-900 p-2.5 rounded border border-amber-100/60 w-fit">
                                                 <span v-if="link.login_id" class="flex items-center gap-1.5"><i class="fa-solid fa-user text-amber-600/70"></i> <span class="text-amber-800">ID:</span> <span class="font-bold select-all cursor-text">{{ link.login_id }}</span></span>
                                                 <span v-if="link.login_pw" class="flex items-center gap-1.5"><i class="fa-solid fa-key text-amber-600/70"></i> <span class="text-amber-800">PW:</span> <span class="font-bold select-all cursor-text">{{ link.login_pw }}</span></span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="flex gap-2 w-full sm:w-auto flex-shrink-0 mt-2 sm:mt-0">
+                                    <div class="flex gap-2 w-full sm:w-auto flex-shrink-0 mt-3 sm:mt-0">
                                         <button @click="copyToClipboard(link.url)" class="flex-1 sm:flex-none px-3 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors flex justify-center items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-copy"></i> 주소복사</button>
                                         <button @click="window.open(link.url, '_blank')" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 shadow-sm transition-colors flex justify-center items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-arrow-right"></i> 바로가기</button>
                                     </div>
@@ -1011,7 +1043,50 @@
                     setTimeout(() => { toast.value.show = false; }, 4000);
                 };
 
-                // --- 🌟 새롭게 추가된 퀵 링크 (Quick Links) 관리 로직 ---
+                // --- 🌟 설명 영역 전역 이미지 업로더 로직 ---
+                const isUploadingImage = ref(false);
+                const currentImageTarget = ref(null);
+                const globalImageInput = ref(null);
+
+                const triggerImageUpload = (obj, key) => {
+                    currentImageTarget.value = { obj, key };
+                    if(globalImageInput.value) globalImageInput.value.click();
+                };
+
+                const handleGlobalImageUpload = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file || !currentImageTarget.value) return;
+                    
+                    isUploadingImage.value = true;
+                    try {
+                        const extMatch = file.name.match(/\.[^.]+$/);
+                        const safeName = `desc_img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}${extMatch ? extMatch[0] : '.png'}`;
+                        
+                        const { error } = await supabase.storage.from('documents').upload(safeName, file);
+                        if (error) throw error;
+                        
+                        const { data: urlData } = supabase.storage.from('documents').getPublicUrl(safeName);
+                        const imgUrl = urlData.publicUrl;
+                        
+                        const imgTag = `<br><img src="${imgUrl}" alt="첨부된 설명 이미지" class="max-w-full rounded-lg border border-gray-200 mt-2 mb-2">`;
+                        
+                        if (currentImageTarget.value.obj[currentImageTarget.value.key]) {
+                            currentImageTarget.value.obj[currentImageTarget.value.key] += imgTag;
+                        } else {
+                            currentImageTarget.value.obj[currentImageTarget.value.key] = imgTag;
+                        }
+                        
+                        showToast('이미지가 본문에 삽입되었습니다.');
+                    } catch (err) {
+                        showToast('이미지 업로드 실패', 'error', err.message);
+                    } finally {
+                        isUploadingImage.value = false;
+                        e.target.value = ''; 
+                        currentImageTarget.value = null;
+                    }
+                };
+                // -----------------------------------------------------------
+
                 const defaultQuickLinks = [
                     { id: '1', name: 'HYM 공식 홈페이지', url: 'https://www.hyminternational.com/', icon: 'fa-globe', bgColor: 'bg-gray-800', width: 'full', order: 1 },
                     { id: '2', name: '전자결재시스템 (e-Approval)', url: 'https://joey1891.github.io/corporate-admin-/e-Approval%20System.html', icon: 'fa-file-signature', bgColor: 'bg-blue-600', width: 'full', order: 2 },
@@ -1033,7 +1108,7 @@
                     if (!currentCompanyId.value) return;
                     const stored = localStorage.getItem(`quickLinks_${currentCompanyId.value}`);
                     if (stored) quickLinks.value = JSON.parse(stored).sort((a,b) => a.order - b.order);
-                    else quickLinks.value = JSON.parse(JSON.stringify(defaultQuickLinks)); // Deep copy defaults
+                    else quickLinks.value = JSON.parse(JSON.stringify(defaultQuickLinks)); 
                 };
 
                 const saveQuickLinksToStorage = () => {
@@ -1068,13 +1143,12 @@
                 const deleteQuickLink = (id) => {
                     if (confirm('이 바로가기 링크를 삭제하시겠습니까?')) {
                         quickLinks.value = quickLinks.value.filter(l => l.id !== id);
-                        quickLinks.value.forEach((l, i) => l.order = i + 1); // 재정렬
+                        quickLinks.value.forEach((l, i) => l.order = i + 1); 
                         saveQuickLinksToStorage();
                         showToast('삭제되었습니다.');
                     }
                 };
 
-                // 퀵 링크 드래그 앤 드롭 구현
                 const draggedQuickLinkId = ref(null);
                 const qlDragOverId = ref(null);
 
@@ -1107,7 +1181,6 @@
                     saveQuickLinksToStorage();
                     draggedQuickLinkId.value = null;
                 };
-                // -------------------------------------------------------------
 
                 const checkSession = async () => {
                     if (localStorage.getItem('keepLoggedIn') === 'false') {
@@ -1221,7 +1294,7 @@
 
                 const loadData = async () => {
                     try {
-                        loadQuickLinks(); // 회사 변경이나 초기 로드 시 퀵 링크도 새로 불러오기
+                        loadQuickLinks();
 
                         const { data: cats } = await supabase.from('categories').select('*').eq('company_id', currentCompanyId.value).order('sort_order', {ascending: true});
                         const { data: itms } = await supabase.from('items').select('*').order('sort_order', {ascending: true});
@@ -1380,7 +1453,7 @@
 
                     modalForm.value={
                         ...i, 
-                        files: parsed.files, 
+                        files: parsed.files.map(f => ({...f, description: f.description || ''})), 
                         links: initialLinks,
                         sector_id: itemSectorId,
                         category_id: i.category_id,
@@ -1393,7 +1466,6 @@
                 const addLinkField = () => modalForm.value.links.push({name: '', url: '', description: '', login_id: '', login_pw: ''});
                 const removeLinkField = (idx) => { if(modalForm.value.links.length > 1) modalForm.value.links.splice(idx, 1); };
                 
-                // 링크 드래그 앤 드롭 함수
                 const draggedLinkIndex = ref(null);
                 const dragOverLinkIndex = ref(null);
                 
@@ -1806,7 +1878,6 @@
                     showPreviewModal, previewItem, previewFiles, previewAttachments, previewLinks, handleAction, downloadActualFile, hasFiles, selectedItems, downloadSelectedZip, copyToClipboard, window,
                     toast, 
 
-                    // --- 복구된 변수 및 함수 ---
                     downloadCEOID,
                     showProxyForm,
                     showBusinessCardModal,
@@ -1830,7 +1901,11 @@
                     handleCardPaste,
                     saveAdminCard,
                     captureAndShare,
-                    // ---------------------------
+
+                    isUploadingImage,
+                    globalImageInput,
+                    triggerImageUpload,
+                    handleGlobalImageUpload,
 
                     getIcon: (t, id) => {
                         if (t === 'folder') return openFolderIds.value.includes(id) ? 'fa-solid fa-folder-open text-amber-600' : 'fa-solid fa-folder';
