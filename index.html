@@ -524,10 +524,13 @@
                                     <input type="file" ref="fileInput" @change="handleFileSelect" multiple class="hidden">
                                 </div>
                                 <ul v-if="modalForm.files && modalForm.files.length > 0" class="space-y-2 mt-2">
-                                    <li v-for="(file, idx) in modalForm.files" :key="idx" class="flex items-center p-2 bg-gray-50 border border-gray-200 rounded-lg gap-2">
-                                        <i class="fa-solid fa-file text-blue-400"></i>
-                                        <input type="text" v-model="file.name" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:border-primary">
-                                        <button @click.prevent="removeFile(idx)" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-xmark"></i></button>
+                                    <li v-for="(file, idx) in modalForm.files" :key="idx" class="flex flex-col p-2 bg-gray-50 border border-gray-200 rounded-lg gap-2">
+                                        <div class="flex items-center gap-2 w-full">
+                                            <i class="fa-solid fa-file text-blue-400"></i>
+                                            <input type="text" v-model="file.name" placeholder="파일명" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:border-primary outline-none">
+                                            <button @click.prevent="removeFile(idx)" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-xmark"></i></button>
+                                        </div>
+                                        <input type="text" v-model="file.description" placeholder="파일 부연 설명 (선택)" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-primary bg-white outline-none">
                                     </li>
                                 </ul>
                             </div>
@@ -539,7 +542,7 @@
                                 </div>
                                 <div class="space-y-2">
                                     <div v-for="(link, idx) in modalForm.links" :key="idx" 
-                                         :class="['flex gap-2 items-center p-1 -mx-1 rounded transition-colors', dragOverLinkIndex === idx ? 'bg-emerald-50 border border-dashed border-emerald-300' : 'border border-transparent']"
+                                         :class="['flex gap-2 items-start p-2 rounded transition-colors border', dragOverLinkIndex === idx ? 'bg-emerald-50 border-dashed border-emerald-300' : 'bg-white border-gray-200']"
                                          draggable="true"
                                          @dragstart="linkDragStart($event, idx)"
                                          @dragover.prevent
@@ -547,10 +550,19 @@
                                          @dragleave="linkDragLeave($event, idx)"
                                          @drop="linkDrop($event, idx)"
                                          @dragend="linkDragEnd">
-                                        <i class="fa-solid fa-grip-vertical text-gray-300 hover:text-gray-500 cursor-move px-1" title="드래그하여 순서 변경"></i>
-                                        <input type="text" v-model="link.name" placeholder="링크명 (예: 의료기기판매업)" class="w-1/3 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
-                                        <input type="text" v-model="link.url" placeholder="https://..." class="flex-1 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
-                                        <button v-if="modalForm.links.length > 1" @click="removeLinkField(idx)" class="px-2 text-red-400 hover:text-red-600 rounded"><i class="fa-solid fa-trash text-sm"></i></button>
+                                        <i class="fa-solid fa-grip-vertical text-gray-300 hover:text-gray-500 cursor-move px-1 mt-1.5" title="드래그하여 순서 변경"></i>
+                                        <div class="flex-1 flex flex-col gap-2 min-w-0">
+                                            <div class="flex gap-2">
+                                                <input type="text" v-model="link.name" placeholder="링크명 (예: 공식홈페이지)" class="w-1/3 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
+                                                <input type="text" v-model="link.url" placeholder="https://..." class="flex-1 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
+                                            </div>
+                                            <input type="text" v-model="link.description" placeholder="링크 설명 (선택)" class="w-full px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
+                                            <div class="flex gap-2">
+                                                <input type="text" v-model="link.login_id" placeholder="접속 ID (선택)" class="w-1/2 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
+                                                <input type="text" v-model="link.login_pw" placeholder="접속 PW (선택)" class="w-1/2 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
+                                            </div>
+                                        </div>
+                                        <button v-if="modalForm.links.length > 1" @click="removeLinkField(idx)" class="px-2 py-1 text-red-400 hover:text-red-600 rounded mt-0.5"><i class="fa-solid fa-trash text-sm"></i></button>
                                     </div>
                                 </div>
                             </div>
@@ -591,12 +603,15 @@
                                 <i class="fa-solid fa-file-arrow-down text-blue-500 mr-2 text-lg"></i> 첨부 파일 ({{ previewAttachments.length }}개)
                             </h4>
                             <ul class="space-y-3">
-                                <li v-for="(file, idx) in previewAttachments" :key="'file-'+idx" class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-                                    <div class="flex items-center gap-3 min-w-0">
-                                        <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 text-lg"><i class="fa-solid fa-file"></i></div>
-                                        <span class="text-sm font-bold text-gray-800 truncate">{{ file.name }}</span>
+                                <li v-for="(file, idx) in previewAttachments" :key="'file-'+idx" class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 shadow-sm hover:shadow-md transition-shadow">
+                                    <div class="flex flex-col min-w-0 flex-1">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 text-lg"><i class="fa-solid fa-file"></i></div>
+                                            <span class="text-sm font-bold text-gray-800 truncate">{{ file.name }}</span>
+                                        </div>
+                                        <p v-if="file.description" class="text-xs text-gray-600 mt-2 bg-gray-50 border border-gray-100 p-2 rounded ml-[3.25rem]">{{ file.description }}</p>
                                     </div>
-                                    <button @click="downloadActualFile(file.url, file.name)" class="w-full sm:w-auto px-4 py-2 bg-gray-800 text-white text-xs font-bold rounded-lg hover:bg-gray-900 shadow-sm flex items-center justify-center gap-2 transition-colors">
+                                    <button @click="downloadActualFile(file.url, file.name)" class="w-full sm:w-auto px-4 py-2 bg-gray-800 text-white text-xs font-bold rounded-lg hover:bg-gray-900 shadow-sm flex items-center justify-center gap-2 transition-colors mt-1 sm:mt-0">
                                         <i class="fa-solid fa-download"></i> 다운로드
                                     </button>
                                 </li>
@@ -608,16 +623,20 @@
                                 <i class="fa-solid fa-link text-emerald-500 mr-2 text-lg"></i> 연결 링크 ({{ previewLinks.length }}개)
                             </h4>
                             <ul class="space-y-3">
-                                <li v-for="(link, idx) in previewLinks" :key="'link-'+idx" class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-                                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <li v-for="(link, idx) in previewLinks" :key="'link-'+idx" class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 shadow-sm hover:shadow-md transition-shadow">
+                                    <div class="flex items-start gap-3 min-w-0 flex-1">
                                         <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg"><i class="fa-solid fa-up-right-from-square"></i></div>
                                         <div class="flex flex-col min-w-0 w-full">
                                             <span class="text-sm font-bold text-gray-800 truncate">{{ link.name }}</span>
-                                            <!-- URL 영역에 break-all 추가하여 긴 텍스트 줄바꿈 처리 -->
                                             <span class="text-[10px] text-gray-400 mt-0.5 break-all">{{ link.url }}</span>
+                                            <p v-if="link.description" class="text-xs text-gray-600 mt-2 bg-gray-50 border border-gray-100 p-2.5 rounded">{{ link.description }}</p>
+                                            <div v-if="link.login_id || link.login_pw" class="flex flex-wrap items-center gap-x-5 gap-y-2 mt-2 text-xs font-mono bg-amber-50/50 text-amber-900 p-2.5 rounded border border-amber-100/60">
+                                                <span v-if="link.login_id" class="flex items-center gap-1.5"><i class="fa-solid fa-user text-amber-600/70"></i> <span class="text-amber-800">ID:</span> <span class="font-bold select-all cursor-text">{{ link.login_id }}</span></span>
+                                                <span v-if="link.login_pw" class="flex items-center gap-1.5"><i class="fa-solid fa-key text-amber-600/70"></i> <span class="text-amber-800">PW:</span> <span class="font-bold select-all cursor-text">{{ link.login_pw }}</span></span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="flex gap-2 w-full sm:w-auto flex-shrink-0">
+                                    <div class="flex gap-2 w-full sm:w-auto flex-shrink-0 mt-2 sm:mt-0">
                                         <button @click="copyToClipboard(link.url)" class="flex-1 sm:flex-none px-3 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors flex justify-center items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-copy"></i> 주소복사</button>
                                         <button @click="window.open(link.url, '_blank')" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 shadow-sm transition-colors flex justify-center items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-arrow-right"></i> 바로가기</button>
                                     </div>
@@ -1323,7 +1342,7 @@
                 const dragActive = ref(false);
                 const dragOverCategory = ref(null);
                 
-                const modalForm = ref({ id: '', name: '', type: 'download', description: '', files: [], links: [{name: '', url: ''}], sector_id: '', category_id: '', original_category_id: '' });
+                const modalForm = ref({ id: '', name: '', type: 'download', description: '', files: [], links: [{name: '', url: '', description: '', login_id: '', login_pw: ''}], sector_id: '', category_id: '', original_category_id: '' });
                 
                 const modalAvailableCategories = computed(() => {
                     const group = menuGroups.value.find(g => g.sectorId === modalForm.value.sector_id);
@@ -1340,7 +1359,7 @@
                     isEditing.value = false; 
                     let currentSectorId = '';
                     for (const g of menuGroups.value) { if (g.categories.some(c => c.id === activeCategoryId.value)) { currentSectorId = g.sectorId; break; } }
-                    modalForm.value = { type: 'download', name: '', description: '', files: [], links: [{name: '', url: ''}], sector_id: currentSectorId, category_id: activeCategoryId.value, original_category_id: activeCategoryId.value }; 
+                    modalForm.value = { type: 'download', name: '', description: '', files: [], links: [{name: '', url: '', description: '', login_id: '', login_pw: ''}], sector_id: currentSectorId, category_id: activeCategoryId.value, original_category_id: activeCategoryId.value }; 
                     showItemModal.value = true; 
                 };
                 
@@ -1348,8 +1367,13 @@
                     isEditing.value = true; 
                     
                     const parsed = parseItemData(i);
-                    let initialLinks = parsed.links;
-                    if (initialLinks.length === 0) initialLinks = [{name: '', url: ''}];
+                    let initialLinks = parsed.links.map(l => ({
+                        ...l, 
+                        description: l.description || '', 
+                        login_id: l.login_id || '', 
+                        login_pw: l.login_pw || ''
+                    }));
+                    if (initialLinks.length === 0) initialLinks = [{name: '', url: '', description: '', login_id: '', login_pw: ''}];
 
                     let itemSectorId = '';
                     for (const g of menuGroups.value) { if (g.categories.some(c => c.id === i.category_id)) { itemSectorId = g.sectorId; break; } }
@@ -1366,7 +1390,7 @@
                 };
                 
                 const closeModal = () => showItemModal.value = false;
-                const addLinkField = () => modalForm.value.links.push({name: '', url: ''});
+                const addLinkField = () => modalForm.value.links.push({name: '', url: '', description: '', login_id: '', login_pw: ''});
                 const removeLinkField = (idx) => { if(modalForm.value.links.length > 1) modalForm.value.links.splice(idx, 1); };
                 
                 // 링크 드래그 앤 드롭 함수
@@ -1386,8 +1410,8 @@
                 };
                 const linkDragEnd = () => { draggedLinkIndex.value = null; dragOverLinkIndex.value = null; };
 
-                const handleFileSelect = (e) => { const files = e.target.files; if(!files) return; for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true }); dragActive.value = false; };
-                const handleDrop = (e) => { dragActive.value = false; const files = e.dataTransfer.files; if(!files) return; for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true }); };
+                const handleFileSelect = (e) => { const files = e.target.files; if(!files) return; for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, description: '', isNew: true }); dragActive.value = false; };
+                const handleDrop = (e) => { dragActive.value = false; const files = e.dataTransfer.files; if(!files) return; for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, description: '', isNew: true }); };
                 const removeFile = (idx) => modalForm.value.files.splice(idx, 1);
                 
                 const saveItem = async () => {
@@ -1402,14 +1426,14 @@
                                     const safeName = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}${extMatch ? extMatch[0] : ''}`;
                                     await supabase.storage.from('documents').upload(safeName, fData.fileObj);
                                     const { data: urlData } = supabase.storage.from('documents').getPublicUrl(safeName);
-                                    finalCombinedData.push({ name: fData.name, url: urlData.publicUrl, kind: 'file' });
+                                    finalCombinedData.push({ name: fData.name, url: urlData.publicUrl, kind: 'file', description: fData.description || '' });
                                 } else { 
-                                    finalCombinedData.push({ name: fData.name, url: fData.url, kind: 'file' }); 
+                                    finalCombinedData.push({ name: fData.name, url: fData.url, kind: 'file', description: fData.description || '' }); 
                                 }
                             }
                             const validLinks = modalForm.value.links.filter(l => l.url.trim() !== '');
                             for (let lData of validLinks) {
-                                finalCombinedData.push({ name: lData.name, url: lData.url, kind: 'link' });
+                                finalCombinedData.push({ name: lData.name, url: lData.url, kind: 'link', description: lData.description || '', login_id: lData.login_id || '', login_pw: lData.login_pw || '' });
                             }
                         }
                         
