@@ -532,7 +532,11 @@
                                     <i class="fa-regular fa-image"></i> 설명에 이미지 삽입
                                 </button>
                             </div>
-                            <textarea v-model="modalForm.description" rows="3" placeholder="간단한 안내사항이나 설명을 적어주세요. (이미지를 첨부하면 이곳에 HTML로 삽입됩니다)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none"></textarea>
+                            <textarea v-model="modalForm.description" 
+                                      @dragover.prevent 
+                                      @drop="handleTextareaDrop($event, modalForm, 'description')" 
+                                      @paste="handleTextareaPaste($event, modalForm, 'description')" 
+                                      rows="3" placeholder="설명을 적어주세요. (클릭, 드래그 앤 드롭, 또는 Ctrl+V로 이미지 삽입 가능)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-primary outline-none"></textarea>
                         </div>
                         
                         <!-- 복합 데이터 처리 영역 (파일 + 링크 동시 지원) -->
@@ -553,7 +557,11 @@
                                         </div>
                                         <!-- 파일 설명란 + 이미지 업로드 -->
                                         <div class="flex gap-1 w-full items-start">
-                                            <textarea v-model="file.description" rows="2" placeholder="파일 부연 설명 (선택)" class="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-primary bg-white outline-none resize-y min-h-[40px]"></textarea>
+                                            <textarea v-model="file.description" 
+                                                      @dragover.prevent 
+                                                      @drop="handleTextareaDrop($event, file, 'description')" 
+                                                      @paste="handleTextareaPaste($event, file, 'description')" 
+                                                      rows="2" placeholder="파일 부연 설명 (드래그 앤 드롭 / Ctrl+V 이미지 첨부 가능)" class="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-primary bg-white outline-none resize-y min-h-[40px]"></textarea>
                                             <button type="button" @click.prevent="triggerImageUpload(file, 'description')" class="px-2 py-2 bg-white border border-gray-300 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0" title="설명에 이미지 추가"><i class="fa-regular fa-image"></i></button>
                                         </div>
                                     </li>
@@ -583,7 +591,11 @@
                                             </div>
                                             <!-- 링크 설명란 + 이미지 업로드 -->
                                             <div class="flex gap-1 w-full items-start">
-                                                <textarea v-model="link.description" rows="2" placeholder="링크 설명 (선택)" class="flex-1 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs resize-y min-h-[40px]"></textarea>
+                                                <textarea v-model="link.description" 
+                                                          @dragover.prevent 
+                                                          @drop="handleTextareaDrop($event, link, 'description')" 
+                                                          @paste="handleTextareaPaste($event, link, 'description')" 
+                                                          rows="2" placeholder="링크 설명 (드래그 앤 드롭 / Ctrl+V 이미지 첨부 가능)" class="flex-1 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs resize-y min-h-[40px]"></textarea>
                                                 <button type="button" @click.prevent="triggerImageUpload(link, 'description')" class="px-2 py-2 bg-gray-50 border border-gray-300 rounded text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors flex-shrink-0" title="설명에 이미지 추가"><i class="fa-regular fa-image"></i></button>
                                             </div>
                                             <div class="flex gap-2">
@@ -1053,10 +1065,8 @@
                     if(globalImageInput.value) globalImageInput.value.click();
                 };
 
-                const handleGlobalImageUpload = async (e) => {
-                    const file = e.target.files[0];
-                    if (!file || !currentImageTarget.value) return;
-                    
+                const processDescriptionImage = async (file, targetObj, targetKey) => {
+                    if (!file || !file.type.startsWith('image/')) return;
                     isUploadingImage.value = true;
                     try {
                         const extMatch = file.name.match(/\.[^.]+$/);
@@ -1070,10 +1080,10 @@
                         
                         const imgTag = `<br><img src="${imgUrl}" alt="첨부된 설명 이미지" class="max-w-full rounded-lg border border-gray-200 mt-2 mb-2">`;
                         
-                        if (currentImageTarget.value.obj[currentImageTarget.value.key]) {
-                            currentImageTarget.value.obj[currentImageTarget.value.key] += imgTag;
+                        if (targetObj[targetKey]) {
+                            targetObj[targetKey] += imgTag;
                         } else {
-                            currentImageTarget.value.obj[currentImageTarget.value.key] = imgTag;
+                            targetObj[targetKey] = imgTag;
                         }
                         
                         showToast('이미지가 본문에 삽입되었습니다.');
@@ -1081,8 +1091,36 @@
                         showToast('이미지 업로드 실패', 'error', err.message);
                     } finally {
                         isUploadingImage.value = false;
-                        e.target.value = ''; 
-                        currentImageTarget.value = null;
+                    }
+                };
+
+                const handleGlobalImageUpload = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file || !currentImageTarget.value) return;
+                    await processDescriptionImage(file, currentImageTarget.value.obj, currentImageTarget.value.key);
+                    e.target.value = ''; 
+                    currentImageTarget.value = null;
+                };
+
+                const handleTextareaDrop = (e, obj, key) => {
+                    if (!e.dataTransfer || !e.dataTransfer.files) return;
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        e.preventDefault();
+                        processDescriptionImage(file, obj, key);
+                    }
+                };
+
+                const handleTextareaPaste = (e, obj, key) => {
+                    if (!e.clipboardData || !e.clipboardData.items) return;
+                    const items = e.clipboardData.items;
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf('image') !== -1) {
+                            const file = items[i].getAsFile();
+                            e.preventDefault();
+                            processDescriptionImage(file, obj, key);
+                            break;
+                        }
                     }
                 };
                 // -----------------------------------------------------------
@@ -1906,6 +1944,8 @@
                     globalImageInput,
                     triggerImageUpload,
                     handleGlobalImageUpload,
+                    handleTextareaDrop,
+                    handleTextareaPaste,
 
                     getIcon: (t, id) => {
                         if (t === 'folder') return openFolderIds.value.includes(id) ? 'fa-solid fa-folder-open text-amber-600' : 'fa-solid fa-folder';
