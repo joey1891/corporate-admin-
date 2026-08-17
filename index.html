@@ -538,7 +538,16 @@
                                     <button @click="addLinkField" class="px-2 py-1 bg-emerald-50 text-[10px] font-bold rounded text-emerald-700 border border-emerald-200 hover:bg-emerald-100"><i class="fa-solid fa-plus"></i> 링크 추가</button>
                                 </div>
                                 <div class="space-y-2">
-                                    <div v-for="(link, idx) in modalForm.links" :key="idx" class="flex gap-2">
+                                    <div v-for="(link, idx) in modalForm.links" :key="idx" 
+                                         :class="['flex gap-2 items-center p-1 -mx-1 rounded transition-colors', dragOverLinkIndex === idx ? 'bg-emerald-50 border border-dashed border-emerald-300' : 'border border-transparent']"
+                                         draggable="true"
+                                         @dragstart="linkDragStart($event, idx)"
+                                         @dragover.prevent
+                                         @dragenter.prevent="linkDragEnter($event, idx)"
+                                         @dragleave="linkDragLeave($event, idx)"
+                                         @drop="linkDrop($event, idx)"
+                                         @dragend="linkDragEnd">
+                                        <i class="fa-solid fa-grip-vertical text-gray-300 hover:text-gray-500 cursor-move px-1" title="드래그하여 순서 변경"></i>
                                         <input type="text" v-model="link.name" placeholder="링크명 (예: 의료기기판매업)" class="w-1/3 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
                                         <input type="text" v-model="link.url" placeholder="https://..." class="flex-1 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
                                         <button v-if="modalForm.links.length > 1" @click="removeLinkField(idx)" class="px-2 text-red-400 hover:text-red-600 rounded"><i class="fa-solid fa-trash text-sm"></i></button>
@@ -600,16 +609,17 @@
                             </h4>
                             <ul class="space-y-3">
                                 <li v-for="(link, idx) in previewLinks" :key="'link-'+idx" class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-                                    <div class="flex items-center gap-3 min-w-0">
+                                    <div class="flex items-center gap-3 min-w-0 flex-1">
                                         <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg"><i class="fa-solid fa-up-right-from-square"></i></div>
-                                        <div class="flex flex-col min-w-0">
+                                        <div class="flex flex-col min-w-0 w-full">
                                             <span class="text-sm font-bold text-gray-800 truncate">{{ link.name }}</span>
-                                            <span class="text-[10px] text-gray-400 truncate mt-0.5">{{ link.url }}</span>
+                                            <!-- URL 영역에 break-all 추가하여 긴 텍스트 줄바꿈 처리 -->
+                                            <span class="text-[10px] text-gray-400 mt-0.5 break-all">{{ link.url }}</span>
                                         </div>
                                     </div>
-                                    <div class="flex gap-2 w-full sm:w-auto">
-                                        <button @click="copyToClipboard(link.url)" class="flex-1 sm:flex-none px-3 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors flex justify-center items-center gap-1.5"><i class="fa-solid fa-copy"></i> 주소복사</button>
-                                        <button @click="window.open(link.url, '_blank')" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 shadow-sm transition-colors flex justify-center items-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> 바로가기</button>
+                                    <div class="flex gap-2 w-full sm:w-auto flex-shrink-0">
+                                        <button @click="copyToClipboard(link.url)" class="flex-1 sm:flex-none px-3 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors flex justify-center items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-copy"></i> 주소복사</button>
+                                        <button @click="window.open(link.url, '_blank')" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 shadow-sm transition-colors flex justify-center items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-arrow-right"></i> 바로가기</button>
                                     </div>
                                 </li>
                             </ul>
@@ -1358,6 +1368,24 @@
                 const closeModal = () => showItemModal.value = false;
                 const addLinkField = () => modalForm.value.links.push({name: '', url: ''});
                 const removeLinkField = (idx) => { if(modalForm.value.links.length > 1) modalForm.value.links.splice(idx, 1); };
+                
+                // 링크 드래그 앤 드롭 함수
+                const draggedLinkIndex = ref(null);
+                const dragOverLinkIndex = ref(null);
+                
+                const linkDragStart = (e, idx) => { draggedLinkIndex.value = idx; e.dataTransfer.effectAllowed = 'move'; };
+                const linkDragEnter = (e, idx) => { if (draggedLinkIndex.value !== null && draggedLinkIndex.value !== idx) dragOverLinkIndex.value = idx; };
+                const linkDragLeave = (e, idx) => { if (dragOverLinkIndex.value === idx) dragOverLinkIndex.value = null; };
+                const linkDrop = (e, idx) => {
+                    if (draggedLinkIndex.value !== null && draggedLinkIndex.value !== idx) {
+                        const item = modalForm.value.links.splice(draggedLinkIndex.value, 1)[0];
+                        modalForm.value.links.splice(idx, 0, item);
+                    }
+                    draggedLinkIndex.value = null;
+                    dragOverLinkIndex.value = null;
+                };
+                const linkDragEnd = () => { draggedLinkIndex.value = null; dragOverLinkIndex.value = null; };
+
                 const handleFileSelect = (e) => { const files = e.target.files; if(!files) return; for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true }); dragActive.value = false; };
                 const handleDrop = (e) => { dragActive.value = false; const files = e.dataTransfer.files; if(!files) return; for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, isNew: true }); };
                 const removeFile = (idx) => modalForm.value.files.splice(idx, 1);
@@ -1749,6 +1777,7 @@
                     openFolderIds, expandedItemIds, displayItems, toggleFolder, toggleDescription, handleItemClick,
                     showCatModal, catModalData, openCatModal, saveCategory, moveCategory, showDeleteModal, deleteTarget, confirmDeleteCategory, confirmDelete, executeDelete,
                     showItemModal, isEditing, isUploading, dragActive, dragOverCategory, modalForm, modalAvailableCategories, handleModalSectorChange, openAddModal, openEditModal, closeModal, saveItem, handleFileSelect, handleDrop, removeFile, addLinkField, removeLinkField,
+                    draggedLinkIndex, dragOverLinkIndex, linkDragStart, linkDragEnter, linkDragLeave, linkDrop, linkDragEnd,
                     dragStart, dragOverItem, dragLeaveItem, dragDropToFolder, dragDrop, dragDropToCategory, dragEnd, dragTargetFolderId, dragItem,
                     showPreviewModal, previewItem, previewFiles, previewAttachments, previewLinks, handleAction, downloadActualFile, hasFiles, selectedItems, downloadSelectedZip, copyToClipboard, window,
                     toast, 
