@@ -39,7 +39,7 @@
         .html-content h1 { font-size: 1.75rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; }
         .html-content p { margin-bottom: 0.75rem; line-height: 1.6; }
         .html-content a { color: #2563eb; text-decoration: underline; }
-        .html-content img { max-width: 100%; height: auto; border-radius: 0.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; display: inline-block; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb; }
+        .html-content img { max-width: 100%; height: auto; border-radius: 0.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; display: block; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb; }
         
         .a4-preview { width: 210mm; height: 297mm; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 0 auto; padding: 12mm; position: relative; transform-origin: top center; overflow: hidden; box-sizing: border-box; }
         @media print { 
@@ -49,6 +49,8 @@
         }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
+        
+        /* 토글 등에서 활용할 슬라이드/페이드 애니메이션 */
         .slide-fade-enter-active { transition: all 0.3s ease-out; }
         .slide-fade-leave-active { transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1); }
         .slide-fade-enter-from, .slide-fade-leave-to { transform: translateY(-10px); opacity: 0; }
@@ -135,7 +137,7 @@
             <div v-if="isSidebarOpen" @click="toggleSidebar" class="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"></div>
 
             <aside :class="['fixed md:static inset-y-0 left-0 z-30 w-72 bg-surface border-r border-gray-200 transform transition-transform duration-300 flex flex-col', isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
-                <!-- 퀵 링크 영역 (기존 유지) -->
+                <!-- 퀵 링크 영역 -->
                 <div class="px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gray-50">
                     <div class="flex items-center mb-4">
                         <i class="fa-solid fa-building text-primary text-xl mr-3"></i>
@@ -172,7 +174,7 @@
                     </div>
                 </div>
 
-                <!-- 메뉴 영역 (기존 유지) -->
+                <!-- 메뉴 영역 -->
                 <div class="overflow-y-auto flex-grow py-4">
                     <div v-for="group in visibleMenuGroups" :key="group.sectorId" class="mb-4">
                         <div class="bg-gray-100 border-l-4 border-primary px-4 py-2 mb-1 flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-colors" @click="toggleSector(group)">
@@ -542,7 +544,7 @@
                         <!-- 복합 데이터 처리 영역 (파일 + 링크 동시 지원) -->
                         <template v-if="!['folder', 'proxy_form', 'my_business_card'].includes(modalForm.type)">
                             <div class="pt-3 border-t border-gray-100">
-                                <label class="block text-sm font-bold text-blue-700 mb-2"><i class="fa-solid fa-file-arrow-down"></i> 첨부 파일 (다운로드용)</label>
+                                <label class="block text-sm font-bold text-blue-700 mb-2"><i class="fa-solid fa-file-arrow-down"></i> 개별 첨부 파일</label>
                                 <div @dragover.prevent="dragActive = true" @dragleave.prevent="dragActive = false" @drop.prevent="handleDrop" :class="['border-2 border-dashed rounded-lg p-5 flex flex-col items-center justify-center cursor-pointer transition-colors', dragActive ? 'border-primary bg-blue-50' : 'border-gray-300 hover:bg-gray-50']" @click="$refs.fileInput.click()">
                                     <i class="fa-solid fa-cloud-arrow-up text-2xl text-gray-400 mb-1"></i>
                                     <p class="text-xs text-gray-600">클릭 또는 파일 드래그 앤 드롭</p>
@@ -570,12 +572,12 @@
                             
                             <div class="pt-4 border-t border-gray-100 mt-2">
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="block text-sm font-bold text-emerald-700"><i class="fa-solid fa-link"></i> 연결 주소 (바로가기용)</label>
-                                    <button @click="addLinkField" class="px-2 py-1 bg-emerald-50 text-[10px] font-bold rounded text-emerald-700 border border-emerald-200 hover:bg-emerald-100"><i class="fa-solid fa-plus"></i> 링크 추가</button>
+                                    <label class="block text-sm font-bold text-emerald-700"><i class="fa-solid fa-link"></i> 연결/섹션 주소 (하위 첨부파일 추가 가능)</label>
+                                    <button @click="addLinkField" class="px-2 py-1 bg-emerald-50 text-[10px] font-bold rounded text-emerald-700 border border-emerald-200 hover:bg-emerald-100"><i class="fa-solid fa-plus"></i> 추가</button>
                                 </div>
-                                <div class="space-y-2">
+                                <div class="space-y-3">
                                     <div v-for="(link, idx) in modalForm.links" :key="idx" 
-                                         :class="['flex gap-2 items-start p-2 rounded transition-colors border', dragOverLinkIndex === idx ? 'bg-emerald-50 border-dashed border-emerald-300' : 'bg-white border-gray-200']"
+                                         :class="['flex gap-2 items-start p-3 rounded transition-colors border', dragOverLinkIndex === idx ? 'bg-emerald-50 border-dashed border-emerald-300' : 'bg-white border-gray-200']"
                                          draggable="true"
                                          @dragstart="linkDragStart($event, idx)"
                                          @dragover.prevent
@@ -586,8 +588,8 @@
                                         <i class="fa-solid fa-grip-vertical text-gray-300 hover:text-gray-500 cursor-move px-1 mt-1.5" title="드래그하여 순서 변경"></i>
                                         <div class="flex-1 flex flex-col gap-2 min-w-0">
                                             <div class="flex gap-2">
-                                                <input type="text" v-model="link.name" placeholder="링크명 (예: 공식홈페이지)" class="w-1/3 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
-                                                <input type="text" v-model="link.url" placeholder="https://..." class="flex-1 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
+                                                <input type="text" v-model="link.name" placeholder="링크/섹션명 (예: 공식홈페이지)" class="w-1/3 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
+                                                <input type="text" v-model="link.url" placeholder="https://... (URL 생략시 폴더처럼 동작)" class="flex-1 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
                                             </div>
                                             <!-- 링크 설명란 + 이미지 업로드 -->
                                             <div class="flex gap-1 w-full items-start">
@@ -595,13 +597,43 @@
                                                           @dragover.prevent 
                                                           @drop="handleTextareaDrop($event, link, 'description')" 
                                                           @paste="handleTextareaPaste($event, link, 'description')" 
-                                                          rows="2" placeholder="링크 설명 (드래그 앤 드롭 / Ctrl+V 이미지 첨부 가능)" class="flex-1 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs resize-y min-h-[40px]"></textarea>
+                                                          rows="2" placeholder="링크/섹션 설명 (이미지 첨부 가능)" class="flex-1 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs resize-y min-h-[40px]"></textarea>
                                                 <button type="button" @click.prevent="triggerImageUpload(link, 'description')" class="px-2 py-2 bg-gray-50 border border-gray-300 rounded text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors flex-shrink-0" title="설명에 이미지 추가"><i class="fa-regular fa-image"></i></button>
                                             </div>
                                             <div class="flex gap-2">
                                                 <input type="text" v-model="link.login_id" placeholder="접속 ID (선택)" class="w-1/2 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
                                                 <input type="text" v-model="link.login_pw" placeholder="접속 PW (선택)" class="w-1/2 px-2 py-1.5 border border-gray-300 rounded focus:border-emerald-500 outline-none text-xs">
                                             </div>
+                                            
+                                            <!-- 링크 하위 첨부파일 영역 -->
+                                            <div class="mt-1 bg-gray-50 p-2.5 rounded-lg border border-gray-200"
+                                                 @dragover.prevent
+                                                 @drop.prevent="e => handleLinkFileDrop(e, idx)">
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <span class="text-xs font-bold text-gray-600"><i class="fa-solid fa-paperclip"></i> 해당 항목 내 첨부파일</span>
+                                                    <button @click.prevent="$refs['linkFileInput_'+idx][0].click()" class="text-[10px] bg-white border border-gray-300 px-2 py-1.5 rounded text-blue-600 font-bold hover:bg-blue-50 transition-colors shadow-sm"><i class="fa-solid fa-plus"></i> 파일 추가</button>
+                                                    <input type="file" :ref="'linkFileInput_'+idx" @change="e => handleLinkFileSelect(e, idx)" multiple class="hidden">
+                                                </div>
+                                                <ul v-if="link.files && link.files.length > 0" class="space-y-1.5">
+                                                    <li v-for="(lFile, lfIdx) in link.files" :key="lfIdx" class="flex flex-col p-2.5 bg-white border border-gray-200 rounded-lg text-xs gap-2 shadow-sm">
+                                                         <div class="flex justify-between items-center gap-2">
+                                                             <i class="fa-solid fa-file text-blue-400"></i>
+                                                             <input v-model="lFile.name" class="border border-gray-300 px-2 py-1 rounded flex-1 focus:border-primary outline-none" placeholder="파일명">
+                                                             <button @click.prevent="removeLinkFile(idx, lfIdx)" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-xmark"></i></button>
+                                                         </div>
+                                                         <div class="flex gap-1 w-full items-start pl-4">
+                                                             <textarea v-model="lFile.description" 
+                                                                    @dragover.prevent 
+                                                                    @drop="handleTextareaDrop($event, lFile, 'description')" 
+                                                                    @paste="handleTextareaPaste($event, lFile, 'description')" 
+                                                                    rows="1" placeholder="파일 설명 (이미지 첨부 가능)" class="flex-1 px-2 py-1 border border-gray-300 rounded resize-y min-h-[34px] focus:border-primary outline-none"></textarea>
+                                                             <button type="button" @click.prevent="triggerImageUpload(lFile, 'description')" class="px-2 py-1.5 bg-gray-50 border border-gray-300 rounded text-gray-500 hover:text-primary transition-colors"><i class="fa-regular fa-image"></i></button>
+                                                         </div>
+                                                    </li>
+                                                </ul>
+                                                <p v-else class="text-[10px] text-gray-400 text-center py-2 border border-dashed border-gray-300 rounded bg-white">이 영역으로 파일을 드래그 앤 드롭할 수 있습니다.</p>
+                                            </div>
+
                                         </div>
                                         <button v-if="modalForm.links.length > 1" @click="removeLinkField(idx)" class="px-2 py-1 text-red-400 hover:text-red-600 rounded mt-0.5"><i class="fa-solid fa-trash text-sm"></i></button>
                                     </div>
@@ -638,9 +670,10 @@
                             <div class="html-content text-gray-800" v-html="previewItem.description"></div>
                         </div>
                         
+                        <!-- 개별 첨부 파일 영역 -->
                         <div v-if="previewAttachments.length > 0" class="w-full max-w-3xl mb-6">
                             <h4 class="text-sm font-bold text-gray-800 mb-3 flex items-center">
-                                <i class="fa-solid fa-file-arrow-down text-blue-500 mr-2 text-lg"></i> 첨부 파일 ({{ previewAttachments.length }}개)
+                                <i class="fa-solid fa-file-arrow-down text-blue-500 mr-2 text-lg"></i> 개별 첨부 파일 ({{ previewAttachments.length }}개)
                             </h4>
                             <ul class="space-y-3">
                                 <li v-for="(file, idx) in previewAttachments" :key="'file-'+idx" class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 shadow-sm hover:shadow-md transition-shadow">
@@ -649,8 +682,16 @@
                                             <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 text-lg"><i class="fa-solid fa-file"></i></div>
                                             <span class="text-sm font-bold text-gray-800 truncate">{{ file.name }}</span>
                                         </div>
-                                        <!-- HTML 지원되도록 v-html 적용 -->
-                                        <div v-if="file.description" class="text-xs text-gray-600 mt-3 bg-gray-50 border border-gray-100 p-3 rounded-lg sm:ml-[3.25rem] html-content" v-html="file.description"></div>
+                                        
+                                        <!-- 설명 토글 버튼 -->
+                                        <button v-if="file.description" @click="toggleFileDesc(idx)" class="text-[11px] font-bold text-gray-500 hover:text-primary transition-colors text-left mt-2 w-fit sm:ml-[3.25rem] flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded">
+                                            <i :class="['fa-solid', expandedFileDescs.includes(idx) ? 'fa-chevron-up text-primary' : 'fa-chevron-down']"></i> 설명 {{ expandedFileDescs.includes(idx) ? '접기' : '보기' }}
+                                        </button>
+                                        
+                                        <!-- 설명 영역 -->
+                                        <transition name="slide-fade">
+                                            <div v-if="file.description && expandedFileDescs.includes(idx)" class="text-xs text-gray-600 mt-2 bg-gray-50 border border-gray-100 p-4 rounded-lg sm:ml-[3.25rem] html-content" v-html="file.description"></div>
+                                        </transition>
                                     </div>
                                     <button @click="downloadActualFile(file.url, file.name)" class="w-full sm:w-auto px-4 py-2 bg-gray-800 text-white text-xs font-bold rounded-lg hover:bg-gray-900 shadow-sm flex items-center justify-center gap-2 transition-colors mt-1 sm:mt-0 flex-shrink-0">
                                         <i class="fa-solid fa-download"></i> 다운로드
@@ -659,30 +700,66 @@
                             </ul>
                         </div>
 
+                        <!-- 연결 주소 / 섹션 영역 -->
                         <div v-if="previewLinks.length > 0" class="w-full max-w-3xl mb-6">
                             <h4 class="text-sm font-bold text-gray-800 mb-3 flex items-center">
-                                <i class="fa-solid fa-link text-emerald-500 mr-2 text-lg"></i> 연결 링크 ({{ previewLinks.length }}개)
+                                <i class="fa-solid fa-layer-group text-emerald-500 mr-2 text-lg"></i> 세부 항목 / 연결 ({{ previewLinks.length }}개)
                             </h4>
-                            <ul class="space-y-3">
-                                <li v-for="(link, idx) in previewLinks" :key="'link-'+idx" class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 shadow-sm hover:shadow-md transition-shadow">
-                                    <div class="flex items-start gap-3 min-w-0 flex-1 w-full">
-                                        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg"><i class="fa-solid fa-up-right-from-square"></i></div>
-                                        <div class="flex flex-col min-w-0 w-full">
-                                            <span class="text-sm font-bold text-gray-800 truncate">{{ link.name }}</span>
-                                            <span class="text-[10px] text-gray-400 mt-0.5 break-all">{{ link.url }}</span>
-                                            
-                                            <!-- HTML 지원되도록 v-html 적용 -->
-                                            <div v-if="link.description" class="text-xs text-gray-600 mt-3 bg-gray-50 border border-gray-100 p-3 rounded-lg html-content" v-html="link.description"></div>
-                                            
-                                            <div v-if="link.login_id || link.login_pw" class="flex flex-wrap items-center gap-x-5 gap-y-2 mt-2 text-xs font-mono bg-amber-50/50 text-amber-900 p-2.5 rounded border border-amber-100/60 w-fit">
-                                                <span v-if="link.login_id" class="flex items-center gap-1.5"><i class="fa-solid fa-user text-amber-600/70"></i> <span class="text-amber-800">ID:</span> <span class="font-bold select-all cursor-text">{{ link.login_id }}</span></span>
-                                                <span v-if="link.login_pw" class="flex items-center gap-1.5"><i class="fa-solid fa-key text-amber-600/70"></i> <span class="text-amber-800">PW:</span> <span class="font-bold select-all cursor-text">{{ link.login_pw }}</span></span>
+                            <ul class="space-y-4">
+                                <li v-for="(link, idx) in previewLinks" :key="'link-'+idx" class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                                    <div class="flex flex-col sm:flex-row gap-4 w-full">
+                                        <div class="flex items-start gap-3 min-w-0 flex-1 w-full">
+                                            <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 text-lg"><i class="fa-solid fa-list-ul"></i></div>
+                                            <div class="flex flex-col min-w-0 w-full mt-0.5">
+                                                <span class="text-base font-black text-gray-800 truncate">{{ link.name || '이름 없음' }}</span>
+                                                <span v-if="link.url" class="text-[10px] text-gray-400 mt-0.5 break-all">{{ link.url }}</span>
+                                                
+                                                <div v-if="link.login_id || link.login_pw" class="flex flex-wrap items-center gap-x-5 gap-y-2 mt-2 text-xs font-mono bg-amber-50/50 text-amber-900 p-2.5 rounded border border-amber-100/60 w-fit">
+                                                    <span v-if="link.login_id" class="flex items-center gap-1.5"><i class="fa-solid fa-user text-amber-600/70"></i> <span class="text-amber-800">ID:</span> <span class="font-bold select-all cursor-text">{{ link.login_id }}</span></span>
+                                                    <span v-if="link.login_pw" class="flex items-center gap-1.5"><i class="fa-solid fa-key text-amber-600/70"></i> <span class="text-amber-800">PW:</span> <span class="font-bold select-all cursor-text">{{ link.login_pw }}</span></span>
+                                                </div>
+
+                                                <!-- 섹션 설명 토글 버튼 -->
+                                                <button v-if="link.description || (link.files && link.files.length > 0)" @click="toggleLinkDesc(idx)" class="text-xs font-bold text-gray-500 hover:text-emerald-600 transition-colors text-left mt-3 w-fit flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-50 rounded border border-gray-100">
+                                                    <i :class="['fa-solid', expandedLinkDescs.includes(idx) ? 'fa-chevron-up text-emerald-500' : 'fa-chevron-down']"></i> 
+                                                    {{ expandedLinkDescs.includes(idx) ? '상세내용 접기' : '상세내용 보기' }}
+                                                    <span v-if="link.files && link.files.length > 0" class="ml-1 text-blue-500 border-l border-gray-300 pl-2">첨부파일 {{link.files.length}}개 <i class="fa-solid fa-paperclip"></i></span>
+                                                </button>
+
+                                                <!-- 설명 및 하위 파일 영역 -->
+                                                <transition name="slide-fade">
+                                                    <div v-if="expandedLinkDescs.includes(idx)" class="mt-3 space-y-3">
+                                                        
+                                                        <div v-if="link.description" class="text-sm text-gray-700 bg-gray-50 border border-gray-100 p-4 rounded-lg html-content" v-html="link.description"></div>
+                                                        
+                                                        <div v-if="link.files && link.files.length > 0" class="mt-2 bg-blue-50/40 rounded-xl p-4 border border-blue-100">
+                                                            <h5 class="text-xs font-bold text-blue-800 mb-3 ml-1"><i class="fa-solid fa-paperclip mr-1"></i> 이 섹션의 첨부파일</h5>
+                                                            <ul class="space-y-2.5">
+                                                                <li v-for="(lFile, lfIdx) in link.files" :key="'lf-'+idx+'-'+lfIdx" class="bg-white p-3 rounded-lg border border-blue-100/60 shadow-sm flex flex-col gap-2">
+                                                                    <div class="flex justify-between items-center gap-4">
+                                                                        <span class="text-sm font-bold text-gray-800 flex items-center gap-2.5 truncate"><i class="fa-solid fa-file-lines text-blue-400 text-lg"></i> {{ lFile.name }}</span>
+                                                                        <button @click="downloadActualFile(lFile.url, lFile.name)" class="flex-shrink-0 text-[11px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-100 border border-blue-200 transition-colors shadow-sm"><i class="fa-solid fa-download mr-1"></i> 다운로드</button>
+                                                                    </div>
+                                                                    
+                                                                    <button v-if="lFile.description" @click="toggleLinkFileDesc(idx, lfIdx)" class="text-[10px] font-bold text-gray-500 hover:text-primary text-left w-fit mt-1 px-1.5 py-0.5 rounded bg-gray-50 flex items-center gap-1">
+                                                                        <i :class="['fa-solid', isLinkFileDescExpanded(idx, lfIdx) ? 'fa-chevron-up' : 'fa-chevron-down']"></i> 파일 설명 토글
+                                                                    </button>
+                                                                    
+                                                                    <transition name="slide-fade">
+                                                                        <div v-if="lFile.description && isLinkFileDescExpanded(idx, lfIdx)" class="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg mt-1 html-content border border-gray-100" v-html="lFile.description"></div>
+                                                                    </transition>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+
+                                                    </div>
+                                                </transition>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="flex gap-2 w-full sm:w-auto flex-shrink-0 mt-3 sm:mt-0">
-                                        <button @click="copyToClipboard(link.url)" class="flex-1 sm:flex-none px-3 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors flex justify-center items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-copy"></i> 주소복사</button>
-                                        <button @click="window.open(link.url, '_blank')" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 shadow-sm transition-colors flex justify-center items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-arrow-right"></i> 바로가기</button>
+                                        <div v-if="link.url" class="flex flex-row sm:flex-col gap-2 w-full sm:w-auto flex-shrink-0 mt-3 sm:mt-0">
+                                            <button @click="copyToClipboard(link.url)" class="flex-1 sm:flex-none px-3 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors flex justify-center items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-copy"></i> 주소복사</button>
+                                            <button @click="window.open(link.url, '_blank')" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 shadow-sm transition-colors flex justify-center items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-arrow-right"></i> 바로가기</button>
+                                        </div>
                                     </div>
                                 </li>
                             </ul>
@@ -692,6 +769,7 @@
                 </div>
             </div>
 
+            <!-- 이하 기존 모달들 (삭제, 카테고리, 회사, 권한, 명함, 위임장 등) -->
             <div v-if="showDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
                     <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mx-auto mb-4"><i class="fa-solid fa-triangle-exclamation"></i></div>
@@ -1321,11 +1399,15 @@
                         const isLegacyLinkType = ['system', 'link'].includes(item.type);
                         
                         parsed.forEach(p => {
-                            if (p.kind === 'file' || (!p.kind && !isLegacyLinkType)) files.push({ ...p, kind: 'file' });
-                            else if (p.kind === 'link' || (!p.kind && isLegacyLinkType)) links.push({ ...p, kind: 'link' });
+                            if (p.kind === 'file' || (!p.kind && !isLegacyLinkType)) {
+                                files.push({ ...p, kind: 'file' });
+                            }
+                            else if (p.kind === 'link' || (!p.kind && isLegacyLinkType)) {
+                                links.push({ ...p, kind: 'link', files: p.files || [] });
+                            }
                         });
                     } else if (item.file_path && !item.file_path.startsWith('[')) {
-                        if (['system', 'link'].includes(item.type)) links.push({ name: item.name || '바로가기', url: item.file_path, kind: 'link' });
+                        if (['system', 'link'].includes(item.type)) links.push({ name: item.name || '바로가기', url: item.file_path, kind: 'link', files: [] });
                     }
                     return { files, links };
                 };
@@ -1453,7 +1535,7 @@
                 const dragActive = ref(false);
                 const dragOverCategory = ref(null);
                 
-                const modalForm = ref({ id: '', name: '', type: 'download', description: '', files: [], links: [{name: '', url: '', description: '', login_id: '', login_pw: ''}], sector_id: '', category_id: '', original_category_id: '' });
+                const modalForm = ref({ id: '', name: '', type: 'download', description: '', files: [], links: [{name: '', url: '', description: '', login_id: '', login_pw: '', files: []}], sector_id: '', category_id: '', original_category_id: '' });
                 
                 const modalAvailableCategories = computed(() => {
                     const group = menuGroups.value.find(g => g.sectorId === modalForm.value.sector_id);
@@ -1470,7 +1552,7 @@
                     isEditing.value = false; 
                     let currentSectorId = '';
                     for (const g of menuGroups.value) { if (g.categories.some(c => c.id === activeCategoryId.value)) { currentSectorId = g.sectorId; break; } }
-                    modalForm.value = { type: 'download', name: '', description: '', files: [], links: [{name: '', url: '', description: '', login_id: '', login_pw: ''}], sector_id: currentSectorId, category_id: activeCategoryId.value, original_category_id: activeCategoryId.value }; 
+                    modalForm.value = { type: 'download', name: '', description: '', files: [], links: [{name: '', url: '', description: '', login_id: '', login_pw: '', files: []}], sector_id: currentSectorId, category_id: activeCategoryId.value, original_category_id: activeCategoryId.value }; 
                     showItemModal.value = true; 
                 };
                 
@@ -1482,9 +1564,10 @@
                         ...l, 
                         description: l.description || '', 
                         login_id: l.login_id || '', 
-                        login_pw: l.login_pw || ''
+                        login_pw: l.login_pw || '',
+                        files: l.files ? l.files.map(f => ({...f, description: f.description || ''})) : []
                     }));
-                    if (initialLinks.length === 0) initialLinks = [{name: '', url: '', description: '', login_id: '', login_pw: ''}];
+                    if (initialLinks.length === 0) initialLinks = [{name: '', url: '', description: '', login_id: '', login_pw: '', files: []}];
 
                     let itemSectorId = '';
                     for (const g of menuGroups.value) { if (g.categories.some(c => c.id === i.category_id)) { itemSectorId = g.sectorId; break; } }
@@ -1501,7 +1584,7 @@
                 };
                 
                 const closeModal = () => showItemModal.value = false;
-                const addLinkField = () => modalForm.value.links.push({name: '', url: '', description: '', login_id: '', login_pw: ''});
+                const addLinkField = () => modalForm.value.links.push({name: '', url: '', description: '', login_id: '', login_pw: '', files: []});
                 const removeLinkField = (idx) => { if(modalForm.value.links.length > 1) modalForm.value.links.splice(idx, 1); };
                 
                 const draggedLinkIndex = ref(null);
@@ -1524,12 +1607,37 @@
                 const handleDrop = (e) => { dragActive.value = false; const files = e.dataTransfer.files; if(!files) return; for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, description: '', isNew: true }); };
                 const removeFile = (idx) => modalForm.value.files.splice(idx, 1);
                 
+                const handleLinkFileSelect = (e, linkIdx) => {
+                    const files = e.target.files;
+                    if(!files) return;
+                    if(!modalForm.value.links[linkIdx].files) modalForm.value.links[linkIdx].files = [];
+                    for(let i=0; i<files.length; i++) {
+                        modalForm.value.links[linkIdx].files.push({ fileObj: files[i], name: files[i].name, description: '', isNew: true });
+                    }
+                };
+
+                const handleLinkFileDrop = (e, linkIdx) => {
+                    const files = e.dataTransfer.files;
+                    if(!files) return;
+                    if(!modalForm.value.links[linkIdx].files) modalForm.value.links[linkIdx].files = [];
+                    for(let i=0; i<files.length; i++) {
+                        modalForm.value.links[linkIdx].files.push({ fileObj: files[i], name: files[i].name, description: '', isNew: true });
+                    }
+                };
+
+                const removeLinkFile = (linkIdx, fileIdx) => {
+                    if(modalForm.value.links[linkIdx] && modalForm.value.links[linkIdx].files) {
+                        modalForm.value.links[linkIdx].files.splice(fileIdx, 1);
+                    }
+                };
+
                 const saveItem = async () => {
                     isUploading.value = true;
                     try {
                         let finalCombinedData = [];
                         
                         if (!['folder', 'proxy_form', 'my_business_card'].includes(modalForm.value.type)) {
+                            // 일반 첨부파일 업로드
                             for (let fData of modalForm.value.files) {
                                 if (fData.isNew) {
                                     const extMatch = fData.fileObj.name.match(/\.[^.]+$/);
@@ -1541,9 +1649,34 @@
                                     finalCombinedData.push({ name: fData.name, url: fData.url, kind: 'file', description: fData.description || '' }); 
                                 }
                             }
-                            const validLinks = modalForm.value.links.filter(l => l.url.trim() !== '');
+                            
+                            // 링크 및 섹션 처리 (하위 파일 업로드 포함)
+                            const validLinks = modalForm.value.links.filter(l => l.url.trim() !== '' || l.name.trim() !== '' || (l.files && l.files.length > 0));
                             for (let lData of validLinks) {
-                                finalCombinedData.push({ name: lData.name, url: lData.url, kind: 'link', description: lData.description || '', login_id: lData.login_id || '', login_pw: lData.login_pw || '' });
+                                let linkFiles = [];
+                                if (lData.files && lData.files.length > 0) {
+                                    for (let lfData of lData.files) {
+                                        if (lfData.isNew) {
+                                            const extMatch = lfData.fileObj.name.match(/\.[^.]+$/);
+                                            const safeName = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}${extMatch ? extMatch[0] : ''}`;
+                                            await supabase.storage.from('documents').upload(safeName, lfData.fileObj);
+                                            const { data: urlData } = supabase.storage.from('documents').getPublicUrl(safeName);
+                                            linkFiles.push({ name: lfData.name, url: urlData.publicUrl, kind: 'file', description: lfData.description || '' });
+                                        } else {
+                                            linkFiles.push({ name: lfData.name, url: lfData.url, kind: 'file', description: lfData.description || '' });
+                                        }
+                                    }
+                                }
+
+                                finalCombinedData.push({ 
+                                    name: lData.name, 
+                                    url: lData.url, 
+                                    kind: 'link', 
+                                    description: lData.description || '', 
+                                    login_id: lData.login_id || '', 
+                                    login_pw: lData.login_pw || '',
+                                    files: linkFiles
+                                });
                             }
                         }
                         
@@ -1727,12 +1860,36 @@
 
                 const dragEnd = () => { dragItem.value = null; dragTargetFolderId.value = null; dragOverCategory.value = null; };
 
+                // 미리보기 및 접기/펼치기 상태 관리
                 const showPreviewModal = ref(false);
                 const previewItem = ref(null);
                 const previewFiles = ref([]);
                 
+                const expandedFileDescs = ref([]);
+                const expandedLinkDescs = ref([]);
+                const expandedLinkFileDescs = ref({}); // "linkIdx_fileIdx": true
+                
                 const previewAttachments = computed(() => previewFiles.value.filter(f => f.kind === 'file'));
                 const previewLinks = computed(() => previewFiles.value.filter(f => f.kind === 'link'));
+
+                const toggleFileDesc = (idx) => {
+                    const pos = expandedFileDescs.value.indexOf(idx);
+                    if(pos > -1) expandedFileDescs.value.splice(pos, 1);
+                    else expandedFileDescs.value.push(idx);
+                };
+
+                const toggleLinkDesc = (idx) => {
+                    const pos = expandedLinkDescs.value.indexOf(idx);
+                    if(pos > -1) expandedLinkDescs.value.splice(pos, 1);
+                    else expandedLinkDescs.value.push(idx);
+                };
+                
+                const toggleLinkFileDesc = (lIdx, fIdx) => {
+                    const key = `${lIdx}_${fIdx}`;
+                    if (expandedLinkFileDescs.value[key]) delete expandedLinkFileDescs.value[key];
+                    else expandedLinkFileDescs.value[key] = true;
+                };
+                const isLinkFileDescExpanded = (lIdx, fIdx) => !!expandedLinkFileDescs.value[`${lIdx}_${fIdx}`];
 
                 const hasFiles = (item) => item.file_path && item.file_path.startsWith('[');
                 
@@ -1757,9 +1914,14 @@
                         
                         previewItem.value = item;
                         previewFiles.value = combinedFiles;
+                        expandedFileDescs.value = [];
+                        expandedLinkDescs.value = [];
+                        expandedLinkFileDescs.value = {};
                         
-                        if (parsed.links.length === 1 && parsed.files.length === 0 && !item.description) {
-                            window.open(parsed.links[0].url, '_blank');
+                        // 단일 링크만 있는 경우 바로 이동 처리 (파일 없고, 설명 없을 때)
+                        if (parsed.links.length === 1 && parsed.files.length === 0 && !item.description && (!parsed.links[0].files || parsed.links[0].files.length === 0) && !parsed.links[0].description) {
+                            if(parsed.links[0].url) window.open(parsed.links[0].url, '_blank');
+                            else showPreviewModal.value = true;
                         } 
                         else if (combinedFiles.length > 0 || item.description) {
                             showPreviewModal.value = true;
@@ -1880,6 +2042,19 @@
                                     } catch(e) {}
                                 }
                             }
+                            
+                            // 링크 내부의 파일들도 함께 다운로드
+                            for (const link of parsed.links) {
+                                if (link.files && link.files.length > 0) {
+                                    const subFolder = zip.folder(`${item.name}/${link.name || '섹션 파일'}`);
+                                    for (const lFile of link.files) {
+                                        try {
+                                            const response = await fetch(lFile.url); 
+                                            subFolder.file(lFile.name, await response.blob()); 
+                                        } catch(e) {}
+                                    }
+                                }
+                            }
                         }
                     }
                     zip.generateAsync({type:"blob"}).then(content => saveAs(content, `다운로드_${Date.now()}.zip`));
@@ -1915,6 +2090,10 @@
                     dragStart, dragOverItem, dragLeaveItem, dragDropToFolder, dragDrop, dragDropToCategory, dragEnd, dragTargetFolderId, dragItem,
                     showPreviewModal, previewItem, previewFiles, previewAttachments, previewLinks, handleAction, downloadActualFile, hasFiles, selectedItems, downloadSelectedZip, copyToClipboard, window,
                     toast, 
+
+                    expandedFileDescs, expandedLinkDescs, toggleFileDesc, toggleLinkDesc,
+                    expandedLinkFileDescs, toggleLinkFileDesc, isLinkFileDescExpanded,
+                    handleLinkFileSelect, handleLinkFileDrop, removeLinkFile,
 
                     downloadCEOID,
                     showProxyForm,
