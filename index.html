@@ -61,7 +61,6 @@
 <body class="text-gray-800 h-screen overflow-hidden">
     <div id="app" class="flex h-full w-full relative">
         
-        <!-- 설명란용 공통 이미지 업로더 (숨김) -->
         <input type="file" ref="globalImageInput" @change="handleGlobalImageUpload" accept="image/*" class="hidden">
         
         <!-- 전역 이미지 업로드 로딩 오버레이 -->
@@ -75,7 +74,7 @@
             </div>
         </div>
         
-        <!-- 인증 화면 (기존 동일) -->
+        <!-- 인증 화면 -->
         <transition name="fade">
             <div v-if="authState !== 'authenticated'" class="fixed inset-0 z-[100] bg-gray-100 flex items-center justify-center p-4">
                 <div v-if="authState === 'loading'" class="flex flex-col items-center">
@@ -551,14 +550,23 @@
                                     <input type="file" ref="fileInput" @change="handleFileSelect" multiple class="hidden">
                                 </div>
                                 <ul v-if="modalForm.files && modalForm.files.length > 0" class="space-y-2 mt-2">
-                                    <li v-for="(file, idx) in modalForm.files" :key="idx" class="flex flex-col p-2 bg-gray-50 border border-gray-200 rounded-lg gap-2">
+                                    <li v-for="(file, idx) in modalForm.files" :key="idx" 
+                                        :class="['flex flex-col p-2 border rounded-lg gap-2 transition-colors', dragOverFileIndex === idx ? 'bg-blue-50 border-dashed border-blue-300' : 'bg-gray-50 border-gray-200']"
+                                        draggable="true"
+                                        @dragstart="fileDragStart($event, idx)"
+                                        @dragover.prevent
+                                        @dragenter.prevent="fileDragEnter($event, idx)"
+                                        @dragleave="fileDragLeave($event, idx)"
+                                        @drop="fileDrop($event, idx)"
+                                        @dragend="fileDragEnd">
                                         <div class="flex items-center gap-2 w-full">
+                                            <i class="fa-solid fa-grip-vertical text-gray-300 hover:text-gray-500 cursor-move" title="드래그하여 순서 변경"></i>
                                             <i class="fa-solid fa-file text-blue-400"></i>
-                                            <input type="text" v-model="file.name" placeholder="파일명" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:border-primary outline-none">
+                                            <input type="text" v-model="file.name" placeholder="파일명" class="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:border-primary outline-none bg-white">
                                             <button @click.prevent="removeFile(idx)" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-xmark"></i></button>
                                         </div>
                                         <!-- 파일 설명란 + 이미지 업로드 -->
-                                        <div class="flex gap-1 w-full items-start">
+                                        <div class="flex gap-1 w-full items-start pl-6">
                                             <textarea v-model="file.description" 
                                                       @dragover.prevent 
                                                       @drop="handleTextareaDrop($event, file, 'description')" 
@@ -615,13 +623,22 @@
                                                     <input type="file" :ref="'linkFileInput_'+idx" @change="e => handleLinkFileSelect(e, idx)" multiple class="hidden">
                                                 </div>
                                                 <ul v-if="link.files && link.files.length > 0" class="space-y-1.5">
-                                                    <li v-for="(lFile, lfIdx) in link.files" :key="lfIdx" class="flex flex-col p-2.5 bg-white border border-gray-200 rounded-lg text-xs gap-2 shadow-sm">
+                                                    <li v-for="(lFile, lfIdx) in link.files" :key="lfIdx" 
+                                                        :class="['flex flex-col p-2.5 border rounded-lg text-xs gap-2 shadow-sm transition-colors', getLinkFileDragOverState(idx, lfIdx) ? 'bg-blue-50 border-dashed border-blue-300' : 'bg-white border-gray-200']"
+                                                        draggable="true"
+                                                        @dragstart="linkFileDragStart($event, idx, lfIdx)"
+                                                        @dragover.prevent
+                                                        @dragenter.prevent="linkFileDragEnter($event, idx, lfIdx)"
+                                                        @dragleave="linkFileDragLeave($event, idx, lfIdx)"
+                                                        @drop="linkFileDrop($event, idx, lfIdx)"
+                                                        @dragend="linkFileDragEnd">
                                                          <div class="flex justify-between items-center gap-2">
+                                                             <i class="fa-solid fa-grip-vertical text-gray-300 hover:text-gray-500 cursor-move" title="드래그하여 순서 변경"></i>
                                                              <i class="fa-solid fa-file text-blue-400"></i>
                                                              <input v-model="lFile.name" class="border border-gray-300 px-2 py-1 rounded flex-1 focus:border-primary outline-none" placeholder="파일명">
                                                              <button @click.prevent="removeLinkFile(idx, lfIdx)" class="text-red-400 hover:text-red-600 p-1"><i class="fa-solid fa-xmark"></i></button>
                                                          </div>
-                                                         <div class="flex gap-1 w-full items-start pl-4">
+                                                         <div class="flex gap-1 w-full items-start pl-6">
                                                              <textarea v-model="lFile.description" 
                                                                     @dragover.prevent 
                                                                     @drop="handleTextareaDrop($event, lFile, 'description')" 
@@ -1603,6 +1620,56 @@
                 };
                 const linkDragEnd = () => { draggedLinkIndex.value = null; dragOverLinkIndex.value = null; };
 
+                const draggedFileIndex = ref(null);
+                const dragOverFileIndex = ref(null);
+
+                const fileDragStart = (e, idx) => { draggedFileIndex.value = idx; e.dataTransfer.effectAllowed = 'move'; };
+                const fileDragEnter = (e, idx) => { if (draggedFileIndex.value !== null && draggedFileIndex.value !== idx) dragOverFileIndex.value = idx; };
+                const fileDragLeave = (e, idx) => { if (dragOverFileIndex.value === idx) dragOverFileIndex.value = null; };
+                const fileDrop = (e, idx) => {
+                    if (draggedFileIndex.value !== null && draggedFileIndex.value !== idx) {
+                        const item = modalForm.value.files.splice(draggedFileIndex.value, 1)[0];
+                        modalForm.value.files.splice(idx, 0, item);
+                    }
+                    draggedFileIndex.value = null;
+                    dragOverFileIndex.value = null;
+                };
+                const fileDragEnd = () => { draggedFileIndex.value = null; dragOverFileIndex.value = null; };
+
+
+                const draggedLinkFile = ref({ linkIdx: null, fileIdx: null });
+                const dragOverLinkFile = ref({ linkIdx: null, fileIdx: null });
+
+                const linkFileDragStart = (e, lIdx, fIdx) => { 
+                    draggedLinkFile.value = { linkIdx: lIdx, fileIdx: fIdx }; 
+                    e.dataTransfer.effectAllowed = 'move'; 
+                };
+                const linkFileDragEnter = (e, lIdx, fIdx) => { 
+                    if (draggedLinkFile.value.linkIdx === lIdx && draggedLinkFile.value.fileIdx !== null && draggedLinkFile.value.fileIdx !== fIdx) {
+                        dragOverLinkFile.value = { linkIdx: lIdx, fileIdx: fIdx };
+                    }
+                };
+                const linkFileDragLeave = (e, lIdx, fIdx) => { 
+                    if (dragOverLinkFile.value.linkIdx === lIdx && dragOverLinkFile.value.fileIdx === fIdx) {
+                        dragOverLinkFile.value = { linkIdx: null, fileIdx: null }; 
+                    }
+                };
+                const linkFileDrop = (e, lIdx, fIdx) => {
+                    if (draggedLinkFile.value.linkIdx === lIdx && draggedLinkFile.value.fileIdx !== null && draggedLinkFile.value.fileIdx !== fIdx) {
+                        const item = modalForm.value.links[lIdx].files.splice(draggedLinkFile.value.fileIdx, 1)[0];
+                        modalForm.value.links[lIdx].files.splice(fIdx, 0, item);
+                    }
+                    draggedLinkFile.value = { linkIdx: null, fileIdx: null };
+                    dragOverLinkFile.value = { linkIdx: null, fileIdx: null };
+                };
+                const linkFileDragEnd = () => { 
+                    draggedLinkFile.value = { linkIdx: null, fileIdx: null };
+                    dragOverLinkFile.value = { linkIdx: null, fileIdx: null };
+                };
+                const getLinkFileDragOverState = (lIdx, fIdx) => {
+                    return dragOverLinkFile.value.linkIdx === lIdx && dragOverLinkFile.value.fileIdx === fIdx;
+                };
+
                 const handleFileSelect = (e) => { const files = e.target.files; if(!files) return; for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, description: '', isNew: true }); dragActive.value = false; };
                 const handleDrop = (e) => { dragActive.value = false; const files = e.dataTransfer.files; if(!files) return; for(let i=0; i<files.length; i++) modalForm.value.files.push({ fileObj: files[i], name: files[i].name, description: '', isNew: true }); };
                 const removeFile = (idx) => modalForm.value.files.splice(idx, 1);
@@ -1860,14 +1927,13 @@
 
                 const dragEnd = () => { dragItem.value = null; dragTargetFolderId.value = null; dragOverCategory.value = null; };
 
-                // 미리보기 및 접기/펼치기 상태 관리
                 const showPreviewModal = ref(false);
                 const previewItem = ref(null);
                 const previewFiles = ref([]);
                 
                 const expandedFileDescs = ref([]);
                 const expandedLinkDescs = ref([]);
-                const expandedLinkFileDescs = ref({}); // "linkIdx_fileIdx": true
+                const expandedLinkFileDescs = ref({}); 
                 
                 const previewAttachments = computed(() => previewFiles.value.filter(f => f.kind === 'file'));
                 const previewLinks = computed(() => previewFiles.value.filter(f => f.kind === 'link'));
@@ -1918,7 +1984,6 @@
                         expandedLinkDescs.value = [];
                         expandedLinkFileDescs.value = {};
                         
-                        // 단일 링크만 있는 경우 바로 이동 처리 (파일 없고, 설명 없을 때)
                         if (parsed.links.length === 1 && parsed.files.length === 0 && !item.description && (!parsed.links[0].files || parsed.links[0].files.length === 0) && !parsed.links[0].description) {
                             if(parsed.links[0].url) window.open(parsed.links[0].url, '_blank');
                             else showPreviewModal.value = true;
@@ -2043,7 +2108,6 @@
                                 }
                             }
                             
-                            // 링크 내부의 파일들도 함께 다운로드
                             for (const link of parsed.links) {
                                 if (link.files && link.files.length > 0) {
                                     const subFolder = zip.folder(`${item.name}/${link.name || '섹션 파일'}`);
@@ -2086,7 +2150,11 @@
                     openFolderIds, expandedItemIds, displayItems, toggleFolder, toggleDescription, handleItemClick,
                     showCatModal, catModalData, openCatModal, saveCategory, moveCategory, showDeleteModal, deleteTarget, confirmDeleteCategory, confirmDelete, executeDelete,
                     showItemModal, isEditing, isUploading, dragActive, dragOverCategory, modalForm, modalAvailableCategories, handleModalSectorChange, openAddModal, openEditModal, closeModal, saveItem, handleFileSelect, handleDrop, removeFile, addLinkField, removeLinkField,
+                    
                     draggedLinkIndex, dragOverLinkIndex, linkDragStart, linkDragEnter, linkDragLeave, linkDrop, linkDragEnd,
+                    fileDragStart, fileDragEnter, fileDragLeave, fileDrop, fileDragEnd, dragOverFileIndex,
+                    linkFileDragStart, linkFileDragEnter, linkFileDragLeave, linkFileDrop, linkFileDragEnd, getLinkFileDragOverState,
+                    
                     dragStart, dragOverItem, dragLeaveItem, dragDropToFolder, dragDrop, dragDropToCategory, dragEnd, dragTargetFolderId, dragItem,
                     showPreviewModal, previewItem, previewFiles, previewAttachments, previewLinks, handleAction, downloadActualFile, hasFiles, selectedItems, downloadSelectedZip, copyToClipboard, window,
                     toast, 
